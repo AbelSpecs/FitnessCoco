@@ -63,24 +63,24 @@ function Progreso() {
               <AreaChart data={volumeData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
                 <defs>
                   <linearGradient id="vg" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="oklch(0.74 0.19 285)" stopOpacity={0.7} />
-                    <stop offset="100%" stopColor="oklch(0.62 0.22 275)" stopOpacity={0} />
+                    <stop offset="0%" stopColor="oklch(0.82 0.17 65)" stopOpacity={0.7} />
+                    <stop offset="100%" stopColor="oklch(0.72 0.19 50)" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.27 0.05 280)" vertical={false} />
-                <XAxis dataKey="week" stroke="oklch(0.7 0.03 270)" fontSize={11} />
-                <YAxis stroke="oklch(0.7 0.03 270)" fontSize={11} />
+                <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.26 0.015 60)" vertical={false} />
+                <XAxis dataKey="week" stroke="oklch(0.7 0.02 70)" fontSize={11} />
+                <YAxis stroke="oklch(0.7 0.02 70)" fontSize={11} />
                 <Tooltip
                   contentStyle={{
-                    background: "oklch(0.18 0.05 280)",
-                    border: "1px solid oklch(0.27 0.05 280)",
+                    background: "oklch(0.17 0.008 60)",
+                    border: "1px solid oklch(0.26 0.015 60)",
                     borderRadius: 12,
                   }}
                 />
                 <Area
                   type="monotone"
                   dataKey="volume"
-                  stroke="oklch(0.74 0.19 285)"
+                  stroke="oklch(0.82 0.17 65)"
                   strokeWidth={2}
                   fill="url(#vg)"
                 />
@@ -128,19 +128,19 @@ function Progreso() {
                 data={strengthData}
                 margin={{ top: 10, right: 10, left: -10, bottom: 0 }}
               >
-                <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.27 0.05 280)" vertical={false} />
-                <XAxis dataKey="exercise" stroke="oklch(0.7 0.03 270)" fontSize={11} />
-                <YAxis stroke="oklch(0.7 0.03 270)" fontSize={11} />
+                <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.26 0.015 60)" vertical={false} />
+                <XAxis dataKey="exercise" stroke="oklch(0.7 0.02 70)" fontSize={11} />
+                <YAxis stroke="oklch(0.7 0.02 70)" fontSize={11} />
                 <Tooltip
                   contentStyle={{
-                    background: "oklch(0.18 0.05 280)",
-                    border: "1px solid oklch(0.27 0.05 280)",
+                    background: "oklch(0.17 0.008 60)",
+                    border: "1px solid oklch(0.26 0.015 60)",
                     borderRadius: 12,
                   }}
                 />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Bar dataKey="previous" name="Anterior" fill="oklch(0.32 0.12 285)" radius={[6, 6, 0, 0]} />
-                <Bar dataKey="current" name="Actual" fill="oklch(0.74 0.19 285)" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="previous" name="Anterior" fill="oklch(0.32 0.12 50)" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="current" name="Actual" fill="oklch(0.82 0.17 65)" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
