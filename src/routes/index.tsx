@@ -31,7 +31,7 @@ import {
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Dashboard — Forja Training" },
+      { title: "Dashboard — FITYEI Training" },
       {
         name: "description",
         content:
