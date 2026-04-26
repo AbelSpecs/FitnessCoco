@@ -207,22 +207,22 @@ function HistoryDialog({ ex }: { ex: Exercise }) {
         <div className="h-56 sm:h-64 mt-2 -mx-1">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={ex.history} margin={{ top: 10, right: 10, left: -15, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.27 0.05 280)" vertical={false} />
-              <XAxis dataKey="date" stroke="oklch(0.7 0.03 270)" fontSize={10} />
-              <YAxis stroke="oklch(0.7 0.03 270)" fontSize={10} />
+              <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.26 0.015 60)" vertical={false} />
+              <XAxis dataKey="date" stroke="oklch(0.7 0.02 70)" fontSize={10} />
+              <YAxis stroke="oklch(0.7 0.02 70)" fontSize={10} />
               <Tooltip
                 contentStyle={{
-                  background: "oklch(0.18 0.05 280)",
-                  border: "1px solid oklch(0.27 0.05 280)",
+                  background: "oklch(0.17 0.008 60)",
+                  border: "1px solid oklch(0.26 0.015 60)",
                   borderRadius: 12,
                 }}
               />
               <Line
                 type="monotone"
                 dataKey="weight"
-                stroke="oklch(0.74 0.19 285)"
+                stroke="oklch(0.82 0.17 65)"
                 strokeWidth={3}
-                dot={{ fill: "oklch(0.62 0.22 275)", r: 4 }}
+                dot={{ fill: "oklch(0.72 0.19 50)", r: 4 }}
               />
             </LineChart>
           </ResponsiveContainer>

@@ -16,7 +16,7 @@ import { CheckCircle2, HeartPulse, Pencil } from "lucide-react";
 export const Route = createFileRoute("/perfil")({
   head: () => ({
     meta: [
-      { title: "Perfil — Forja Training" },
+      { title: "Perfil — FITYEI Training" },
       { name: "description", content: "Gestiona tus datos, objetivos y salud." },
     ],
   }),

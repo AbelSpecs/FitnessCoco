@@ -71,7 +71,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
           {!collapsed && (
             <div className="min-w-0">
-              <p className="font-display text-2xl leading-none tracking-wider">FORJA</p>
+              <p className="font-display text-2xl leading-none tracking-wider">FITYEI</p>
               <p className="text-[10px] text-muted-foreground uppercase tracking-[0.2em]">
                 training co.
               </p>
@@ -161,7 +161,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 </div>
                 <div>
                   <p className="font-display text-2xl leading-none tracking-wider">
-                    FORJA
+                    FITYEI
                   </p>
                   <p className="text-[10px] text-muted-foreground uppercase tracking-[0.2em]">
                     training co.
@@ -233,7 +233,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <Dumbbell className="h-4 w-4 text-primary-foreground" />
               </div>
               <p className="font-display text-xl sm:text-2xl tracking-wider truncate">
-                FORJA
+                FITYEI
               </p>
             </div>
 
