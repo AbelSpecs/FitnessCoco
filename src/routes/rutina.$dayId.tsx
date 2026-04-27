@@ -14,14 +14,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { weekPlan, type Exercise } from "@/lib/mock-data";
-import {
-  ArrowLeft,
-  History,
-  PlayCircle,
-  Clock,
-  Flame,
-  CheckCircle2,
-} from "lucide-react";
+import { ArrowLeft, History, PlayCircle, Clock, Flame, CheckCircle2 } from "lucide-react";
 import { useState } from "react";
 import {
   LineChart,
@@ -92,8 +85,8 @@ function DayDetail() {
           <div className="text-7xl mb-4">🌿</div>
           <h2 className="font-display text-4xl mb-2">Descanso</h2>
           <p className="text-muted-foreground max-w-md mx-auto">
-            Recuperarse es parte del entrenamiento. Hidrátate, duerme bien y mueve el cuerpo
-            con calma.
+            Recuperarse es parte del entrenamiento. Hidrátate, duerme bien y mueve el cuerpo con
+            calma.
           </p>
         </Card>
       ) : (
@@ -268,8 +261,7 @@ function VideoDialog({ ex }: { ex: Exercise }) {
           <PlayCircle className="h-12 w-12 sm:h-16 sm:w-16 text-primary-glow mb-3" />
           <p className="font-display text-xl sm:text-2xl">Vídeo demostración</p>
           <p className="text-xs sm:text-sm text-muted-foreground mt-2 max-w-sm">
-            Aquí se mostrará el clip corto con la ejecución correcta del ejercicio (3-8s en
-            loop).
+            Aquí se mostrará el clip corto con la ejecución correcta del ejercicio (3-8s en loop).
           </p>
         </div>
       </DialogContent>

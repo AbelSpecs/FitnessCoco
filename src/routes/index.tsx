@@ -3,21 +3,8 @@ import { AppShell } from "@/components/AppShell";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import {
-  Flame,
-  Target,
-  TrendingUp,
-  Dumbbell,
-  ChevronRight,
-  Zap,
-  Trophy,
-} from "lucide-react";
-import {
-  goalLabels,
-  userProfile,
-  weekPlan,
-  volumeData,
-} from "@/lib/mock-data";
+import { Flame, Target, TrendingUp, Dumbbell, ChevronRight, Zap, Trophy } from "lucide-react";
+import { goalLabels, userProfile, weekPlan, volumeData } from "@/lib/mock-data";
 import {
   AreaChart,
   Area,
@@ -34,8 +21,7 @@ export const Route = createFileRoute("/")({
       { title: "Dashboard — FITYEI Training" },
       {
         name: "description",
-        content:
-          "Tu centro de entrenamiento personal: rutina semanal, progreso y rachas.",
+        content: "Tu centro de entrenamiento personal: rutina semanal, progreso y rachas.",
       },
     ],
   }),
@@ -97,18 +83,8 @@ function Dashboard() {
               value={goalLabels[userProfile.goal].split(" ")[1]}
               hint={goalLabels[userProfile.goal]}
             />
-            <StatTile
-              icon={Trophy}
-              label="PRs este mes"
-              value="4"
-              hint="récords personales"
-            />
-            <StatTile
-              icon={TrendingUp}
-              label="Volumen"
-              value="+18%"
-              hint="vs mes pasado"
-            />
+            <StatTile icon={Trophy} label="PRs este mes" value="4" hint="récords personales" />
+            <StatTile icon={TrendingUp} label="Volumen" value="+18%" hint="vs mes pasado" />
           </div>
         </div>
       </section>
@@ -163,9 +139,7 @@ function Dashboard() {
 
         {/* Weekly progress */}
         <Card className="bg-gradient-card border-border p-6">
-          <p className="text-xs uppercase tracking-widest text-muted-foreground">
-            Esta semana
-          </p>
+          <p className="text-xs uppercase tracking-widest text-muted-foreground">Esta semana</p>
           <h2 className="font-display text-3xl mb-4">Plan</h2>
           <div className="space-y-3">
             {weekPlan.map((d, i) => {
@@ -182,8 +156,8 @@ function Dashboard() {
                       isToday
                         ? "bg-gradient-primary shadow-glow text-primary-foreground"
                         : d.rest
-                        ? "bg-muted text-muted-foreground"
-                        : "bg-secondary text-foreground group-hover:bg-primary/30"
+                          ? "bg-muted text-muted-foreground"
+                          : "bg-secondary text-foreground group-hover:bg-primary/30"
                     }`}
                   >
                     {d.short}
@@ -193,9 +167,7 @@ function Dashboard() {
                     <p className="text-xs text-muted-foreground truncate">{d.focus}</p>
                   </div>
                   {!d.rest && (
-                    <span className="text-[10px] text-muted-foreground">
-                      {d.durationMin}′
-                    </span>
+                    <span className="text-[10px] text-muted-foreground">{d.durationMin}′</span>
                   )}
                 </Link>
               );
@@ -225,7 +197,11 @@ function Dashboard() {
                     <stop offset="100%" stopColor="oklch(0.72 0.19 50)" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.26 0.015 60)" vertical={false} />
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="oklch(0.26 0.015 60)"
+                  vertical={false}
+                />
                 <XAxis dataKey="week" stroke="oklch(0.7 0.02 70)" fontSize={11} />
                 <YAxis stroke="oklch(0.7 0.02 70)" fontSize={11} />
                 <Tooltip

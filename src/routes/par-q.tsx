@@ -14,8 +14,7 @@ export const Route = createFileRoute("/par-q")({
       { title: "PAR-Q & YOU — FITYEI Training" },
       {
         name: "description",
-        content:
-          "Cuestionario de aptitud física previo al entrenamiento (PAR-Q & YOU).",
+        content: "Cuestionario de aptitud física previo al entrenamiento (PAR-Q & YOU).",
       },
     ],
   }),
@@ -23,9 +22,7 @@ export const Route = createFileRoute("/par-q")({
 });
 
 function ParQ() {
-  const [answers, setAnswers] = useState<(boolean | null)[]>(
-    parqQuestions.map(() => null),
-  );
+  const [answers, setAnswers] = useState<(boolean | null)[]>(parqQuestions.map(() => null));
   const [submitted, setSubmitted] = useState(false);
   const [name, setName] = useState("");
 
@@ -40,9 +37,8 @@ function ParQ() {
         </p>
         <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl">PAR-Q &amp; YOU</h1>
         <p className="text-sm sm:text-base text-muted-foreground mt-3">
-          Cuestionario para personas de 15 a 69 años. La actividad física regular es saludable;
-          este formulario te ayudará a saber si necesitas consultar a tu médico antes de
-          comenzar.
+          Cuestionario para personas de 15 a 69 años. La actividad física regular es saludable; este
+          formulario te ayudará a saber si necesitas consultar a tu médico antes de comenzar.
         </p>
       </div>
 
@@ -125,8 +121,8 @@ function ParQ() {
             submitted && anyYes
               ? "bg-warning/10 border-warning/40"
               : submitted
-              ? "bg-success/10 border-success/40"
-              : "bg-gradient-card border-border"
+                ? "bg-success/10 border-success/40"
+                : "bg-gradient-card border-border"
           }`}
         >
           {!submitted ? (
@@ -157,9 +153,9 @@ function ParQ() {
               <AlertTriangle className="h-8 w-8 text-warning mb-3" />
               <h3 className="font-display text-2xl mb-2">Consulta médica recomendada</h3>
               <p className="text-sm text-muted-foreground">
-                Has respondido <strong>SÍ</strong> a una o más preguntas. Habla con tu médico
-                ANTES de empezar a estar más activo físicamente y comenta qué preguntas
-                respondiste afirmativamente.
+                Has respondido <strong>SÍ</strong> a una o más preguntas. Habla con tu médico ANTES
+                de empezar a estar más activo físicamente y comenta qué preguntas respondiste
+                afirmativamente.
               </p>
             </>
           ) : (
@@ -167,14 +163,14 @@ function ParQ() {
               <CheckCircle2 className="h-8 w-8 text-success mb-3" />
               <h3 className="font-display text-2xl mb-2">Apto para entrenar</h3>
               <p className="text-sm text-muted-foreground">
-                Puedes comenzar a estar más activo de forma gradual. Tu cuestionario es válido
-                por 12 meses.
+                Puedes comenzar a estar más activo de forma gradual. Tu cuestionario es válido por
+                12 meses.
               </p>
             </>
           )}
           <p className="text-[10px] text-muted-foreground mt-6 leading-relaxed">
-            Fuente: Canadian Society for Exercise Physiology — PAR-Q &amp; YOU. Si un cambio en
-            tu salud te obliga a responder SÍ a alguna pregunta, infórmalo a tu entrenador.
+            Fuente: Canadian Society for Exercise Physiology — PAR-Q &amp; YOU. Si un cambio en tu
+            salud te obliga a responder SÍ a alguna pregunta, infórmalo a tu entrenador.
           </p>
         </Card>
       </div>

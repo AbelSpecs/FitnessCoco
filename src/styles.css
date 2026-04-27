@@ -1,21 +1,8 @@
-@import "tailwindcss" source(none);
-@source "../src";
+@import url("https://fonts.googleapis.com/css2?family=Barlow:wght@300;400;500;600;700&display=swap");
+@import "tailwindcss";
 @import "tw-animate-css";
 
-@custom-variant dark (&:is(.dark *));
-
-@layer base {
-  @font-face {
-    font-family: "Bebas Neue";
-    font-style: normal;
-    font-weight: 400;
-    font-display: swap;
-    src: url("https://fonts.gstatic.com/s/bebasneue/v14/JTUSjIg69CK48gW7PXoo9WlhyA.woff2") format("woff2");
-  }
-}
-
-/* Google fonts via CDN @import for Barlow */
-@import url("https://fonts.googleapis.com/css2?family=Barlow:wght@300;400;500;600;700&display=swap");
+@source "../src";
 
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);
@@ -66,6 +53,21 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 }
+
+@custom-variant dark (&:is(.dark *));
+
+@layer base {
+  @font-face {
+    font-family: "Bebas Neue";
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url("https://fonts.gstatic.com/s/bebasneue/v14/JTUSjIg69CK48gW7PXoo9WlhyA.woff2")
+      format("woff2");
+  }
+}
+
+/* Google fonts via CDN @import for Barlow */
 
 :root {
   --radius: 0.875rem;
@@ -129,7 +131,8 @@
     oklch(0.34 0.14 50) 100%
   );
   --gradient-card: linear-gradient(160deg, oklch(0.2 0.01 60) 0%, oklch(0.14 0.008 60) 100%);
-  --gradient-mesh: radial-gradient(at 20% 10%, oklch(0.72 0.19 50 / 0.25), transparent 50%),
+  --gradient-mesh:
+    radial-gradient(at 20% 10%, oklch(0.72 0.19 50 / 0.25), transparent 50%),
     radial-gradient(at 80% 90%, oklch(0.82 0.17 65 / 0.18), transparent 50%);
 
   --shadow-glow: 0 10px 40px -10px oklch(0.72 0.19 50 / 0.55);

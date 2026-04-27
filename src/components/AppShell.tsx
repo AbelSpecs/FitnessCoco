@@ -60,12 +60,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           collapsed ? "w-20" : "w-64",
         )}
       >
-        <div
-          className={cn(
-            "p-4 flex items-center gap-2",
-            collapsed && "justify-center px-2",
-          )}
-        >
+        <div className={cn("p-4 flex items-center gap-2", collapsed && "justify-center px-2")}>
           <div className="h-10 w-10 rounded-xl bg-gradient-primary flex items-center justify-center shadow-glow shrink-0">
             <Dumbbell className="h-5 w-5 text-primary-foreground" />
           </div>
@@ -160,9 +155,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   <Dumbbell className="h-5 w-5 text-primary-foreground" />
                 </div>
                 <div>
-                  <p className="font-display text-2xl leading-none tracking-wider">
-                    FITYEI
-                  </p>
+                  <p className="font-display text-2xl leading-none tracking-wider">FITYEI</p>
                   <p className="text-[10px] text-muted-foreground uppercase tracking-[0.2em]">
                     training co.
                   </p>
@@ -232,9 +225,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <div className="h-9 w-9 rounded-xl bg-gradient-primary flex items-center justify-center shadow-glow shrink-0">
                 <Dumbbell className="h-4 w-4 text-primary-foreground" />
               </div>
-              <p className="font-display text-xl sm:text-2xl tracking-wider truncate">
-                FITYEI
-              </p>
+              <p className="font-display text-xl sm:text-2xl tracking-wider truncate">FITYEI</p>
             </div>
 
             <div className="hidden md:flex items-center gap-2 max-w-md flex-1 lg:ml-0">

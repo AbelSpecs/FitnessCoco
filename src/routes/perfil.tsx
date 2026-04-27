@@ -5,10 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import {
-  RadioGroup,
-  RadioGroupItem,
-} from "@/components/ui/radio-group";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { goalLabels, userProfile, type Goal } from "@/lib/mock-data";
 import { useState } from "react";
 import { CheckCircle2, HeartPulse, Pencil } from "lucide-react";
@@ -107,7 +104,10 @@ function Perfil() {
               <p className="text-xs text-muted-foreground">
                 Vigente hasta {userProfile.parqValidUntil}.
               </p>
-              <Badge variant="secondary" className="mt-3 bg-success/15 text-success border-success/30">
+              <Badge
+                variant="secondary"
+                className="mt-3 bg-success/15 text-success border-success/30"
+              >
                 Apto para entrenar
               </Badge>
               <Button variant="glass" className="w-full mt-4" asChild>
@@ -150,9 +150,7 @@ function Field({
 }) {
   return (
     <div>
-      <Label className="text-xs uppercase tracking-widest text-muted-foreground">
-        {label}
-      </Label>
+      <Label className="text-xs uppercase tracking-widest text-muted-foreground">{label}</Label>
       <Input defaultValue={defaultValue} type={type} className="mt-1.5 bg-background/50" />
     </div>
   );
