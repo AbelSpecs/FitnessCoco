@@ -9,13 +9,20 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as RegisterRouteImport } from './routes/register'
 import { Route as ProgresoRouteImport } from './routes/progreso'
 import { Route as PerfilRouteImport } from './routes/perfil'
 import { Route as ParQRouteImport } from './routes/par-q'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as RutinaIndexRouteImport } from './routes/rutina.index'
 import { Route as RutinaDayIdRouteImport } from './routes/rutina.$dayId'
 
+const RegisterRoute = RegisterRouteImport.update({
+  id: '/register',
+  path: '/register',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ProgresoRoute = ProgresoRouteImport.update({
   id: '/progreso',
   path: '/progreso',
@@ -29,6 +36,11 @@ const PerfilRoute = PerfilRouteImport.update({
 const ParQRoute = ParQRouteImport.update({
   id: '/par-q',
   path: '/par-q',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -49,26 +61,32 @@ const RutinaDayIdRoute = RutinaDayIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/login': typeof LoginRoute
   '/par-q': typeof ParQRoute
   '/perfil': typeof PerfilRoute
   '/progreso': typeof ProgresoRoute
+  '/register': typeof RegisterRoute
   '/rutina/$dayId': typeof RutinaDayIdRoute
   '/rutina/': typeof RutinaIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/login': typeof LoginRoute
   '/par-q': typeof ParQRoute
   '/perfil': typeof PerfilRoute
   '/progreso': typeof ProgresoRoute
+  '/register': typeof RegisterRoute
   '/rutina/$dayId': typeof RutinaDayIdRoute
   '/rutina': typeof RutinaIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/login': typeof LoginRoute
   '/par-q': typeof ParQRoute
   '/perfil': typeof PerfilRoute
   '/progreso': typeof ProgresoRoute
+  '/register': typeof RegisterRoute
   '/rutina/$dayId': typeof RutinaDayIdRoute
   '/rutina/': typeof RutinaIndexRoute
 }
@@ -76,34 +94,55 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/login'
     | '/par-q'
     | '/perfil'
     | '/progreso'
+    | '/register'
     | '/rutina/$dayId'
     | '/rutina/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/par-q' | '/perfil' | '/progreso' | '/rutina/$dayId' | '/rutina'
-  id:
-    | '__root__'
+  to:
     | '/'
+    | '/login'
     | '/par-q'
     | '/perfil'
     | '/progreso'
+    | '/register'
+    | '/rutina/$dayId'
+    | '/rutina'
+  id:
+    | '__root__'
+    | '/'
+    | '/login'
+    | '/par-q'
+    | '/perfil'
+    | '/progreso'
+    | '/register'
     | '/rutina/$dayId'
     | '/rutina/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  LoginRoute: typeof LoginRoute
   ParQRoute: typeof ParQRoute
   PerfilRoute: typeof PerfilRoute
   ProgresoRoute: typeof ProgresoRoute
+  RegisterRoute: typeof RegisterRoute
   RutinaDayIdRoute: typeof RutinaDayIdRoute
   RutinaIndexRoute: typeof RutinaIndexRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/register': {
+      id: '/register'
+      path: '/register'
+      fullPath: '/register'
+      preLoaderRoute: typeof RegisterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/progreso': {
       id: '/progreso'
       path: '/progreso'
@@ -123,6 +162,13 @@ declare module '@tanstack/react-router' {
       path: '/par-q'
       fullPath: '/par-q'
       preLoaderRoute: typeof ParQRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -151,9 +197,11 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  LoginRoute: LoginRoute,
   ParQRoute: ParQRoute,
   PerfilRoute: PerfilRoute,
   ProgresoRoute: ProgresoRoute,
+  RegisterRoute: RegisterRoute,
   RutinaDayIdRoute: RutinaDayIdRoute,
   RutinaIndexRoute: RutinaIndexRoute,
 }
