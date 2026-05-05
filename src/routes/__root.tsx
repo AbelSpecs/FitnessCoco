@@ -1,6 +1,6 @@
 import { Outlet, Link, createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
 
-import appCss from "../styles.css?url";
+//import appCss from "../styles.css?url";
 
 function NotFoundComponent() {
   return (
@@ -29,21 +29,21 @@ export const Route = createRootRoute({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
-      { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
-      { name: "twitter:site", content: "@Lovable" },
+      { title: "FitYei App" },
+      // { name: "description", content: "Lovable Generated Project" },
+      // { name: "author", content: "Lovable" },
+      // { property: "og:title", content: "Lovable App" },
+      // { property: "og:description", content: "Lovable Generated Project" },
+      // { property: "og:type", content: "website" },
+      // { name: "twitter:card", content: "summary" },
+      // { name: "twitter:site", content: "@Lovable" },
     ],
-    links: [
-      {
-        rel: "stylesheet",
-        href: appCss,
-      },
-    ],
+    // links: [
+    //   {
+    //     rel: "stylesheet",
+    //     href: appCss,
+    //   },
+    // ],
   }),
   shellComponent: RootShell,
   component: RootComponent,
@@ -52,15 +52,11 @@ export const Route = createRootRoute({
 
 function RootShell({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <head>
-        <HeadContent />
-      </head>
-      <body>
-        {children}
-        <Scripts />
-      </body>
-    </html>
+    <>
+      <HeadContent />
+      {children}
+      <Scripts />
+    </>
   );
 }
 

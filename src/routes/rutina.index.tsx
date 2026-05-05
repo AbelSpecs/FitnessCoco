@@ -27,8 +27,7 @@ function RutinaPage() {
         </p>
         <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl">Rutina semanal</h1>
         <p className="text-sm sm:text-base text-muted-foreground mt-2">
-          Pulsa cualquier día para ver los ejercicios, registrar tu sesión y consultar el
-          historial.
+          Pulsa cualquier día para ver los ejercicios, registrar tu sesión y consultar el historial.
         </p>
       </div>
 
@@ -36,19 +35,14 @@ function RutinaPage() {
         {weekPlan.map((day, i) => {
           const isToday = i === todayIndex;
           return (
-            <Link
-              key={day.id}
-              to="/rutina/$dayId"
-              params={{ dayId: day.id }}
-              className="group"
-            >
+            <Link key={day.id} to="/rutina/$dayId" params={{ dayId: day.id }} className="group">
               <Card
                 className={`relative overflow-hidden p-6 h-full transition-all duration-300 hover:-translate-y-1 ${
                   isToday
                     ? "bg-gradient-primary border-primary-glow shadow-glow"
                     : day.rest
-                    ? "bg-card/40 border-border"
-                    : "bg-gradient-card border-border hover:border-primary/50 hover:shadow-card"
+                      ? "bg-card/40 border-border"
+                      : "bg-gradient-card border-border hover:border-primary/50 hover:shadow-card"
                 }`}
               >
                 <div className="flex items-start justify-between mb-6">
@@ -56,9 +50,7 @@ function RutinaPage() {
                     <p className="text-xs uppercase tracking-widest opacity-70">
                       {isToday ? "Hoy" : day.day}
                     </p>
-                    <p className="font-display text-5xl leading-none mt-1">
-                      {day.short}
-                    </p>
+                    <p className="font-display text-5xl leading-none mt-1">{day.short}</p>
                   </div>
                   <ChevronRight className="h-5 w-5 opacity-40 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
                 </div>

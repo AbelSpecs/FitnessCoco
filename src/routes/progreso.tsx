@@ -36,8 +36,8 @@ function Progreso() {
         </p>
         <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl">Tu progreso</h1>
         <p className="text-sm sm:text-base text-muted-foreground mt-2 max-w-2xl">
-          Estadísticas de volumen, fuerza y consistencia para llevar el seguimiento contigo y
-          tu entrenador.
+          Estadísticas de volumen, fuerza y consistencia para llevar el seguimiento contigo y tu
+          entrenador.
         </p>
       </div>
 
@@ -59,7 +59,7 @@ function Progreso() {
             <h2 className="font-display text-3xl">Evolución</h2>
           </div>
           <div className="h-72">
-            <ResponsiveContainer width="100%" height="100%">
+            {/* <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={volumeData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
                 <defs>
                   <linearGradient id="vg" x1="0" y1="0" x2="0" y2="1">
@@ -67,7 +67,11 @@ function Progreso() {
                     <stop offset="100%" stopColor="oklch(0.72 0.19 50)" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.26 0.015 60)" vertical={false} />
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="oklch(0.26 0.015 60)"
+                  vertical={false}
+                />
                 <XAxis dataKey="week" stroke="oklch(0.7 0.02 70)" fontSize={11} />
                 <YAxis stroke="oklch(0.7 0.02 70)" fontSize={11} />
                 <Tooltip
@@ -85,7 +89,7 @@ function Progreso() {
                   fill="url(#vg)"
                 />
               </AreaChart>
-            </ResponsiveContainer>
+            </ResponsiveContainer> */}
           </div>
         </Card>
 
@@ -99,9 +103,7 @@ function Progreso() {
             {Array.from({ length: 28 }).map((_, i) => (
               <div
                 key={i}
-                className={`aspect-square rounded ${
-                  i < 24 ? "bg-white/80" : "bg-white/20"
-                }`}
+                className={`aspect-square rounded ${i < 24 ? "bg-white/80" : "bg-white/20"}`}
               />
             ))}
           </div>
@@ -123,12 +125,13 @@ function Progreso() {
             </div>
           </div>
           <div className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={strengthData}
-                margin={{ top: 10, right: 10, left: -10, bottom: 0 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.26 0.015 60)" vertical={false} />
+            {/* <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={strengthData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="oklch(0.26 0.015 60)"
+                  vertical={false}
+                />
                 <XAxis dataKey="exercise" stroke="oklch(0.7 0.02 70)" fontSize={11} />
                 <YAxis stroke="oklch(0.7 0.02 70)" fontSize={11} />
                 <Tooltip
@@ -139,10 +142,20 @@ function Progreso() {
                   }}
                 />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Bar dataKey="previous" name="Anterior" fill="oklch(0.32 0.12 50)" radius={[6, 6, 0, 0]} />
-                <Bar dataKey="current" name="Actual" fill="oklch(0.82 0.17 65)" radius={[6, 6, 0, 0]} />
+                <Bar
+                  dataKey="previous"
+                  name="Anterior"
+                  fill="oklch(0.32 0.12 50)"
+                  radius={[6, 6, 0, 0]}
+                />
+                <Bar
+                  dataKey="current"
+                  name="Actual"
+                  fill="oklch(0.82 0.17 65)"
+                  radius={[6, 6, 0, 0]}
+                />
               </BarChart>
-            </ResponsiveContainer>
+            </ResponsiveContainer> */}
           </div>
         </Card>
       </div>
@@ -173,9 +186,7 @@ function Kpi({
     >
       <div className="flex items-center gap-2 mb-1.5 sm:mb-2 opacity-80">
         <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-        <p className="text-[9px] sm:text-[10px] uppercase tracking-widest truncate">
-          {label}
-        </p>
+        <p className="text-[9px] sm:text-[10px] uppercase tracking-widest truncate">{label}</p>
       </div>
       <p className="font-display text-2xl sm:text-4xl leading-none">{value}</p>
       <p className="text-[10px] sm:text-xs opacity-70 mt-1 truncate">{unit}</p>

@@ -1,21 +1,27 @@
-export type Goal = "muscle" | "fat-loss" | "strength" | "endurance";
+// export type Goal = "muscle" | "fat-loss" | "strength" | "endurance";
 
-export const goalLabels: Record<Goal, string> = {
-  muscle: "Ganar masa muscular",
-  "fat-loss": "Perder grasa",
-  strength: "Ganar fuerza",
-  endurance: "Ganar resistencia",
-};
+import { Goal } from "@/types/goals";
+import { User } from "@/types/user";
 
-export const userProfile = {
+// export const goalLabels: Record<Goal, string> = {
+//   muscle: "Ganar masa muscular",
+//   "fat-loss": "Perder grasa",
+//   strength: "Ganar fuerza",
+//   endurance: "Ganar resistencia",
+// };
+
+export const userProfile: User = {
+  id: 1,
   name: "Diego Martínez",
   age: 28,
   weight: 78,
   gender: "Masculino",
   goal: "muscle" as Goal,
   streak: 12,
-  parqCompleted: true,
+  parqCompleted: false,
   parqValidUntil: "12 mar 2026",
+  coachId: 1,
+  planType: "basic",
 };
 
 export type Exercise = {
@@ -45,7 +51,7 @@ const hist = (base: number) =>
     date: `Sem ${i + 1}`,
     weight: base + i * 2.5 + (i % 2 === 0 ? 0 : 1),
     reps: 8 + (i % 3),
-    rpe: 7 + ((i % 3) * 0.5),
+    rpe: 7 + (i % 3) * 0.5,
   }));
 
 export const weekPlan: DayPlan[] = [

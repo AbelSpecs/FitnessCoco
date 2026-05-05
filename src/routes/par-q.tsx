@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, createLazyRoute } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,15 +9,15 @@ import { useState } from "react";
 import { AlertTriangle, CheckCircle2, HeartPulse } from "lucide-react";
 
 export const Route = createFileRoute("/par-q")({
-  head: () => ({
-    meta: [
-      { title: "PAR-Q & YOU — FITYEI Training" },
-      {
-        name: "description",
-        content: "Cuestionario de aptitud física previo al entrenamiento (PAR-Q & YOU).",
-      },
-    ],
-  }),
+  // head: () => ({
+  //   meta: [
+  //     { title: "PAR-Q & YOU — FITYEI Training" },
+  //     {
+  //       name: "description",
+  //       content: "Cuestionario de aptitud física previo al entrenamiento (PAR-Q & YOU).",
+  //     },
+  //   ],
+  // }),
   component: ParQ,
 });
 

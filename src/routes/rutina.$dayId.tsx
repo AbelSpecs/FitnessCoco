@@ -198,7 +198,7 @@ function HistoryDialog({ ex }: { ex: Exercise }) {
           </DialogTitle>
         </DialogHeader>
         <div className="h-56 sm:h-64 mt-2 -mx-1">
-          <ResponsiveContainer width="100%" height="100%">
+          {/* <ResponsiveContainer width="100%" height="100%">
             <LineChart data={ex.history} margin={{ top: 10, right: 10, left: -15, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.26 0.015 60)" vertical={false} />
               <XAxis dataKey="date" stroke="oklch(0.7 0.02 70)" fontSize={10} />
@@ -218,7 +218,7 @@ function HistoryDialog({ ex }: { ex: Exercise }) {
                 dot={{ fill: "oklch(0.72 0.19 50)", r: 4 }}
               />
             </LineChart>
-          </ResponsiveContainer>
+          </ResponsiveContainer> */}
         </div>
         <div className="grid grid-cols-3 gap-2 text-xs mt-2">
           <div className="bg-background/40 rounded-lg p-2.5 sm:p-3">

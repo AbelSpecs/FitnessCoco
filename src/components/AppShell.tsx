@@ -21,9 +21,9 @@ import { useEffect, useState } from "react";
 const nav = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
   { to: "/rutina", label: "Rutina", icon: Calendar },
-  { to: "/progreso", label: "Progreso", icon: TrendingUp },
+  // { to: "/progreso", label: "Progreso", icon: TrendingUp },
   { to: "/perfil", label: "Perfil", icon: User },
-  { to: "/par-q", label: "PAR-Q", icon: HeartPulse },
+  // { to: "/par-q", label: "PAR-Q", icon: HeartPulse },
 ] as const;
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -123,7 +123,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div className="p-4 m-3 rounded-xl bg-gradient-card border border-sidebar-border">
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-full bg-gradient-primary flex items-center justify-center font-display text-lg shrink-0">
-                {userProfile.name.charAt(0)}
+                {userProfile.name!.charAt(0)}
               </div>
               <div className="min-w-0">
                 <p className="text-sm font-medium truncate">{userProfile.name}</p>
@@ -135,7 +135,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         {collapsed && (
           <div className="p-3 flex justify-center">
             <div className="h-10 w-10 rounded-full bg-gradient-primary flex items-center justify-center font-display text-lg">
-              {userProfile.name.charAt(0)}
+              {userProfile.name!.charAt(0)}
             </div>
           </div>
         )}
@@ -196,7 +196,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <div className="p-4 m-3 rounded-xl bg-gradient-card border border-sidebar-border">
               <div className="flex items-center gap-3">
                 <div className="h-10 w-10 rounded-full bg-gradient-primary flex items-center justify-center font-display text-lg">
-                  {userProfile.name.charAt(0)}
+                  {userProfile.name!.charAt(0)}
                 </div>
                 <div className="min-w-0">
                   <p className="text-sm font-medium truncate">{userProfile.name}</p>
@@ -230,7 +230,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
             <div className="hidden md:flex items-center gap-2 max-w-md flex-1 lg:ml-0">
               <div className="relative w-full">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                {/* <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /> */}
                 <input
                   placeholder="Buscar ejercicio, rutina…"
                   className="w-full h-10 rounded-lg bg-input/60 border border-border pl-9 pr-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
@@ -243,7 +243,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <Bell className="h-4 w-4" />
               </Button>
               <div className="lg:hidden h-9 w-9 rounded-full bg-gradient-primary flex items-center justify-center font-display text-base shrink-0">
-                {userProfile.name.charAt(0)}
+                {userProfile.name!.charAt(0)}
               </div>
             </div>
           </div>
@@ -256,7 +256,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       {/* Mobile bottom nav */}
       <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 backdrop-blur-xl bg-sidebar/90 border-t border-sidebar-border safe-bottom">
-        <div className="grid grid-cols-5">
+        <div className={`grid grid-cols-${nav.length}`}>
           {nav.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.to);

@@ -1,10 +1,10 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, createLazyRoute } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Flame, Target, TrendingUp, Dumbbell, ChevronRight, Zap, Trophy } from "lucide-react";
-import { goalLabels, userProfile, weekPlan, volumeData } from "@/lib/mock-data";
+import { userProfile, weekPlan, volumeData } from "@/lib/mock-data";
 import {
   AreaChart,
   Area,
@@ -14,6 +14,7 @@ import {
   Tooltip,
   CartesianGrid,
 } from "recharts";
+import { goalLabels } from "@/types/goals";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -48,7 +49,7 @@ function Dashboard() {
               })}
             </p>
             <h1 className="font-display text-3xl sm:text-4xl lg:text-6xl mb-3 leading-none">
-              Hola, {userProfile.name.split(" ")[0]}.
+              Hola, {userProfile.name!.split(" ")[0]}.
               <br />
               <span className="text-gradient">Es hora de entrenar.</span>
             </h1>
@@ -80,8 +81,8 @@ function Dashboard() {
             <StatTile
               icon={Target}
               label="Objetivo"
-              value={goalLabels[userProfile.goal].split(" ")[1]}
-              hint={goalLabels[userProfile.goal]}
+              value={goalLabels[userProfile.goal!].split(" ")[1]}
+              hint={goalLabels[userProfile.goal!]}
             />
             <StatTile icon={Trophy} label="PRs este mes" value="4" hint="récords personales" />
             <StatTile icon={TrendingUp} label="Volumen" value="+18%" hint="vs mes pasado" />
@@ -185,11 +186,11 @@ function Dashboard() {
               <h2 className="font-display text-3xl">Últimas 12 semanas</h2>
             </div>
             <Button variant="ghost" size="sm" asChild>
-              <Link to="/progreso">Ver todo</Link>
+              {/* <Link to="/progreso">Ver todo</Link> */}
             </Button>
           </div>
           <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
+            {/* <ResponsiveContainer width="100%" height={250}>
               <AreaChart data={volumeData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
                 <defs>
                   <linearGradient id="volumeGrad" x1="0" y1="0" x2="0" y2="1">
@@ -220,7 +221,7 @@ function Dashboard() {
                   fill="url(#volumeGrad)"
                 />
               </AreaChart>
-            </ResponsiveContainer>
+            </ResponsiveContainer> */}
           </div>
         </Card>
 
