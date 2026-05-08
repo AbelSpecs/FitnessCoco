@@ -3,9 +3,42 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Dumbbell } from "lucide-react";
-import { set } from "react-hook-form";
 import { register } from "@/services/auth.service";
+
+const COUNTRIES = [
+  "Argentina",
+  "Bolivia",
+  "Brasil",
+  "Canadá",
+  "Chile",
+  "Colombia",
+  "Costa Rica",
+  "Cuba",
+  "Ecuador",
+  "El Salvador",
+  "España",
+  "Estados Unidos",
+  "Guatemala",
+  "Honduras",
+  "México",
+  "Nicaragua",
+  "Panamá",
+  "Paraguay",
+  "Perú",
+  "Puerto Rico",
+  "República Dominicana",
+  "Uruguay",
+  "Venezuela",
+  "Otro",
+];
 
 export const Route = createFileRoute("/register")({
   head: () => ({
