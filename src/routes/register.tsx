@@ -3,9 +3,42 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Dumbbell } from "lucide-react";
-import { set } from "react-hook-form";
 import { register } from "@/services/auth.service";
+
+const COUNTRIES = [
+  "Argentina",
+  "Bolivia",
+  "Brasil",
+  "Canadá",
+  "Chile",
+  "Colombia",
+  "Costa Rica",
+  "Cuba",
+  "Ecuador",
+  "El Salvador",
+  "España",
+  "Estados Unidos",
+  "Guatemala",
+  "Honduras",
+  "México",
+  "Nicaragua",
+  "Panamá",
+  "Paraguay",
+  "Perú",
+  "Puerto Rico",
+  "República Dominicana",
+  "Uruguay",
+  "Venezuela",
+  "Otro",
+];
 
 export const Route = createFileRoute("/register")({
   head: () => ({
@@ -270,16 +303,24 @@ function RegisterPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="country">Pais</Label>
-                  <Input
-                    id="country"
-                    type="text"
-                    placeholder="Pais"
+                  <Label htmlFor="country">País</Label>
+                  <Select
                     value={registerForm.country}
-                    onChange={(e) => setRegisterForm({ ...registerForm, country: e.target.value })}
-                    required
-                    className="bg-input/60"
-                  />
+                    onValueChange={(value) =>
+                      setRegisterForm({ ...registerForm, country: value })
+                    }
+                  >
+                    <SelectTrigger id="country" className="bg-input/60">
+                      <SelectValue placeholder="Selecciona tu país" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {COUNTRIES.map((c) => (
+                        <SelectItem key={c} value={c}>
+                          {c}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="city">Ciudad</Label>
@@ -319,25 +360,27 @@ function RegisterPage() {
                     className="bg-input/60"
                   />
                 </div>
-                <Button
-                  type="button"
-                  variant="hero"
-                  size="lg"
-                  className="w-full"
-                  onClick={handlePreviousStep}
-                  disabled={loading}
-                >
-                  {"Anterior"}
-                </Button>
-                <Button
-                  type="submit"
-                  variant="hero"
-                  size="lg"
-                  className="w-full"
-                  disabled={loading}
-                >
-                  {"Registrar"}
-                </Button>
+                <div className="flex gap-3 pt-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="lg"
+                    className="flex-1"
+                    onClick={handlePreviousStep}
+                    disabled={loading}
+                  >
+                    Anterior
+                  </Button>
+                  <Button
+                    type="submit"
+                    variant="hero"
+                    size="lg"
+                    className="flex-1"
+                    disabled={loading}
+                  >
+                    {loading ? "Registrando..." : "Registrar"}
+                  </Button>
+                </div>
               </>
             )}
           </form>
