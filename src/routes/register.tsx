@@ -303,16 +303,24 @@ function RegisterPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="country">Pais</Label>
-                  <Input
-                    id="country"
-                    type="text"
-                    placeholder="Pais"
+                  <Label htmlFor="country">País</Label>
+                  <Select
                     value={registerForm.country}
-                    onChange={(e) => setRegisterForm({ ...registerForm, country: e.target.value })}
-                    required
-                    className="bg-input/60"
-                  />
+                    onValueChange={(value) =>
+                      setRegisterForm({ ...registerForm, country: value })
+                    }
+                  >
+                    <SelectTrigger id="country" className="bg-input/60">
+                      <SelectValue placeholder="Selecciona tu país" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {COUNTRIES.map((c) => (
+                        <SelectItem key={c} value={c}>
+                          {c}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="city">Ciudad</Label>
