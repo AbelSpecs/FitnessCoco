@@ -360,25 +360,27 @@ function RegisterPage() {
                     className="bg-input/60"
                   />
                 </div>
-                <Button
-                  type="button"
-                  variant="hero"
-                  size="lg"
-                  className="w-full"
-                  onClick={handlePreviousStep}
-                  disabled={loading}
-                >
-                  {"Anterior"}
-                </Button>
-                <Button
-                  type="submit"
-                  variant="hero"
-                  size="lg"
-                  className="w-full"
-                  disabled={loading}
-                >
-                  {"Registrar"}
-                </Button>
+                <div className="flex gap-3 pt-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="lg"
+                    className="flex-1"
+                    onClick={handlePreviousStep}
+                    disabled={loading}
+                  >
+                    Anterior
+                  </Button>
+                  <Button
+                    type="submit"
+                    variant="hero"
+                    size="lg"
+                    className="flex-1"
+                    disabled={loading}
+                  >
+                    {loading ? "Registrando..." : "Registrar"}
+                  </Button>
+                </div>
               </>
             )}
           </form>
