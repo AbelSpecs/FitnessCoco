@@ -11,12 +11,12 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as ProgresoRouteImport } from './routes/progreso'
-import { Route as PerfilRouteImport } from './routes/perfil'
 import { Route as ParQRouteImport } from './routes/par-q'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as RutinaIndexRouteImport } from './routes/rutina.index'
 import { Route as RutinaDayIdRouteImport } from './routes/rutina.$dayId'
+import { Route as PerfilUserIdRouteImport } from './routes/perfil.$userId'
 
 const RegisterRoute = RegisterRouteImport.update({
   id: '/register',
@@ -26,11 +26,6 @@ const RegisterRoute = RegisterRouteImport.update({
 const ProgresoRoute = ProgresoRouteImport.update({
   id: '/progreso',
   path: '/progreso',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PerfilRoute = PerfilRouteImport.update({
-  id: '/perfil',
-  path: '/perfil',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ParQRoute = ParQRouteImport.update({
@@ -58,14 +53,19 @@ const RutinaDayIdRoute = RutinaDayIdRouteImport.update({
   path: '/rutina/$dayId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PerfilUserIdRoute = PerfilUserIdRouteImport.update({
+  id: '/perfil/$userId',
+  path: '/perfil/$userId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/par-q': typeof ParQRoute
-  '/perfil': typeof PerfilRoute
   '/progreso': typeof ProgresoRoute
   '/register': typeof RegisterRoute
+  '/perfil/$userId': typeof PerfilUserIdRoute
   '/rutina/$dayId': typeof RutinaDayIdRoute
   '/rutina/': typeof RutinaIndexRoute
 }
@@ -73,9 +73,9 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/par-q': typeof ParQRoute
-  '/perfil': typeof PerfilRoute
   '/progreso': typeof ProgresoRoute
   '/register': typeof RegisterRoute
+  '/perfil/$userId': typeof PerfilUserIdRoute
   '/rutina/$dayId': typeof RutinaDayIdRoute
   '/rutina': typeof RutinaIndexRoute
 }
@@ -84,9 +84,9 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/par-q': typeof ParQRoute
-  '/perfil': typeof PerfilRoute
   '/progreso': typeof ProgresoRoute
   '/register': typeof RegisterRoute
+  '/perfil/$userId': typeof PerfilUserIdRoute
   '/rutina/$dayId': typeof RutinaDayIdRoute
   '/rutina/': typeof RutinaIndexRoute
 }
@@ -96,9 +96,9 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/par-q'
-    | '/perfil'
     | '/progreso'
     | '/register'
+    | '/perfil/$userId'
     | '/rutina/$dayId'
     | '/rutina/'
   fileRoutesByTo: FileRoutesByTo
@@ -106,9 +106,9 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/par-q'
-    | '/perfil'
     | '/progreso'
     | '/register'
+    | '/perfil/$userId'
     | '/rutina/$dayId'
     | '/rutina'
   id:
@@ -116,9 +116,9 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/par-q'
-    | '/perfil'
     | '/progreso'
     | '/register'
+    | '/perfil/$userId'
     | '/rutina/$dayId'
     | '/rutina/'
   fileRoutesById: FileRoutesById
@@ -127,9 +127,9 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   LoginRoute: typeof LoginRoute
   ParQRoute: typeof ParQRoute
-  PerfilRoute: typeof PerfilRoute
   ProgresoRoute: typeof ProgresoRoute
   RegisterRoute: typeof RegisterRoute
+  PerfilUserIdRoute: typeof PerfilUserIdRoute
   RutinaDayIdRoute: typeof RutinaDayIdRoute
   RutinaIndexRoute: typeof RutinaIndexRoute
 }
@@ -148,13 +148,6 @@ declare module '@tanstack/react-router' {
       path: '/progreso'
       fullPath: '/progreso'
       preLoaderRoute: typeof ProgresoRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/perfil': {
-      id: '/perfil'
-      path: '/perfil'
-      fullPath: '/perfil'
-      preLoaderRoute: typeof PerfilRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/par-q': {
@@ -192,6 +185,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RutinaDayIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/perfil/$userId': {
+      id: '/perfil/$userId'
+      path: '/perfil/$userId'
+      fullPath: '/perfil/$userId'
+      preLoaderRoute: typeof PerfilUserIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -199,9 +199,9 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   LoginRoute: LoginRoute,
   ParQRoute: ParQRoute,
-  PerfilRoute: PerfilRoute,
   ProgresoRoute: ProgresoRoute,
   RegisterRoute: RegisterRoute,
+  PerfilUserIdRoute: PerfilUserIdRoute,
   RutinaDayIdRoute: RutinaDayIdRoute,
   RutinaIndexRoute: RutinaIndexRoute,
 }

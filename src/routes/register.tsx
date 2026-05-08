@@ -1,11 +1,11 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-// import { supabase } from "@/integrations/supabase/client";
-// import { lovable } from "@/integrations/lovable/index";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dumbbell } from "lucide-react";
+import { set } from "react-hook-form";
+import { register } from "@/services/auth.service";
 
 export const Route = createFileRoute("/register")({
   head: () => ({
@@ -19,34 +19,51 @@ export const Route = createFileRoute("/register")({
 
 function RegisterPage() {
   const navigate = useNavigate();
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  const [step, setStep] = useState(1);
+  const [registerForm, setRegisterForm] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    userName: "",
+    password: "",
+    confirmPassword: "",
+    phoneNumber: "",
+    country: "",
+    city: "",
+    address: "",
+    birthdate: "",
+  });
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  const handleNextStep = () => setStep(2);
+  const handlePreviousStep = () => setStep(1);
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
-    if (password !== confirmPassword) {
+    if (registerForm.password !== registerForm.confirmPassword) {
       setError("Las contraseñas no coinciden");
       return;
     }
-    if (password.length < 6) {
-      setError("La contraseña debe tener al menos 6 caracteres");
+    if (registerForm.password.length < 8) {
+      setError("La contraseña debe tener al menos 8 caracteres");
       return;
     }
 
     setLoading(true);
-    console.log("re registre con", { name, email, password });
+
+    console.log(registerForm);
+    const data = await register(registerForm);
+    setLoading(false);
+    // console.log("re registre con", { firstName, email, password });
     // const { error: err } = await supabase.auth.signUp({
     //   email,
     //   password,
     //   options: {
-    //     data: { full_name: name },
+    //     data: { full_name: firstName },
     //     emailRedirectTo: window.location.origin,
     //   },
     // });
@@ -58,6 +75,7 @@ function RegisterPage() {
     //   setSuccess(true);
     //   setLoading(false);
     // }
+    navigate({ to: "/login" });
   };
 
   //   const handleGoogleLogin = async () => {
@@ -87,7 +105,7 @@ function RegisterPage() {
             <h2 className="text-xl font-semibold">¡Revisa tu email!</h2>
             <p className="text-sm text-muted-foreground">
               Hemos enviado un enlace de confirmación a{" "}
-              <span className="text-foreground font-medium">{email}</span>. Confirma tu cuenta para
+              <span className="text-foreground font-medium">{registerForm.email}</span>. Confirma tu
               empezar.
             </p>
             <Link to="/login" className="text-primary font-medium hover:underline text-sm">
@@ -122,9 +140,9 @@ function RegisterPage() {
         <div className="rounded-2xl border border-border bg-card/80 backdrop-blur-md p-8 shadow-elevated space-y-6">
           <div className="text-center">
             <h2 className="text-xl font-semibold">Crear Cuenta</h2>
-            <p className="text-sm text-muted-foreground mt-1">
+            {/* <p className="text-sm text-muted-foreground mt-1">
               Únete a FITYEI y comienza tu entrenamiento
-            </p>
+            </p> */}
           </div>
 
           {error && (
@@ -134,57 +152,194 @@ function RegisterPage() {
           )}
 
           <form onSubmit={handleRegister} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Nombre completo</Label>
-              <Input
-                id="name"
-                type="text"
-                placeholder="Tu nombre"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-                className="bg-input/60"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="tu@email.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="bg-input/60"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Contraseña</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="bg-input/60"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirmar contraseña</Label>
-              <Input
-                id="confirmPassword"
-                type="password"
-                placeholder="••••••••"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-                className="bg-input/60"
-              />
-            </div>
-            <Button type="submit" variant="hero" size="lg" className="w-full" disabled={loading}>
-              {loading ? "Creando cuenta…" : "Crear cuenta"}
-            </Button>
+            {/* Paso 1: Datos personales */}
+            {step === 1 && (
+              <>
+                <p className="text-sm text-center text-muted-foreground mt-1">
+                  Paso 1 de 2: Información básica
+                </p>
+                <div className="space-y-2">
+                  <div>
+                    <Label htmlFor="firstName">Nombre</Label>
+                    <Input
+                      id="firstName"
+                      type="text"
+                      placeholder="Nombre"
+                      value={registerForm.firstName}
+                      onChange={(e) =>
+                        setRegisterForm({ ...registerForm, firstName: e.target.value })
+                      }
+                      required
+                      className="bg-input/60"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="lastName">Apellido</Label>
+                    <Input
+                      id="lastName"
+                      type="text"
+                      placeholder="Apellido"
+                      value={registerForm.lastName}
+                      onChange={(e) =>
+                        setRegisterForm({ ...registerForm, lastName: e.target.value })
+                      }
+                      required
+                      className="bg-input/60"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="tu@email.com"
+                    value={registerForm.email}
+                    onChange={(e) => setRegisterForm({ ...registerForm, email: e.target.value })}
+                    required
+                    className="bg-input/60"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="userName">UserName</Label>
+                  <Input
+                    id="userName"
+                    type="text"
+                    placeholder="Nombre de usuario"
+                    value={registerForm.userName}
+                    onChange={(e) => setRegisterForm({ ...registerForm, userName: e.target.value })}
+                    required
+                    className="bg-input/60"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="password">Contraseña</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="••••••••"
+                    value={registerForm.password}
+                    onChange={(e) => setRegisterForm({ ...registerForm, password: e.target.value })}
+                    required
+                    className="bg-input/60"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPassword">Confirmar contraseña</Label>
+                  <Input
+                    id="confirmPassword"
+                    type="password"
+                    placeholder="••••••••"
+                    value={registerForm.confirmPassword}
+                    onChange={(e) =>
+                      setRegisterForm({ ...registerForm, confirmPassword: e.target.value })
+                    }
+                    required
+                    className="bg-input/60"
+                  />
+                </div>
+                <Button
+                  type="button"
+                  variant="hero"
+                  size="lg"
+                  className="w-full"
+                  onClick={handleNextStep}
+                  disabled={loading}
+                >
+                  {"Siguiente"}
+                </Button>
+              </>
+            )}
+            {step === 2 && (
+              <>
+                <p className="text-sm text-center text-muted-foreground mt-1">
+                  Paso 2 de 2: Información adicional
+                </p>
+                <div className="space-y-2">
+                  <Label htmlFor="phoneNumber">Teléfono</Label>
+                  <Input
+                    id="phoneNumber"
+                    type="text"
+                    placeholder="123-456-7890"
+                    value={registerForm.phoneNumber}
+                    onChange={(e) =>
+                      setRegisterForm({ ...registerForm, phoneNumber: e.target.value })
+                    }
+                    required
+                    className="bg-input/60"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="country">Pais</Label>
+                  <Input
+                    id="country"
+                    type="text"
+                    placeholder="Pais"
+                    value={registerForm.country}
+                    onChange={(e) => setRegisterForm({ ...registerForm, country: e.target.value })}
+                    required
+                    className="bg-input/60"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="city">Ciudad</Label>
+                  <Input
+                    id="city"
+                    type="text"
+                    placeholder="Ciudad"
+                    value={registerForm.city}
+                    onChange={(e) => setRegisterForm({ ...registerForm, city: e.target.value })}
+                    required
+                    className="bg-input/60"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="address">Dirección</Label>
+                  <Input
+                    id="address"
+                    type="text"
+                    placeholder="Dirección"
+                    value={registerForm.address}
+                    onChange={(e) => setRegisterForm({ ...registerForm, address: e.target.value })}
+                    required
+                    className="bg-input/60"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="birthdate">Fecha de Nacimiento</Label>
+                  <Input
+                    id="birthdate"
+                    type="text"
+                    placeholder="Fecha de Nacimiento"
+                    value={registerForm.birthdate}
+                    onChange={(e) =>
+                      setRegisterForm({ ...registerForm, birthdate: e.target.value })
+                    }
+                    required
+                    className="bg-input/60"
+                  />
+                </div>
+                <Button
+                  type="button"
+                  variant="hero"
+                  size="lg"
+                  className="w-full"
+                  onClick={handlePreviousStep}
+                  disabled={loading}
+                >
+                  {"Anterior"}
+                </Button>
+                <Button
+                  type="submit"
+                  variant="hero"
+                  size="lg"
+                  className="w-full"
+                  disabled={loading}
+                >
+                  {"Registrar"}
+                </Button>
+              </>
+            )}
           </form>
 
           {/* <div className="relative">

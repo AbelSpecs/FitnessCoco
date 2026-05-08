@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect, useParams } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,9 +11,13 @@ import { ChangeEvent, useEffect, useState } from "react";
 import { CheckCircle2, HeartPulse, Pencil } from "lucide-react";
 import { Goal, goalLabels } from "@/types/goals";
 import { User } from "@/types/user";
-import { getUser, postUser } from "@/services/user.service";
+import { getStudent, getUser, updateUser } from "@/services/user.service";
+import { set } from "react-hook-form";
+import { age } from "@/utils/age";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
-export const Route = createFileRoute("/perfil")({
+export const Route = createFileRoute("/perfil/$userId")({
   head: () => ({
     meta: [
       { title: "Perfil — FITYEI Training" },
@@ -21,38 +25,84 @@ export const Route = createFileRoute("/perfil")({
     ],
   }),
   component: Perfil,
+  beforeLoad: ({ location }) => {
+    const auth = localStorage.getItem("fityei_user");
+
+    if (!auth) {
+      throw redirect({
+        to: "/login",
+        search: {
+          redirect: location.href,
+        },
+      });
+    }
+  },
 });
 
 function Perfil() {
-  const [goal, setGoal] = useState<Goal>(userProfile.goal!);
+  const [goal, setGoal] = useState<Goal>(userProfile.fitnessGoal!);
   const [edition, setEdition] = useState(true);
   const [userData, setUserData] = useState<User | null>(userProfile);
   const [userCompleteData, setUserCompleteData] = useState<User | null>(null);
+  const { userId } = useParams({ from: "/perfil/$userId" });
 
   useEffect(() => {
-    const user = getUser();
-    if (user) {
-      setUserCompleteData(user);
-      setGoal(user.goal!);
-    }
-  }, []);
+    if (!userId || isNaN(Number(userId))) return;
+    console.log(userId);
+
+    const fetchUserData = async () => {
+      try {
+        const user = await getUser(Number(userId));
+
+        const userDetails = await getStudent(Number(user.id));
+
+        console.log(user);
+        console.log(userDetails);
+
+        setUserData({
+          ...userData,
+          name: user.firstName,
+          studentId: userDetails.id,
+          age: age(user.birthdate),
+          weight: userDetails.weight,
+          height: userDetails.height,
+          fitnessGoal: userDetails.fitnessGoal,
+        });
+
+        setUserCompleteData({
+          ...userCompleteData,
+          name: user.firstName,
+          studentId: userDetails.id,
+          age: age(user.birthdate),
+          weight: userDetails.weight,
+          height: userDetails.height,
+          fitnessGoal: userDetails.fitnessGoal,
+        });
+      } catch (e) {
+        console.error("Error fetching user data:", e);
+      }
+    };
+
+    fetchUserData();
+  }, [userId]);
 
   const handleInputOnChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { value, name } = e.target;
     console.log("Campo cambiado:", name, value);
-    if (value) setUserData({ ...userData, [name]: value });
+    setUserData({ ...userData, [name]: value });
   };
 
   const handleRadioOnChange = (e: Goal) => {
     console.log(e);
-    setUserData({ ...userData, goal: e });
+    setUserData({ ...userData, fitnessGoal: e });
   };
 
-  const handleSaveUser = () => {
+  const handleSaveUser = async () => {
     console.log("Guardando usuario:", userData);
     if (userData) {
       setUserCompleteData(userData);
-      postUser(userData);
+      const updatedUser = await updateUser(userData);
+      console.log(updatedUser);
     }
     setEdition(true);
     alert("Cambios guardados (simulado)");
@@ -98,39 +148,52 @@ function Perfil() {
           <h3 className="font-display text-2xl mb-5">Datos básicos</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field
-              key="f-name"
-              label="Nombre"
-              name="name"
-              onChange={(e) => handleInputOnChange(e)}
-              defaultValue={userData?.name || userProfile.name}
-              disabled={edition}
-            />
-            <Field
-              name="age"
-              key="f-age"
-              label="Edad"
-              onChange={(e) => handleInputOnChange(e)}
-              defaultValue={`${userData?.age || userProfile.age}`}
-              disabled={edition}
-              type="number"
-            />
-            <Field
               name="weight"
               key="f-weight"
               label="Peso (kg)"
               onChange={(e) => handleInputOnChange(e)}
-              defaultValue={`${userData?.weight || userProfile.weight}`}
+              value={`${userData?.weight}`}
+              // defaultValue={`${userData?.weight || userProfile.weight}`}
               disabled={edition}
               type="number"
             />
             <Field
+              name="height"
+              key="f-height"
+              label="Altura (cm)"
+              onChange={(e) => handleInputOnChange(e)}
+              value={`${userData?.height}`}
+              // defaultValue={`${userData?.weight || userProfile.weight}`}
+              disabled={edition}
+              type="number"
+            />
+            {/* <Field
+              key="f-name"
+              label="Nombre"
+              name="name"
+              onChange={(e) => handleInputOnChange(e)}
+              value={userData?.name}
+              // defaultValue={userData?.name || userProfile.name}
+              disabled={edition}
+            /> */}
+            {/* <Field
+              name="age"
+              key="f-age"
+              label="Edad"
+              // onChange={(e) => handleInputOnChange(e)}
+              value={`${userData?.age}`}
+              // defaultValue={`${userData?.age}`}
+              disabled={true}
+              type="number"
+            /> */}
+            {/* <Field
               name="gender"
               key="f-gender"
               label="Género"
               onChange={(e) => handleInputOnChange(e)}
               defaultValue={userData?.gender || userProfile.gender}
-              disabled={edition}
-            />
+              disabled={true}
+            /> */}
           </div>
         </Card>
 

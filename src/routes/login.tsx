@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dumbbell } from "lucide-react";
+import { login } from "@/services/auth.service";
 
 export const Route = createFileRoute("/login")({
   head: () => ({
@@ -17,7 +18,7 @@ export const Route = createFileRoute("/login")({
 
 function LoginPage() {
   const navigate = useNavigate();
-  const [email, setEmail] = useState("");
+  const [userName, setUserName] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -26,14 +27,18 @@ function LoginPage() {
     e.preventDefault();
     setError("");
     setLoading(true);
-    console.log("me loguee con", { email, password });
-    // const { error: err } = await supabase.auth.signInWithPassword({ email, password });
-    // if (err) {
-    //   setError(err.message);
-    //   setLoading(false);
-    // } else {
-    //   navigate({ to: "/" });
-    // }
+    console.log("me loguee con", { userName, password });
+
+    try {
+      const id = await login({ userName, password });
+      navigate({ to: "/perfil/$userId", params: { userId: id } });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (err: any) {
+      const message = err.response?.data?.message || "Error al iniciar sesión";
+      setError(message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   //   const handleGoogleLogin = async () => {
@@ -85,13 +90,13 @@ function LoginPage() {
 
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="userName">UserName</Label>
               <Input
-                id="email"
-                type="email"
-                placeholder="tu@email.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                id="userName"
+                type="text"
+                placeholder="userName"
+                value={userName}
+                onChange={(e) => setUserName(e.target.value)}
                 required
                 className="bg-input/60"
               />
@@ -152,9 +157,9 @@ function LoginPage() {
 
           <p className="text-center text-sm text-muted-foreground">
             ¿No tienes cuenta?{" "}
-            {/* <Link to="/register" className="text-primary font-medium hover:underline">
+            <Link to="/register" className="text-primary font-medium hover:underline">
               Regístrate
-            </Link> */}
+            </Link>
           </p>
         </div>
       </div>

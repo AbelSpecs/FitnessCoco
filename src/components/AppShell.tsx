@@ -20,9 +20,14 @@ import { useEffect, useState } from "react";
 
 const nav = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/rutina", label: "Rutina", icon: Calendar },
+  // { to: "/rutina", label: "Rutina", icon: Calendar },
   // { to: "/progreso", label: "Progreso", icon: TrendingUp },
-  { to: "/perfil", label: "Perfil", icon: User },
+  {
+    to: "/perfil/$userId",
+    label: "Perfil",
+    icon: User,
+    // params: { userId: JSON.parse(localStorage.getItem("fityei_user")!).id || {} },
+  },
   // { to: "/par-q", label: "PAR-Q", icon: HeartPulse },
 ] as const;
 

@@ -16,7 +16,7 @@ export const userProfile: User = {
   age: 28,
   weight: 78,
   gender: "Masculino",
-  goal: "muscle" as Goal,
+  fitnessGoal: "muscle" as Goal,
   streak: 12,
   parqCompleted: false,
   parqValidUntil: "12 mar 2026",

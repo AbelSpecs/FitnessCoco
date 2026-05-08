@@ -43,7 +43,7 @@ function Progreso() {
 
       {/* KPI row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3 mb-5 sm:mb-6">
-        <Kpi icon={Flame} label="Racha actual" value={`${userProfile.streak}`} unit="días" accent />
+        {/* <Kpi icon={Flame} label="Racha actual" value={`${userProfile.streak}`} unit="días" accent /> */}
         <Kpi icon={Trophy} label="PRs totales" value="14" unit="récords" />
         <Kpi icon={TrendingUp} label="Volumen 12s" value="+22%" unit="vs anterior" />
         <Kpi icon={Activity} label="Adherencia" value="91%" unit="cumplimiento" />
@@ -97,7 +97,7 @@ function Progreso() {
         <Card className="bg-gradient-primary border-primary-glow/40 p-6 shadow-glow text-primary-foreground relative overflow-hidden">
           <Flame className="absolute -right-6 -bottom-6 h-40 w-40 opacity-10" />
           <p className="text-xs uppercase tracking-widest opacity-80">Racha de resistencia</p>
-          <p className="font-display text-8xl leading-none my-2">{userProfile.streak}</p>
+          {/* <p className="font-display text-8xl leading-none my-2">{userProfile.streak}</p> */}
           <p className="text-sm opacity-90">días consecutivos</p>
           <div className="mt-6 grid grid-cols-7 gap-1.5">
             {Array.from({ length: 28 }).map((_, i) => (

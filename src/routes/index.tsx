@@ -1,4 +1,4 @@
-import { createFileRoute, Link, createLazyRoute } from "@tanstack/react-router";
+import { createFileRoute, Link, createLazyRoute, redirect } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -27,6 +27,18 @@ export const Route = createFileRoute("/")({
     ],
   }),
   component: Dashboard,
+  beforeLoad: ({ location }) => {
+    const auth = localStorage.getItem("fityei_user");
+
+    if (!auth) {
+      throw redirect({
+        to: "/login",
+        search: {
+          redirect: location.href,
+        },
+      });
+    }
+  },
 });
 
 function Dashboard() {
@@ -81,8 +93,8 @@ function Dashboard() {
             <StatTile
               icon={Target}
               label="Objetivo"
-              value={goalLabels[userProfile.goal!].split(" ")[1]}
-              hint={goalLabels[userProfile.goal!]}
+              value={goalLabels[userProfile.fitnessGoal!].split(" ")[1]}
+              hint={goalLabels[userProfile.fitnessGoal!]}
             />
             <StatTile icon={Trophy} label="PRs este mes" value="4" hint="récords personales" />
             <StatTile icon={TrendingUp} label="Volumen" value="+18%" hint="vs mes pasado" />

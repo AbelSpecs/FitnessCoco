@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +13,18 @@ export const Route = createFileRoute("/rutina/")({
     ],
   }),
   component: RutinaPage,
+  beforeLoad: ({ location }) => {
+    const auth = localStorage.getItem("fityei_user");
+
+    if (!auth) {
+      throw redirect({
+        to: "/login",
+        search: {
+          redirect: location.href,
+        },
+      });
+    }
+  },
 });
 
 function RutinaPage() {

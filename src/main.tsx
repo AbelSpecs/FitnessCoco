@@ -1,7 +1,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { RouterProvider, createRootRoute, createRoute, createRouter } from "@tanstack/react-router";
-import { routeTree } from "./routeTree.gen"; // Lovable genera esto automáticamente
+import { routeTree } from "./routeTree.gen";
 import "./styles.css";
 
 // Creamos la instancia del router usando el árbol de rutas generado
