@@ -12,13 +12,6 @@ import {
 } from "@/components/ui/select";
 import { Dumbbell } from "lucide-react";
 import { register } from "@/services/auth.service";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { get } from "http";
 import { getCities, getCountries } from "@/services/general.service";
 import { City, Country } from "@/types/general";
@@ -33,33 +26,6 @@ export const Route = createFileRoute("/register")({
   }),
   component: RegisterPage,
 });
-
-const COUNTRIES = [
-  { id: 1, name: "Argentina" },
-  { id: 2, name: "Bolivia" },
-  { id: 3, name: "Brasil" },
-  { id: 4, name: "Canadá" },
-  { id: 5, name: "Chile" },
-  { id: 6, name: "Colombia" },
-  { id: 7, name: "Costa Rica" },
-  { id: 8, name: "Cuba" },
-  { id: 9, name: "Ecuador" },
-  { id: 10, name: "El Salvador" },
-  { id: 11, name: "España" },
-  { id: 12, name: "Estados Unidos" },
-  { id: 13, name: "Guatemala" },
-  { id: 14, name: "Honduras" },
-  { id: 15, name: "México" },
-  { id: 16, name: "Nicaragua" },
-  { id: 17, name: "Panamá" },
-  { id: 18, name: "Paraguay" },
-  { id: 19, name: "Perú" },
-  { id: 20, name: "Puerto Rico" },
-  { id: 21, name: "República Dominicana" },
-  { id: 22, name: "Uruguay" },
-  { id: 23, name: "Venezuela" },
-  { id: 24, name: "Otro" },
-];
 
 function RegisterPage() {
   const navigate = useNavigate();
