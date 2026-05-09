@@ -11,7 +11,7 @@ import { ChangeEvent, useEffect, useState } from "react";
 import { CheckCircle2, HeartPulse, Pencil } from "lucide-react";
 import { Goal, goalLabels } from "@/types/goals";
 import { User } from "@/types/user";
-import { getStudent, getUser, updateUser } from "@/services/user.service";
+import { getFinalUser, getStudent, getUser, updateUser } from "@/services/user.service";
 import { set } from "react-hook-form";
 import { age } from "@/utils/age";
 import { Input } from "@/components/ui/input";
@@ -42,6 +42,7 @@ export const Route = createFileRoute("/perfil/$userId")({
 function Perfil() {
   const [goal, setGoal] = useState<Goal>(userProfile.fitnessGoal!);
   const [edition, setEdition] = useState(true);
+  const [isStudent, setIsStudent] = useState(true);
   const [userData, setUserData] = useState<User | null>(userProfile);
   const [userCompleteData, setUserCompleteData] = useState<User | null>(null);
   const { userId } = useParams({ from: "/perfil/$userId" });
@@ -52,32 +53,42 @@ function Perfil() {
 
     const fetchUserData = async () => {
       try {
-        const user = await getUser(Number(userId));
+        const user = await getFinalUser(Number(userId));
+        const { student, coach } = user;
 
-        const userDetails = await getStudent(Number(user.id));
+        console.log(student);
+        console.log(coach);
 
-        console.log(user);
-        console.log(userDetails);
+        if (student) {
+          setUserData({
+            ...userData,
+            name: student.firstName,
+            studentId: student.id,
+            age: age(student.birthdate),
+            weight: student.weight,
+            height: student.height,
+            fitnessGoal: student.fitnessGoal,
+          });
 
-        setUserData({
-          ...userData,
-          name: user.firstName,
-          studentId: userDetails.id,
-          age: age(user.birthdate),
-          weight: userDetails.weight,
-          height: userDetails.height,
-          fitnessGoal: userDetails.fitnessGoal,
-        });
-
-        setUserCompleteData({
-          ...userCompleteData,
-          name: user.firstName,
-          studentId: userDetails.id,
-          age: age(user.birthdate),
-          weight: userDetails.weight,
-          height: userDetails.height,
-          fitnessGoal: userDetails.fitnessGoal,
-        });
+          setUserCompleteData({
+            ...userCompleteData,
+            name: student.firstName,
+            studentId: student.id,
+            age: age(student.birthdate),
+            weight: student.weight,
+            height: student.height,
+            fitnessGoal: student.fitnessGoal,
+          });
+        } else {
+          setUserData({
+            ...userData,
+            name: coach.firstName,
+          });
+          setUserCompleteData({
+            ...userCompleteData,
+            name: student.firstName,
+          });
+        }
       } catch (e) {
         console.error("Error fetching user data:", e);
       }
