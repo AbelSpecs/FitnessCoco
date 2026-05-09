@@ -6,8 +6,8 @@ export interface RegisterCredentials {
   password: string;
   confirmPassword: string;
   phoneNumber: string;
-  country: string;
-  city: string;
+  country: number;
+  city: number;
   address: string;
   birthdate: string;
 }

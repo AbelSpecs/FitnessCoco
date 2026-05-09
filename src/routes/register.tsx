@@ -1,11 +1,22 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dumbbell } from "lucide-react";
 import { set } from "react-hook-form";
 import { register } from "@/services/auth.service";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { get } from "http";
+import { getCities, getCountries } from "@/services/general.service";
+import { City, Country } from "@/types/general";
+import { RegisterCredentials } from "@/types/auth";
 
 export const Route = createFileRoute("/register")({
   head: () => ({
@@ -17,10 +28,39 @@ export const Route = createFileRoute("/register")({
   component: RegisterPage,
 });
 
+const COUNTRIES = [
+  { id: 1, name: "Argentina" },
+  { id: 2, name: "Bolivia" },
+  { id: 3, name: "Brasil" },
+  { id: 4, name: "Canadá" },
+  { id: 5, name: "Chile" },
+  { id: 6, name: "Colombia" },
+  { id: 7, name: "Costa Rica" },
+  { id: 8, name: "Cuba" },
+  { id: 9, name: "Ecuador" },
+  { id: 10, name: "El Salvador" },
+  { id: 11, name: "España" },
+  { id: 12, name: "Estados Unidos" },
+  { id: 13, name: "Guatemala" },
+  { id: 14, name: "Honduras" },
+  { id: 15, name: "México" },
+  { id: 16, name: "Nicaragua" },
+  { id: 17, name: "Panamá" },
+  { id: 18, name: "Paraguay" },
+  { id: 19, name: "Perú" },
+  { id: 20, name: "Puerto Rico" },
+  { id: 21, name: "República Dominicana" },
+  { id: 22, name: "Uruguay" },
+  { id: 23, name: "Venezuela" },
+  { id: 24, name: "Otro" },
+];
+
 function RegisterPage() {
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
-  const [registerForm, setRegisterForm] = useState({
+  const [countries, setCountries] = useState<Country[]>([]);
+  const [cities, setCities] = useState<City[]>([]);
+  const [registerForm, setRegisterForm] = useState<RegisterCredentials>({
     firstName: "",
     lastName: "",
     email: "",
@@ -28,8 +68,8 @@ function RegisterPage() {
     password: "",
     confirmPassword: "",
     phoneNumber: "",
-    country: "",
-    city: "",
+    country: 0,
+    city: 0,
     address: "",
     birthdate: "",
   });
@@ -37,8 +77,34 @@ function RegisterPage() {
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    const fetchCountries = async () => {
+      try {
+        const countries = await getCountries();
+        console.log(countries);
+        setCountries(countries);
+      } catch (error) {
+        console.error("Error al obtener los países:", error);
+      }
+    };
+
+    fetchCountries();
+  }, []);
+
   const handleNextStep = () => setStep(2);
   const handlePreviousStep = () => setStep(1);
+
+  const handleCities = async (value: number) => {
+    setRegisterForm({ ...registerForm, country: value });
+
+    try {
+      const cities = await getCities(value);
+      console.log(cities);
+      setCities(cities ? [cities] : []);
+    } catch (error) {
+      console.error("Error al obtener las ciudades del pais:", error);
+    }
+  };
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,26 +122,15 @@ function RegisterPage() {
     setLoading(true);
 
     console.log(registerForm);
-    const data = await register(registerForm);
-    setLoading(false);
-    // console.log("re registre con", { firstName, email, password });
-    // const { error: err } = await supabase.auth.signUp({
-    //   email,
-    //   password,
-    //   options: {
-    //     data: { full_name: firstName },
-    //     emailRedirectTo: window.location.origin,
-    //   },
-    // });
-
-    // if (err) {
-    //   setError("error");
-    //   setLoading(false);
-    // } else {
-    //   setSuccess(true);
-    //   setLoading(false);
-    // }
-    navigate({ to: "/login" });
+    try {
+      const data = await register(registerForm);
+      console.log(data);
+      setLoading(false);
+      navigate({ to: "/login" });
+    } catch (error) {
+      setLoading(false);
+      setError("Error al registrar. Intenta nuevamente.");
+    }
   };
 
   //   const handleGoogleLogin = async () => {
@@ -271,7 +326,7 @@ function RegisterPage() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="country">Pais</Label>
-                  <Input
+                  {/* <Input
                     id="country"
                     type="text"
                     placeholder="Pais"
@@ -279,11 +334,29 @@ function RegisterPage() {
                     onChange={(e) => setRegisterForm({ ...registerForm, country: e.target.value })}
                     required
                     className="bg-input/60"
-                  />
+                  /> */}
+                  <Select
+                    value={String(registerForm.country)}
+                    onValueChange={(value) => {
+                      console.log(value);
+                      handleCities(Number(value));
+                    }}
+                  >
+                    <SelectTrigger id="country" className="bg-input/60">
+                      <SelectValue placeholder="Selecciona tu país" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {countries?.map((c) => (
+                        <SelectItem key={c.id} value={String(c.id)}>
+                          {c.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="city">Ciudad</Label>
-                  <Input
+                  {/* <Input
                     id="city"
                     type="text"
                     placeholder="Ciudad"
@@ -291,7 +364,25 @@ function RegisterPage() {
                     onChange={(e) => setRegisterForm({ ...registerForm, city: e.target.value })}
                     required
                     className="bg-input/60"
-                  />
+                  /> */}
+                  <Select
+                    value={String(registerForm.city)}
+                    onValueChange={(value) => {
+                      console.log(value);
+                      setRegisterForm({ ...registerForm, city: Number(value) });
+                    }}
+                  >
+                    <SelectTrigger id="city" className="bg-input/60">
+                      <SelectValue placeholder="Selecciona la ciudad" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {cities?.map((c) => (
+                        <SelectItem key={c.id} value={String(c.id)}>
+                          {c.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="address">Dirección</Label>
@@ -319,25 +410,27 @@ function RegisterPage() {
                     className="bg-input/60"
                   />
                 </div>
-                <Button
-                  type="button"
-                  variant="hero"
-                  size="lg"
-                  className="w-full"
-                  onClick={handlePreviousStep}
-                  disabled={loading}
-                >
-                  {"Anterior"}
-                </Button>
-                <Button
-                  type="submit"
-                  variant="hero"
-                  size="lg"
-                  className="w-full"
-                  disabled={loading}
-                >
-                  {"Registrar"}
-                </Button>
+                <div className="flex gap-3 pt-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="lg"
+                    className="flex-1"
+                    onClick={handlePreviousStep}
+                    disabled={loading}
+                  >
+                    {"Anterior"}
+                  </Button>
+                  <Button
+                    type="submit"
+                    variant="hero"
+                    size="lg"
+                    className="flex-1"
+                    disabled={loading}
+                  >
+                    {loading ? "Registrando..." : "Registrar"}
+                  </Button>
+                </div>
               </>
             )}
           </form>

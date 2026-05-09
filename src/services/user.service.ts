@@ -57,6 +57,18 @@ export const updateUser = async (userData: User) => {
 //   }
 // };
 
+export const getFinalUser = async (id: number) => {
+  try {
+    const response = await api.get(`Users/${id}/details`);
+    const { data } = response.data;
+    console.log(data);
+    return data;
+  } catch (error) {
+    console.error("Error al obtener el perfil del usuario", error);
+    return null;
+  }
+};
+
 export const getUser = async (id: number) => {
   try {
     const response = await api.get(`Users/${id}`);
