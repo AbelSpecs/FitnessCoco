@@ -12,7 +12,7 @@ import { User } from "@/types/user";
 
 export const userProfile: User = {
   id: 1,
-  name: "Diego Martínez",
+  firstName: "Diego Martínez",
   age: 28,
   weight: 78,
   gender: "Masculino",

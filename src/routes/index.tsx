@@ -61,7 +61,7 @@ function Dashboard() {
               })}
             </p>
             <h1 className="font-display text-3xl sm:text-4xl lg:text-6xl mb-3 leading-none">
-              Hola, {userProfile.name!.split(" ")[0]}.
+              Hola, {userProfile.firstName!.split(" ")[0]}.
               <br />
               <span className="text-gradient">Es hora de entrenar.</span>
             </h1>
