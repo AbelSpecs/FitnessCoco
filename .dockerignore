@@ -1,0 +1,27 @@
+# Dependencias (se instalan dentro del Docker)
+node_modules
+bun.lockb
+
+# Archivos de build locales
+dist
+build
+.cache
+
+# Variables de entorno locales (Easypanel usará las suyas)
+.env
+*.local
+
+# Archivos de Git
+.git
+.gitignore
+
+# Logs y Debugging
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+bun.lockb
+.eslintcache
+
+# Archivos de Sistema
+.DS_Store
+Thumbs.db
