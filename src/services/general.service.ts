@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_URL = "https://api.pyrosfit.com/api/v1/;
+const API_URL = "https://api.pyrosfit.com/api/v1/";
 
 const api = axios.create({
   baseURL: API_URL,
