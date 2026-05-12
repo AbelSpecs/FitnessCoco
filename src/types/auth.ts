@@ -1,3 +1,5 @@
+import { User } from "./user";
+
 export interface RegisterCredentials {
   firstName: string;
   lastName: string;
@@ -13,10 +15,15 @@ export interface RegisterCredentials {
 }
 
 export interface Auth {
-  id: string;
-  email: string;
-  role: "student" | "coach";
-  token: string;
+  id?: string;
+  email?: string;
+  role?: "student" | "coach";
+  token?: string | null;
+  isLoading?: boolean;
+  setAuth?: (user: User, token: string) => void;
+  updateUser?: (userData: Partial<User>) => void;
+  logout?: () => void;
+  setLoading?: (status: boolean) => void;
 }
 
 export interface LoginCredentials {

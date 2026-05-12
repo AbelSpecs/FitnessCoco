@@ -1,32 +1,35 @@
 import { Goal } from "./goals";
-
-export interface User {
+export interface Student {
   id?: number;
-  studentId?: number;
-  firstName?: string;
-  lastName?: string;
-  age?: number;
+  userId?: number;
   weight?: number;
   height?: number;
-  gender?: string;
+  bodyFatPercentage?: number;
   fitnessGoal?: Goal;
-  bodyFatPercentage?: string;
   activityLevel?: string;
   medicalConditions?: string;
   allergies?: string;
   fitnessExperience?: string;
   generalNotes?: string;
+}
+export interface Coach {
+  id?: number;
+  userId?: number;
+  bio?: string;
+  certifications?: string;
+  isVerified?: boolean;
+}
+
+export interface User {
+  id?: number;
+  firstName?: string;
+  lastName?: string;
+  gender?: string;
+  age?: number;
   streak?: number;
   planType?: "basic" | "health" | "pro";
   parqCompleted?: boolean;
   parqValidUntil?: string;
-  coachId?: number;
-  bio?: string;
-  certifications?: string;
-}
-
-export interface Student {
-  weight?: number;
-  goal?: Goal;
-  streak?: number;
+  student?: Student;
+  coach?: Coach;
 }

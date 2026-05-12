@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { userProfile } from "@/lib/mock-data";
+// import { userProfile } from "@/lib/mock-data";
 import { useEffect, useState } from "react";
 
 const nav = [

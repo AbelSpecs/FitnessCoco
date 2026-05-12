@@ -4,18 +4,14 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
 import { Stat } from "@/components/ui/stat";
-import { Badge } from "@/components/ui/badge";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { userProfile } from "@/lib/mock-data";
+// import { userProfile } from "@/lib/mock-data";
 import { ChangeEvent, useEffect, useState } from "react";
 import { CheckCircle2, HeartPulse, Pencil } from "lucide-react";
 import { Goal, goalLabels } from "@/types/goals";
 import { User } from "@/types/user";
-import { getFinalUser, getQr, getStudent, getUser, updateUser } from "@/services/user.service";
-import { set } from "react-hook-form";
+import { getFinalUser, getQr, updateUser } from "@/services/user.service";
 import { age } from "@/utils/age";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 
 export const Route = createFileRoute("/perfil/$userId")({
   head: () => ({
@@ -40,11 +36,11 @@ export const Route = createFileRoute("/perfil/$userId")({
 });
 
 function Perfil() {
-  const [goal, setGoal] = useState<Goal>(userProfile.fitnessGoal!);
+  const [goal, setGoal] = useState<Goal | null>(null);
   const [edition, setEdition] = useState(true);
   const [isStudent, setIsStudent] = useState(true);
   const [QrBase64, setQrBase64] = useState("");
-  const [userData, setUserData] = useState<User | null>(userProfile);
+  const [userData, setUserData] = useState<User | null>(null);
   const [userCompleteData, setUserCompleteData] = useState<User | null>(null);
   const { userId } = useParams({ from: "/perfil/$userId" });
 
@@ -66,33 +62,43 @@ function Perfil() {
           setUserData({
             ...userData,
             firstName: student.firstName,
-            studentId: student.id,
+            lastName: student.lastName,
             age: age(student.birthdate),
-            weight: student.weight,
-            height: student.height,
-            fitnessGoal: student.fitnessGoal,
-            bodyFatPercentage: student.bodyFatPercentage,
-            activityLevel: student.activityLevel,
-            medicalConditions: student.medicalConditions,
-            allergies: student.allergies,
-            fitnessExperience: student.fitnessExperience,
-            generalNotes: student.generalNotes,
+            streak: 12,
+            student: {
+              id: student.id,
+              userId: student.userId,
+              weight: student.weight,
+              height: student.height,
+              fitnessGoal: student.fitnessGoal,
+              bodyFatPercentage: student.bodyFatPercentage,
+              activityLevel: student.activityLevel,
+              medicalConditions: student.medicalConditions,
+              allergies: student.allergies,
+              fitnessExperience: student.fitnessExperience,
+              generalNotes: student.generalNotes,
+            },
           });
 
           setUserCompleteData({
             ...userCompleteData,
             firstName: student.firstName,
-            studentId: student.id,
+            lastName: student.lastName,
             age: age(student.birthdate),
-            weight: student.weight,
-            height: student.height,
-            fitnessGoal: student.fitnessGoal,
-            bodyFatPercentage: student.bodyFatPercentage,
-            activityLevel: student.activityLevel,
-            medicalConditions: student.medicalConditions,
-            allergies: student.allergies,
-            fitnessExperience: student.fitnessExperience,
-            generalNotes: student.generalNotes,
+            streak: 12,
+            student: {
+              id: student.id,
+              userId: student.userId,
+              weight: student.weight,
+              height: student.height,
+              fitnessGoal: student.fitnessGoal,
+              bodyFatPercentage: student.bodyFatPercentage,
+              activityLevel: student.activityLevel,
+              medicalConditions: student.medicalConditions,
+              allergies: student.allergies,
+              fitnessExperience: student.fitnessExperience,
+              generalNotes: student.generalNotes,
+            },
           });
         } else {
           const coachQr = await getQr(coach.id);
@@ -124,7 +130,7 @@ function Perfil() {
 
   const handleRadioOnChange = (e: Goal) => {
     console.log(e);
-    setUserData({ ...userData, fitnessGoal: e });
+    setUserData({ ...userData, student: { ...userData?.student, fitnessGoal: e } });
   };
 
   const handleSaveUser = async () => {
@@ -158,23 +164,21 @@ function Perfil() {
           <div className="absolute inset-0 bg-gradient-mesh opacity-50" />
           <div className="relative">
             <div className="h-28 w-28 rounded-full bg-gradient-primary mx-auto flex items-center justify-center font-display text-5xl shadow-glow">
-              {userData?.firstName!.charAt(0) || userProfile.firstName!.charAt(0)}
+              {userData?.firstName!.charAt(0)}
             </div>
-            <h2 className="font-display text-3xl mt-4">
-              {userData?.firstName || userProfile.firstName}
-            </h2>
+            <h2 className="font-display text-3xl mt-4">{userData?.firstName}</h2>
             {!isStudent && (
               <>
                 <p className="text-sm text-muted-foreground">Cliente · Plan Pro</p>
-                <p className="text-sm text-muted-foreground">{userData?.bio}</p>
+                <p className="text-sm text-muted-foreground">{userData?.coach?.bio}</p>
               </>
             )}
             {isStudent && (
               <>
                 <div className="grid grid-cols-3 gap-2 mt-6 text-center">
-                  <Stat label="Edad" value={`${userData?.age || userProfile.age}`} />
-                  <Stat label="Peso" value={`${userData?.weight || userProfile.weight} kg`} />
-                  <Stat label="Racha" value={`${userData?.streak || userProfile.streak}d`} />
+                  <Stat label="Edad" value={`${userData?.age}`} />
+                  <Stat label="Peso" value={`${userData?.student?.weight} kg`} />
+                  <Stat label="Racha" value={`${userData?.streak}d`} />
                 </div>
                 <Button variant="glass" className="mt-6 w-full" onClick={() => setEdition(false)}>
                   <Pencil className="h-4 w-4" /> Editar
@@ -195,7 +199,7 @@ function Perfil() {
                   key="f-weight"
                   label="Peso (kg)"
                   onChange={(e) => handleInputOnChange(e)}
-                  value={`${userData?.weight}`}
+                  value={`${userData?.student?.weight}`}
                   // defaultValue={`${userData?.weight || userProfile.weight}`}
                   disabled={edition}
                   type="number"
@@ -205,7 +209,7 @@ function Perfil() {
                   key="f-height"
                   label="Altura (cm)"
                   onChange={(e) => handleInputOnChange(e)}
-                  value={`${userData?.height}`}
+                  value={`${userData?.student?.height}`}
                   // defaultValue={`${userData?.weight || userProfile.weight}`}
                   disabled={edition}
                   type="number"
@@ -215,7 +219,7 @@ function Perfil() {
                   label="% de grasa"
                   name="bodyFatPercentage"
                   onChange={(e) => handleInputOnChange(e)}
-                  value={userData?.bodyFatPercentage}
+                  value={`${userData?.student?.bodyFatPercentage}`}
                   // defaultValue={userData?.name || userProfile.name}
                   disabled={edition}
                 />
@@ -224,7 +228,7 @@ function Perfil() {
                   key="f-activityLevel"
                   label="Nivel de actividad"
                   onChange={(e) => handleInputOnChange(e)}
-                  value={userData?.activityLevel}
+                  value={userData?.student?.activityLevel}
                   // defaultValue={`${userData?.age}`}
                   disabled={edition}
                 />
@@ -233,7 +237,7 @@ function Perfil() {
                   key="f-medicalConditions"
                   label="Condiciones medicas"
                   onChange={(e) => handleInputOnChange(e)}
-                  value={userData?.medicalConditions}
+                  value={userData?.student?.medicalConditions}
                   // defaultValue={userData?.medicalConditions}
                   disabled={true}
                 />
@@ -242,7 +246,7 @@ function Perfil() {
                   key="f-allergies"
                   label="Alergias"
                   onChange={(e) => handleInputOnChange(e)}
-                  value={userData?.allergies}
+                  value={userData?.student?.allergies}
                   // defaultValue={userData?.allergies}
                   disabled={edition}
                 />
@@ -251,7 +255,7 @@ function Perfil() {
                   key="f-fitnessExperience"
                   label="Experiencia"
                   onChange={(e) => handleInputOnChange(e)}
-                  value={userData?.fitnessExperience}
+                  value={userData?.student?.fitnessExperience}
                   // defaultValue={userData?.fitnessExperience}
                   disabled={true}
                 />
@@ -260,7 +264,7 @@ function Perfil() {
                   key="f-generalNotes"
                   label="Notas"
                   onChange={(e) => handleInputOnChange(e)}
-                  value={userData?.generalNotes}
+                  value={userData?.student?.generalNotes}
                   // defaultValue={userData?.generalNotes}
                   disabled={true}
                 />

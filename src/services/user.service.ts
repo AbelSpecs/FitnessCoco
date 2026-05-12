@@ -31,13 +31,13 @@ export const updateUser = async (userData: User) => {
       parqCompleted,
       planType,
       parqValidUntil,
-      studentId,
-      coachId,
+      // studentId,
+      // coachId,
       ...dataToSend
     } = userData;
 
-    const newDataToSend = { id: studentId, student: { userId: id, ...dataToSend } };
-    const response = await api.put(`Students/${studentId}`, newDataToSend);
+    const newDataToSend = { id: userData.student?.id, student: { userId: id, ...dataToSend } };
+    const response = await api.put(`Students/${userData.student?.id}`, newDataToSend);
 
     console.log(response);
     return response;

@@ -66,10 +66,10 @@ function LoginPage() {
             <Dumbbell className="h-8 w-8 text-primary-foreground" />
           </div>
           <div className="text-center">
-            <h1 className="font-display text-5xl tracking-wider">FITYEI</h1>
-            <p className="text-xs text-muted-foreground uppercase tracking-[0.25em]">
+            <h1 className="font-display text-5xl tracking-wider">PyrosFit</h1>
+            {/* <p className="text-xs text-muted-foreground uppercase tracking-[0.25em]">
               training co.
-            </p>
+            </p> */}
           </div>
         </div>
 
@@ -90,7 +90,7 @@ function LoginPage() {
 
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="userName">UserName</Label>
+              <Label htmlFor="userName">Usuario</Label>
               <Input
                 id="userName"
                 type="text"

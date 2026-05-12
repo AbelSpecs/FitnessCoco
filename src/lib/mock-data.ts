@@ -10,19 +10,19 @@ import { User } from "@/types/user";
 //   endurance: "Ganar resistencia",
 // };
 
-export const userProfile: User = {
-  id: 1,
-  firstName: "Diego Martínez",
-  age: 28,
-  weight: 78,
-  gender: "Masculino",
-  fitnessGoal: "muscle" as Goal,
-  streak: 12,
-  parqCompleted: false,
-  parqValidUntil: "12 mar 2026",
-  coachId: 1,
-  planType: "basic",
-};
+// export const userProfile: User = {
+//   id: 1,
+//   firstName: "Diego Martínez",
+//   age: 28,
+//   weight: 78,
+//   gender: "Masculino",
+//   fitnessGoal: "muscle" as Goal,
+//   streak: 12,
+//   parqCompleted: false,
+//   parqValidUntil: "12 mar 2026",
+//   coachId: 1,
+//   planType: "basic",
+// };
 
 export type Exercise = {
   id: string;

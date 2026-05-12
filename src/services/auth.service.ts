@@ -24,12 +24,12 @@ export const login = async (credentials: LoginCredentials) => {
   const { data } = response.data;
 
   if (data.token) {
-    localStorage.setItem("fityei_user", JSON.stringify(data));
+    localStorage.setItem("pyrosfit_token", JSON.stringify(data));
   }
 
   return data.id;
 };
 
 export const logout = () => {
-  localStorage.removeItem("fityei_user");
+  localStorage.removeItem("pyrosfit_token");
 };
