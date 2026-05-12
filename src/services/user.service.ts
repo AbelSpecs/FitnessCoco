@@ -57,7 +57,7 @@ export const updateUser = async (userData: User) => {
 //   }
 // };
 
-export const getFinalUser = async (id: number) => {
+export const getUserDetails = async (id: number) => {
   try {
     const response = await api.get(`Users/${id}/details`);
     const { data } = response.data;

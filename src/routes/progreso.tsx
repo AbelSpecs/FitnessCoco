@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { volumeData, strengthData, userProfile } from "@/lib/mock-data";
+import { volumeData, strengthData } from "@/lib/mock-data";
 import { Flame, Trophy, TrendingUp, Activity } from "lucide-react";
 import {
   AreaChart,

@@ -23,11 +23,7 @@ export const login = async (credentials: LoginCredentials) => {
   const response = await api.post("Users/Login", credentials);
   const { data } = response.data;
 
-  if (data.token) {
-    localStorage.setItem("pyrosfit_token", JSON.stringify(data));
-  }
-
-  return data.id;
+  return data;
 };
 
 export const logout = () => {

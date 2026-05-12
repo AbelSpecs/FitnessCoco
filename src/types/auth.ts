@@ -15,18 +15,22 @@ export interface RegisterCredentials {
 }
 
 export interface Auth {
-  id?: string;
-  email?: string;
-  role?: "student" | "coach";
+  user?: UserAuth | null;
   token?: string | null;
-  isLoading?: boolean;
-  setAuth?: (user: User, token: string) => void;
+  isLoading: boolean;
+  setAuth: (user: UserAuth, token: string) => void;
   updateUser?: (userData: Partial<User>) => void;
-  logout?: () => void;
-  setLoading?: (status: boolean) => void;
+  logout: () => void;
+  setLoading: (status: boolean) => void;
 }
 
 export interface LoginCredentials {
   userName: string;
   password: string;
+}
+
+export interface UserAuth {
+  id?: string;
+  email?: string;
+  role?: "student" | "coach";
 }

@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 // import { userProfile } from "@/lib/mock-data";
 import { useEffect, useState } from "react";
+import { useAuthStore } from "@/store/authStore";
 
 const nav = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -35,6 +36,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { user } = useAuthStore();
 
   // Close mobile drawer on route change
   useEffect(() => {
@@ -52,6 +54,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       document.body.style.overflow = "";
     };
   }, [mobileOpen]);
+
+  useEffect(() => {});
 
   const isActive = (to: string) =>
     to === "/" ? location.pathname === "/" : location.pathname.startsWith(to);

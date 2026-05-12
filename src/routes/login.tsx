@@ -5,12 +5,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dumbbell } from "lucide-react";
 import { login } from "@/services/auth.service";
+import { useAuthStore } from "@/store/authStore";
+import { UserAuth } from "@/types/auth";
 
 export const Route = createFileRoute("/login")({
   head: () => ({
     meta: [
-      { title: "Iniciar Sesión — FITYEI" },
-      { name: "description", content: "Inicia sesión en tu cuenta FITYEI" },
+      { title: "Iniciar Sesión — PyrosFit" },
+      { name: "description", content: "Inicia sesión en tu cuenta PyrosFit" },
     ],
   }),
   component: LoginPage,
@@ -21,17 +23,29 @@ function LoginPage() {
   const [userName, setUserName] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+  // const [loading, setLoading] = useState(false);
+  const { isLoading } = useAuthStore();
+  const setAuth = useAuthStore((state) => state.setAuth);
+  const setLoading = useAuthStore((state) => state.setLoading);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
-    console.log("me loguee con", { userName, password });
 
     try {
-      const id = await login({ userName, password });
-      navigate({ to: "/perfil/$userId", params: { userId: id } });
+      const data = await login({ userName, password });
+      const { id, email, token } = data;
+      const user: UserAuth = {
+        id,
+        email,
+      };
+
+      if (token) {
+        setAuth(user, token);
+      }
+
+      navigate({ to: "/perfil/$userId", params: { userId: data.id } });
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       const message = err.response?.data?.message || "Error al iniciar sesión";
@@ -94,7 +108,7 @@ function LoginPage() {
               <Input
                 id="userName"
                 type="text"
-                placeholder="userName"
+                placeholder="usuario"
                 value={userName}
                 onChange={(e) => setUserName(e.target.value)}
                 required
@@ -113,8 +127,8 @@ function LoginPage() {
                 className="bg-input/60"
               />
             </div>
-            <Button type="submit" variant="hero" size="lg" className="w-full" disabled={loading}>
-              {loading ? "Ingresando…" : "Ingresar"}
+            <Button type="submit" variant="hero" size="lg" className="w-full" disabled={isLoading}>
+              {isLoading ? "Ingresando…" : "Ingresar"}
             </Button>
           </form>
 

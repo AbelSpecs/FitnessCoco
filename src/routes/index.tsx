@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Flame, Target, TrendingUp, Dumbbell, ChevronRight, Zap, Trophy } from "lucide-react";
-import { userProfile, weekPlan, volumeData } from "@/lib/mock-data";
+import { weekPlan, volumeData } from "@/lib/mock-data";
 import {
   AreaChart,
   Area,
@@ -19,7 +19,7 @@ import { goalLabels } from "@/types/goals";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Dashboard — FITYEI Training" },
+      { title: "Dashboard — PyrosFit Training" },
       {
         name: "description",
         content: "Tu centro de entrenamiento personal: rutina semanal, progreso y rachas.",

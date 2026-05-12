@@ -10,7 +10,7 @@ import { ChangeEvent, useEffect, useState } from "react";
 import { CheckCircle2, HeartPulse, Pencil } from "lucide-react";
 import { Goal, goalLabels } from "@/types/goals";
 import { User } from "@/types/user";
-import { getFinalUser, getQr, updateUser } from "@/services/user.service";
+import { getUserDetails, getQr, updateUser } from "@/services/user.service";
 import { age } from "@/utils/age";
 
 export const Route = createFileRoute("/perfil/$userId")({
@@ -46,17 +46,13 @@ function Perfil() {
 
   useEffect(() => {
     if (!userId || isNaN(Number(userId))) return;
-    console.log(userId);
 
     const fetchUserData = async () => {
       try {
-        const user = await getFinalUser(Number(userId));
+        const user = await getUserDetails(Number(userId));
         const { student = {}, coach = {} } = user;
 
         setIsStudent(student ? true : false);
-
-        console.log(student);
-        console.log(coach);
 
         if (student) {
           setUserData({
@@ -124,21 +120,18 @@ function Perfil() {
 
   const handleInputOnChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { value, name } = e.target;
-    console.log("Campo cambiado:", name, value);
+
     setUserData({ ...userData, [name]: value });
   };
 
   const handleRadioOnChange = (e: Goal) => {
-    console.log(e);
     setUserData({ ...userData, student: { ...userData?.student, fitnessGoal: e } });
   };
 
   const handleSaveUser = async () => {
-    console.log("Guardando usuario:", userData);
     if (userData) {
       setUserCompleteData(userData);
       const updatedUser = await updateUser(userData);
-      console.log(updatedUser);
     }
     setEdition(true);
     alert("Cambios guardados (simulado)");
@@ -282,7 +275,7 @@ function Perfil() {
                 value={goal}
                 onValueChange={(v) => {
                   setGoal(v as Goal);
-                  console.log("Objetivo cambiado:", v);
+
                   handleRadioOnChange(v as Goal);
                 }}
                 className="grid grid-cols-1 sm:grid-cols-2 gap-3"
