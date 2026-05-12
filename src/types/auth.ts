@@ -32,5 +32,6 @@ export interface LoginCredentials {
 export interface UserAuth {
   id?: string;
   email?: string;
+  firstName?: string;
   role?: "student" | "coach";
 }

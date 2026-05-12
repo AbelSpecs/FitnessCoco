@@ -15,6 +15,7 @@ import {
   CartesianGrid,
 } from "recharts";
 import { goalLabels } from "@/types/goals";
+import { useAuthStore } from "@/store/authStore";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -45,6 +46,7 @@ function Dashboard() {
   const today = new Date().getDay(); // 0 = Dom
   const todayIndex = today === 0 ? 6 : today - 1;
   const todayPlan = weekPlan[todayIndex];
+  const { user } = useAuthStore();
 
   return (
     <AppShell>
@@ -61,7 +63,7 @@ function Dashboard() {
               })}
             </p>
             <h1 className="font-display text-3xl sm:text-4xl lg:text-6xl mb-3 leading-none">
-              Hola, {userProfile.firstName!.split(" ")[0]}.
+              Hola, {user!.firstName!.split(" ")[0]}.
               <br />
               <span className="text-gradient">Es hora de entrenar.</span>
             </h1>
@@ -83,19 +85,19 @@ function Dashboard() {
           </div>
 
           <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
-            <StatTile
+            {/* <StatTile
               icon={Flame}
               label="Racha"
-              value={`${userProfile.streak}`}
+              value={`${user.streak}`}
               hint="días seguidos"
               accent
             />
             <StatTile
               icon={Target}
               label="Objetivo"
-              value={goalLabels[userProfile.fitnessGoal!].split(" ")[1]}
-              hint={goalLabels[userProfile.fitnessGoal!]}
-            />
+              value={goalLabels[user!.fitnessGoal!].split(" ")[1]}
+              hint={goalLabels[user!.fitnessGoal!]}
+            /> */}
             <StatTile icon={Trophy} label="PRs este mes" value="4" hint="récords personales" />
             <StatTile icon={TrendingUp} label="Volumen" value="+18%" hint="vs mes pasado" />
           </div>

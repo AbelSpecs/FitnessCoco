@@ -7,6 +7,7 @@ import { Dumbbell } from "lucide-react";
 import { login } from "@/services/auth.service";
 import { useAuthStore } from "@/store/authStore";
 import { UserAuth } from "@/types/auth";
+import { getUser } from "@/services/user.service";
 
 export const Route = createFileRoute("/login")({
   head: () => ({
@@ -23,7 +24,6 @@ function LoginPage() {
   const [userName, setUserName] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  // const [loading, setLoading] = useState(false);
   const { isLoading } = useAuthStore();
   const setAuth = useAuthStore((state) => state.setAuth);
   const setLoading = useAuthStore((state) => state.setLoading);
@@ -35,10 +35,13 @@ function LoginPage() {
 
     try {
       const data = await login({ userName, password });
-      const { id, email, token } = data;
+      const { id, token } = data;
+
+      const userData = await getUser(id);
+      const { firstName } = userData;
       const user: UserAuth = {
         id,
-        email,
+        firstName,
       };
 
       if (token) {
@@ -127,8 +130,8 @@ function LoginPage() {
                 className="bg-input/60"
               />
             </div>
-            <Button type="submit" variant="hero" size="lg" className="w-full" disabled={isLoading}>
-              {isLoading ? "Ingresando…" : "Ingresar"}
+            <Button type="submit" variant="hero" size="lg" className="w-full" disabled={!isLoading}>
+              {!isLoading ? "Ingresar" : "Ingresar"}
             </Button>
           </form>
 

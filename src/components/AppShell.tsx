@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-// import { userProfile } from "@/lib/mock-data";
+// import { user } from "@/lib/mock-data";
 import { useEffect, useState } from "react";
 import { useAuthStore } from "@/store/authStore";
 
@@ -27,7 +27,6 @@ const nav = [
     to: "/perfil/$userId",
     label: "Perfil",
     icon: User,
-    // params: { userId: JSON.parse(localStorage.getItem("fityei_user")!).id || {} },
   },
   // { to: "/par-q", label: "PAR-Q", icon: HeartPulse },
 ] as const;
@@ -132,10 +131,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div className="p-4 m-3 rounded-xl bg-gradient-card border border-sidebar-border">
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-full bg-gradient-primary flex items-center justify-center font-display text-lg shrink-0">
-                {userProfile.firstName!.charAt(0)}
+                {user!.firstName!.charAt(0)}
               </div>
               <div className="min-w-0">
-                <p className="text-sm font-medium truncate">{userProfile.firstName}</p>
+                <p className="text-sm font-medium truncate">{user!.firstName}</p>
                 <p className="text-xs text-muted-foreground">Cliente • Pro</p>
               </div>
             </div>
@@ -144,7 +143,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         {collapsed && (
           <div className="p-3 flex justify-center">
             <div className="h-10 w-10 rounded-full bg-gradient-primary flex items-center justify-center font-display text-lg">
-              {userProfile.firstName!.charAt(0)}
+              {user!.firstName!.charAt(0)}
             </div>
           </div>
         )}
@@ -205,10 +204,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <div className="p-4 m-3 rounded-xl bg-gradient-card border border-sidebar-border">
               <div className="flex items-center gap-3">
                 <div className="h-10 w-10 rounded-full bg-gradient-primary flex items-center justify-center font-display text-lg">
-                  {userProfile.firstName!.charAt(0)}
+                  {user!.firstName!.charAt(0)}
                 </div>
                 <div className="min-w-0">
-                  <p className="text-sm font-medium truncate">{userProfile.firstName}</p>
+                  <p className="text-sm font-medium truncate">{user!.firstName}</p>
                   <p className="text-xs text-muted-foreground">Cliente • Pro</p>
                 </div>
               </div>
@@ -252,7 +251,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <Bell className="h-4 w-4" />
               </Button>
               <div className="lg:hidden h-9 w-9 rounded-full bg-gradient-primary flex items-center justify-center font-display text-base shrink-0">
-                {userProfile.firstName!.charAt(0)}
+                {user!.firstName!.charAt(0)}
               </div>
             </div>
           </div>
