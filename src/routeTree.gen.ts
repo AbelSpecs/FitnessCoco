@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as RegisterInfoRouteImport } from './routes/register-info'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as ProgresoRouteImport } from './routes/progreso'
 import { Route as ParQRouteImport } from './routes/par-q'
@@ -18,6 +19,11 @@ import { Route as RutinaIndexRouteImport } from './routes/rutina.index'
 import { Route as RutinaDayIdRouteImport } from './routes/rutina.$dayId'
 import { Route as PerfilUserIdRouteImport } from './routes/perfil.$userId'
 
+const RegisterInfoRoute = RegisterInfoRouteImport.update({
+  id: '/register-info',
+  path: '/register-info',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RegisterRoute = RegisterRouteImport.update({
   id: '/register',
   path: '/register',
@@ -65,6 +71,7 @@ export interface FileRoutesByFullPath {
   '/par-q': typeof ParQRoute
   '/progreso': typeof ProgresoRoute
   '/register': typeof RegisterRoute
+  '/register-info': typeof RegisterInfoRoute
   '/perfil/$userId': typeof PerfilUserIdRoute
   '/rutina/$dayId': typeof RutinaDayIdRoute
   '/rutina/': typeof RutinaIndexRoute
@@ -75,6 +82,7 @@ export interface FileRoutesByTo {
   '/par-q': typeof ParQRoute
   '/progreso': typeof ProgresoRoute
   '/register': typeof RegisterRoute
+  '/register-info': typeof RegisterInfoRoute
   '/perfil/$userId': typeof PerfilUserIdRoute
   '/rutina/$dayId': typeof RutinaDayIdRoute
   '/rutina': typeof RutinaIndexRoute
@@ -86,6 +94,7 @@ export interface FileRoutesById {
   '/par-q': typeof ParQRoute
   '/progreso': typeof ProgresoRoute
   '/register': typeof RegisterRoute
+  '/register-info': typeof RegisterInfoRoute
   '/perfil/$userId': typeof PerfilUserIdRoute
   '/rutina/$dayId': typeof RutinaDayIdRoute
   '/rutina/': typeof RutinaIndexRoute
@@ -98,6 +107,7 @@ export interface FileRouteTypes {
     | '/par-q'
     | '/progreso'
     | '/register'
+    | '/register-info'
     | '/perfil/$userId'
     | '/rutina/$dayId'
     | '/rutina/'
@@ -108,6 +118,7 @@ export interface FileRouteTypes {
     | '/par-q'
     | '/progreso'
     | '/register'
+    | '/register-info'
     | '/perfil/$userId'
     | '/rutina/$dayId'
     | '/rutina'
@@ -118,6 +129,7 @@ export interface FileRouteTypes {
     | '/par-q'
     | '/progreso'
     | '/register'
+    | '/register-info'
     | '/perfil/$userId'
     | '/rutina/$dayId'
     | '/rutina/'
@@ -129,6 +141,7 @@ export interface RootRouteChildren {
   ParQRoute: typeof ParQRoute
   ProgresoRoute: typeof ProgresoRoute
   RegisterRoute: typeof RegisterRoute
+  RegisterInfoRoute: typeof RegisterInfoRoute
   PerfilUserIdRoute: typeof PerfilUserIdRoute
   RutinaDayIdRoute: typeof RutinaDayIdRoute
   RutinaIndexRoute: typeof RutinaIndexRoute
@@ -136,6 +149,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/register-info': {
+      id: '/register-info'
+      path: '/register-info'
+      fullPath: '/register-info'
+      preLoaderRoute: typeof RegisterInfoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/register': {
       id: '/register'
       path: '/register'
@@ -201,6 +221,7 @@ const rootRouteChildren: RootRouteChildren = {
   ParQRoute: ParQRoute,
   ProgresoRoute: ProgresoRoute,
   RegisterRoute: RegisterRoute,
+  RegisterInfoRoute: RegisterInfoRoute,
   PerfilUserIdRoute: PerfilUserIdRoute,
   RutinaDayIdRoute: RutinaDayIdRoute,
   RutinaIndexRoute: RutinaIndexRoute,
