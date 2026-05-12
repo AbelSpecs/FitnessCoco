@@ -23,10 +23,9 @@ function LoginPage() {
   const navigate = useNavigate();
   const [userName, setUserName] = useState("");
   const [password, setPassword] = useState("");
+  const [isLoading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const { isLoading } = useAuthStore();
   const setAuth = useAuthStore((state) => state.setAuth);
-  const setLoading = useAuthStore((state) => state.setLoading);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,11 +46,12 @@ function LoginPage() {
       if (token) {
         setAuth(user, token);
       }
-
-      navigate({ to: "/perfil/$userId", params: { userId: data.id } });
+      console.log(id);
+      navigate({ to: "/perfil/$userId", params: { userId: id } });
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       const message = err.response?.data?.message || "Error al iniciar sesión";
+      setLoading(false);
       setError(message);
     } finally {
       setLoading(false);
@@ -130,8 +130,8 @@ function LoginPage() {
                 className="bg-input/60"
               />
             </div>
-            <Button type="submit" variant="hero" size="lg" className="w-full" disabled={!isLoading}>
-              {!isLoading ? "Ingresar" : "Ingresar"}
+            <Button type="submit" variant="hero" size="lg" className="w-full" disabled={isLoading}>
+              {isLoading ? "Ingresando" : "Ingresar"}
             </Button>
           </form>
 

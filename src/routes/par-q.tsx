@@ -11,7 +11,7 @@ import { AlertTriangle, CheckCircle2, HeartPulse } from "lucide-react";
 export const Route = createFileRoute("/par-q")({
   // head: () => ({
   //   meta: [
-  //     { title: "PAR-Q & YOU — FITYEI Training" },
+  //     { title: "PAR-Q & YOU — PYROSFIT" },
   //     {
   //       name: "description",
   //       content: "Cuestionario de aptitud física previo al entrenamiento (PAR-Q & YOU).",

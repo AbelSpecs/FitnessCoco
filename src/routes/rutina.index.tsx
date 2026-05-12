@@ -8,7 +8,7 @@ import { ChevronRight, Clock, Dumbbell } from "lucide-react";
 export const Route = createFileRoute("/rutina/")({
   head: () => ({
     meta: [
-      { title: "Rutina semanal — FITYEI Training" },
+      { title: "Rutina semanal — PYROSFIT" },
       { name: "description", content: "Tu calendario de entrenamiento de la semana." },
     ],
   }),

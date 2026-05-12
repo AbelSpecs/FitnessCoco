@@ -29,7 +29,7 @@ export const Route = createFileRoute("/")({
   }),
   component: Dashboard,
   beforeLoad: ({ location }) => {
-    const auth = localStorage.getItem("fityei_user");
+    const auth = localStorage.getItem("pyrosfit_user");
 
     if (!auth) {
       throw redirect({

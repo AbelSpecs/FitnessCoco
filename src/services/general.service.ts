@@ -1,9 +1,10 @@
 import axios from "axios";
+// import api from "./api";
 
-const API_URL = "https://api.pyrosfit.com/api/v1/";
+const API_BASE_URL = import.meta.env.VITE_API_URL;
 
 const api = axios.create({
-  baseURL: API_URL,
+  baseURL: API_BASE_URL,
   headers: {
     "Content-Type": "application/json",
   },
@@ -11,7 +12,7 @@ const api = axios.create({
 
 export const getCountries = async () => {
   try {
-    const response = await api.get(`Countries`);
+    const response = await api.get(`/Countries`);
     const { data } = response.data;
     console.log(data);
     return data;
@@ -23,7 +24,7 @@ export const getCountries = async () => {
 
 export const getCities = async (countryId: number) => {
   try {
-    const response = await api.get(`Cities/${countryId}`);
+    const response = await api.get(`/Cities/${countryId}`);
     const { data } = response.data;
     console.log(data);
     return data;

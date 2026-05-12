@@ -1,31 +1,26 @@
 import { LoginCredentials, RegisterCredentials } from "@/types/auth";
 import axios from "axios";
+// import api from "./api";
 
-const API_URL = "http://localhost:5221/api/v1/";
+const API_BASE_URL = import.meta.env.VITE_API_URL;
 
 const api = axios.create({
-  baseURL: API_URL,
+  baseURL: API_BASE_URL,
   headers: {
     "Content-Type": "application/json",
   },
 });
 
 export const register = async (credentials: RegisterCredentials) => {
-  const response = await api.post("Users/RegisterUser", credentials);
-  const { data } = response.data;
-
-  console.log(response);
-
-  return response.data;
-};
-
-export const login = async (credentials: LoginCredentials) => {
-  const response = await api.post("Users/Login", credentials);
+  const response = await api.post("/Users/RegisterUser", credentials);
   const { data } = response.data;
 
   return data;
 };
 
-export const logout = () => {
-  localStorage.removeItem("pyrosfit_token");
+export const login = async (credentials: LoginCredentials) => {
+  const response = await api.post("/Users/Login", credentials);
+  const { data } = response.data;
+
+  return data;
 };

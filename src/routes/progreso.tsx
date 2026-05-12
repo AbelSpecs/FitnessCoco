@@ -20,7 +20,7 @@ import {
 export const Route = createFileRoute("/progreso")({
   head: () => ({
     meta: [
-      { title: "Progreso — FITYEI Training" },
+      { title: "Progreso — PYROSFIT" },
       { name: "description", content: "Gráficas de volumen, fuerza y rachas." },
     ],
   }),

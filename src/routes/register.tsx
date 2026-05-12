@@ -20,8 +20,8 @@ import { RegisterCredentials } from "@/types/auth";
 export const Route = createFileRoute("/register")({
   head: () => ({
     meta: [
-      { title: "Crear Cuenta — FITYEI" },
-      { name: "description", content: "Crea tu cuenta en FITYEI" },
+      { title: "Crear Cuenta — PYROSFIT" },
+      { name: "description", content: "Crea tu cuenta en PYROSFIT" },
     ],
   }),
   component: RegisterPage,
@@ -156,7 +156,7 @@ function RegisterPage() {
             <Dumbbell className="h-8 w-8 text-primary-foreground" />
           </div>
           <div className="text-center">
-            <h1 className="font-display text-5xl tracking-wider">FITYEI</h1>
+            <h1 className="font-display text-5xl tracking-wider">PYROSFIT</h1>
             <p className="text-xs text-muted-foreground uppercase tracking-[0.25em]">
               training co.
             </p>
@@ -168,7 +168,7 @@ function RegisterPage() {
           <div className="text-center">
             <h2 className="text-xl font-semibold">Crear Cuenta</h2>
             {/* <p className="text-sm text-muted-foreground mt-1">
-              Únete a FITYEI y comienza tu entrenamiento
+              Únete a PYROSFIT y comienza tu entrenamiento
             </p> */}
           </div>
 

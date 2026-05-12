@@ -16,13 +16,13 @@ import { age } from "@/utils/age";
 export const Route = createFileRoute("/perfil/$userId")({
   head: () => ({
     meta: [
-      { title: "Perfil — FITYEI Training" },
+      { title: "Perfil — PyrosFit" },
       { name: "description", content: "Gestiona tus datos, objetivos y salud." },
     ],
   }),
   component: Perfil,
   beforeLoad: ({ location }) => {
-    const auth = localStorage.getItem("fityei_user");
+    const auth = localStorage.getItem("pyrosfit_user");
 
     if (!auth) {
       throw redirect({
@@ -215,6 +215,7 @@ function Perfil() {
                   value={`${userData?.student?.bodyFatPercentage}`}
                   // defaultValue={userData?.name || userProfile.name}
                   disabled={edition}
+                  type="number"
                 />
                 <Field
                   name="activityLevel"

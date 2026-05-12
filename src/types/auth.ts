@@ -17,11 +17,11 @@ export interface RegisterCredentials {
 export interface Auth {
   user?: UserAuth | null;
   token?: string | null;
-  isLoading: boolean;
+  // isLoading: boolean;
   setAuth: (user: UserAuth, token: string) => void;
   updateUser?: (userData: Partial<User>) => void;
   logout: () => void;
-  setLoading: (status: boolean) => void;
+  // setLoading: (status: boolean) => void;
 }
 
 export interface LoginCredentials {
