@@ -30,3 +30,11 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# GitHub Copilot & Visual Studio indexing
+.index/
+FileContentIndex/
+*.db
+*.db-shm
+*.db-wal
+.vs/
