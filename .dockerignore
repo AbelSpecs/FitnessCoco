@@ -1,27 +1,17 @@
-# Dependencias (se instalan dentro del Docker)
 node_modules
-bun.lockb
-
-# Archivos de build locales
+.pnpm-store
 dist
+dist-ssr
+.output
+.vinxi
 build
 .cache
-
-# Variables de entorno locales (Easypanel usará las suyas)
+*.log
+npm-debug.log*
 .env
-*.local
-
-# Archivos de Git
+.env.local
 .git
 .gitignore
-
-# Logs y Debugging
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-bun.lockb
-.eslintcache
-
-# Archivos de Sistema
+.vscode
+.idea
 .DS_Store
-Thumbs.db
