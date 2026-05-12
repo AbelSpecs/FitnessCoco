@@ -46,7 +46,7 @@ function LoginPage() {
       if (token) {
         setAuth(user, token);
       }
-      console.log(id);
+
       navigate({ to: "/perfil/$userId", params: { userId: id } });
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
