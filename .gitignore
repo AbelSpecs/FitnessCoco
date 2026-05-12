@@ -1,30 +1,32 @@
-# Dependencias - NO las subas, se instalan en el build
-node_modules
-.pnpm-store
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
 
-# Archivos de Build locales - Queremos que Docker genere los suyos
+node_modules
 dist
 dist-ssr
 .output
 .vinxi
-build
-.cache
+.tanstack/**
+.nitro
+*.local
 
-# Logs
-*.log
-npm-debug.log*
+# Wrangler / Cloudflare
+.wrangler/
+.dev.vars
 
-# Entorno
-.env
-.env.local
-
-# Git
-.git
-.gitignore
-
-# IDEs
-.vscode
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
 .idea
 .DS_Store
-
-# NOTA: NO incluyas nginx.conf ni bun.lockb aquí
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
