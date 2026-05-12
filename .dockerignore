@@ -1,0 +1,17 @@
+node_modules
+.pnpm-store
+dist
+dist-ssr
+.output
+.vinxi
+build
+.cache
+*.log
+npm-debug.log*
+.env
+.env.local
+.git
+.gitignore
+.vscode
+.idea
+.DS_Store
