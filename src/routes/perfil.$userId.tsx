@@ -12,6 +12,7 @@ import { Goal, goalLabels } from "@/types/goals";
 import { User } from "@/types/user";
 import { getUserDetails, getQr, updateUser } from "@/services/user.service";
 import { age } from "@/utils/age";
+import { useAuthStore } from "@/store/authStore";
 
 export const Route = createFileRoute("/perfil/$userId")({
   head: () => ({

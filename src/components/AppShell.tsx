@@ -21,7 +21,7 @@ import { useAuthStore } from "@/store/authStore";
 
 const nav = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
-  // { to: "/rutina", label: "Rutina", icon: Calendar },
+  { to: "/rutina", label: "Rutina", icon: Calendar },
   // { to: "/progreso", label: "Progreso", icon: TrendingUp },
   {
     to: "/perfil/$userId",
@@ -36,6 +36,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const { user } = useAuthStore();
+  console.log(user);
 
   // Close mobile drawer on route change
   useEffect(() => {
@@ -90,6 +91,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <Link
                 key={item.to}
                 to={item.to}
+                params={{ userId: user?.id?.toString() ?? "" }}
                 title={collapsed ? item.label : undefined}
                 className={cn(
                   "flex items-center gap-3 rounded-lg text-sm transition-all",
@@ -187,6 +189,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   <Link
                     key={item.to}
                     to={item.to}
+                    params={{ userId: user?.id?.toString() ?? "" }}
                     className={cn(
                       "flex items-center gap-3 px-3 py-3 rounded-lg text-sm transition-all",
                       active
@@ -272,6 +275,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <Link
                 key={item.to}
                 to={item.to}
+                params={{ userId: user?.id?.toString() ?? "" }}
                 className={cn(
                   "flex flex-col items-center gap-1 py-2.5 text-[10px] font-medium uppercase tracking-wider",
                   active ? "text-primary" : "text-muted-foreground",

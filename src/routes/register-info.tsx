@@ -76,8 +76,8 @@ function RegisterInfoPage() {
             </div>
             <h2 className="text-xl font-semibold">¡Información guardada!</h2>
             <p className="text-sm text-muted-foreground">
-              Gracias <span className="text-foreground font-medium">{form.name}</span>, tus datos
-              se han registrado correctamente.
+              Gracias <span className="text-foreground font-medium">{form.name}</span>, tus datos se
+              han registrado correctamente.
             </p>
             <Link to="/login" className="text-primary font-medium hover:underline text-sm">
               Ir a iniciar sesión
@@ -183,13 +183,7 @@ function RegisterInfoPage() {
               </Select>
             </div>
 
-            <Button
-              type="submit"
-              variant="hero"
-              size="lg"
-              className="w-full"
-              disabled={loading}
-            >
+            <Button type="submit" variant="hero" size="lg" className="w-full" disabled={loading}>
               {loading ? "Guardando..." : "Guardar información"}
             </Button>
           </form>

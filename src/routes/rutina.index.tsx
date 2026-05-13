@@ -4,6 +4,8 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { weekPlan } from "@/lib/mock-data";
 import { ChevronRight, Clock, Dumbbell } from "lucide-react";
+import { useEffect } from "react";
+import { getRoutine } from "@/services/routine.service";
 
 export const Route = createFileRoute("/rutina/")({
   head: () => ({
@@ -14,7 +16,7 @@ export const Route = createFileRoute("/rutina/")({
   }),
   component: RutinaPage,
   beforeLoad: ({ location }) => {
-    const auth = localStorage.getItem("fityei_user");
+    const auth = localStorage.getItem("pyrosfit_user");
 
     if (!auth) {
       throw redirect({
@@ -30,6 +32,14 @@ export const Route = createFileRoute("/rutina/")({
 function RutinaPage() {
   const today = new Date().getDay();
   const todayIndex = today === 0 ? 6 : today - 1;
+
+  useEffect(() => {
+    const fetchRoutinesData = async () => {
+      // try {
+      //   // const routineData = await getRoutine();
+      // } catch (error) {}
+    };
+  }, []);
 
   return (
     <AppShell>

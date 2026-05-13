@@ -7,7 +7,7 @@ import { Dumbbell } from "lucide-react";
 import { login } from "@/services/auth.service";
 import { useAuthStore } from "@/store/authStore";
 import { UserAuth } from "@/types/auth";
-import { getUser } from "@/services/user.service";
+import { getUser, getUserDetails } from "@/services/user.service";
 
 export const Route = createFileRoute("/login")({
   head: () => ({

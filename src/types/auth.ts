@@ -30,7 +30,9 @@ export interface LoginCredentials {
 }
 
 export interface UserAuth {
-  id?: string;
+  id?: number;
+  studentId?: number;
+  coachId?: number;
   email?: string;
   firstName?: string;
   role?: "student" | "coach";
