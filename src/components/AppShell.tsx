@@ -36,14 +36,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const { user } = useAuthStore();
-  console.log(user);
 
-  // Close mobile drawer on route change
   useEffect(() => {
     setMobileOpen(false);
   }, [location.pathname]);
 
-  // Lock body scroll when drawer open
   useEffect(() => {
     if (mobileOpen) {
       document.body.style.overflow = "hidden";

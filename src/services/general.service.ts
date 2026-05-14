@@ -14,7 +14,7 @@ export const getCountries = async () => {
   try {
     const response = await api.get(`/Countries`);
     const { data } = response.data;
-    console.log(data);
+
     return data;
   } catch (error) {
     console.error("Error al obtener los paises", error);
@@ -26,7 +26,7 @@ export const getCities = async (countryId: number) => {
   try {
     const response = await api.get(`/Cities/${countryId}`);
     const { data } = response.data;
-    console.log(data);
+
     return data;
   } catch (error) {
     console.error("Error al obtener las ciudades", error);

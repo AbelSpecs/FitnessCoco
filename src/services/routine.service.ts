@@ -10,7 +10,7 @@ const api = axios.create({
   },
 });
 
-export const getExercise = async (id: number) => {
+export const getRoutine = async (id: number) => {
   try {
     const response = await api.get(`/Exercises/${id}`);
     const { data } = response.data;
@@ -22,7 +22,7 @@ export const getExercise = async (id: number) => {
   }
 };
 
-export const getRoutine = async (id: number) => {
+export const getExercises = async (id: number) => {
   try {
     const response = await api.get(`/DailyStudentExercises/student/${id}`);
     const { data } = response.data;

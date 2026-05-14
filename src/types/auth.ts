@@ -29,11 +29,13 @@ export interface LoginCredentials {
   password: string;
 }
 
+type Role = "student" | "coach";
+
 export interface UserAuth {
-  id?: number;
-  studentId?: number;
+  id: number;
+  studentId: number;
   coachId?: number;
   email?: string;
   firstName?: string;
-  role?: "student" | "coach";
+  role?: Role;
 }
