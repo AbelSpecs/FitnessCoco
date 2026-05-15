@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 // import { user } from "@/lib/mock-data";
 import { useEffect, useState } from "react";
 import { useAuthStore } from "@/store/authStore";
+import { ProfileMenu } from "@/components/ProfileMenu";
 
 const nav = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
