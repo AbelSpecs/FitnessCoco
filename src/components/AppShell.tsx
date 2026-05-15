@@ -18,10 +18,11 @@ import { Button } from "@/components/ui/button";
 // import { user } from "@/lib/mock-data";
 import { useEffect, useState } from "react";
 import { useAuthStore } from "@/store/authStore";
+import { ProfileMenu } from "@/components/ProfileMenu";
 
 const nav = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
-  // { to: "/rutina", label: "Rutina", icon: Calendar },
+  { to: "/rutina", label: "Rutina", icon: Calendar },
   // { to: "/progreso", label: "Progreso", icon: TrendingUp },
   {
     to: "/perfil/$userId",
@@ -37,12 +38,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const { user } = useAuthStore();
 
-  // Close mobile drawer on route change
   useEffect(() => {
     setMobileOpen(false);
   }, [location.pathname]);
 
-  // Lock body scroll when drawer open
   useEffect(() => {
     if (mobileOpen) {
       document.body.style.overflow = "hidden";
@@ -90,6 +89,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <Link
                 key={item.to}
                 to={item.to}
+                params={{ userId: user?.id?.toString() ?? "" }}
                 title={collapsed ? item.label : undefined}
                 className={cn(
                   "flex items-center gap-3 rounded-lg text-sm transition-all",
@@ -130,9 +130,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         {!collapsed && (
           <div className="p-4 m-3 rounded-xl bg-gradient-card border border-sidebar-border">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-gradient-primary flex items-center justify-center font-display text-lg shrink-0">
-                {user!.firstName!.charAt(0)}
-              </div>
+              <ProfileMenu initial={user!.firstName!.charAt(0)} align="left" />
               <div className="min-w-0">
                 <p className="text-sm font-medium truncate">{user!.firstName}</p>
                 <p className="text-xs text-muted-foreground">Cliente • Pro</p>
@@ -142,9 +140,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         )}
         {collapsed && (
           <div className="p-3 flex justify-center">
-            <div className="h-10 w-10 rounded-full bg-gradient-primary flex items-center justify-center font-display text-lg">
-              {user!.firstName!.charAt(0)}
-            </div>
+            <ProfileMenu initial={user!.firstName!.charAt(0)} align="left" />
           </div>
         )}
       </aside>
@@ -187,6 +183,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   <Link
                     key={item.to}
                     to={item.to}
+                    params={{ userId: user?.id?.toString() ?? "" }}
                     className={cn(
                       "flex items-center gap-3 px-3 py-3 rounded-lg text-sm transition-all",
                       active
@@ -203,9 +200,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
             <div className="p-4 m-3 rounded-xl bg-gradient-card border border-sidebar-border">
               <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-full bg-gradient-primary flex items-center justify-center font-display text-lg">
-                  {user!.firstName!.charAt(0)}
-                </div>
+                <ProfileMenu initial={user!.firstName!.charAt(0)} align="left" />
                 <div className="min-w-0">
                   <p className="text-sm font-medium truncate">{user!.firstName}</p>
                   <p className="text-xs text-muted-foreground">Cliente • Pro</p>
@@ -250,8 +245,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <Button variant="ghost" size="icon" aria-label="Notificaciones">
                 <Bell className="h-4 w-4" />
               </Button>
-              <div className="lg:hidden h-9 w-9 rounded-full bg-gradient-primary flex items-center justify-center font-display text-base shrink-0">
-                {user!.firstName!.charAt(0)}
+              <div className="lg:hidden">
+                <ProfileMenu initial={user!.firstName!.charAt(0)} size="sm" align="right" />
               </div>
             </div>
           </div>
@@ -272,6 +267,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <Link
                 key={item.to}
                 to={item.to}
+                params={{ userId: user?.id?.toString() ?? "" }}
                 className={cn(
                   "flex flex-col items-center gap-1 py-2.5 text-[10px] font-medium uppercase tracking-wider",
                   active ? "text-primary" : "text-muted-foreground",

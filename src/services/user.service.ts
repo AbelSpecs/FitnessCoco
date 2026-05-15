@@ -54,6 +54,8 @@ export const getStudent = async (id: number) => {
     const response = await api.get(`/Students/user/${id}`);
     const { data } = response.data;
 
+    if (!data) return null;
+
     return data;
   } catch (error) {
     console.error("Error al obtener el perfil del usuario", error);
@@ -64,14 +66,11 @@ export const getStudent = async (id: number) => {
 export const getCoach = async (id: number) => {
   const response = await api.get(`/Coaches/user/${id}`);
 
-  console.log(response);
-
   return response.data;
 };
 
 export const getQr = async (id: number) => {
   const response = await api.get(`/Qrs/GenerateQr/${id}`);
-  console.log(response);
 
   return response.data;
 };

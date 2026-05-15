@@ -10,26 +10,26 @@ const api = axios.create({
   },
 });
 
-export const getCountries = async () => {
+export const getRoutine = async (id: number) => {
   try {
-    const response = await api.get(`/Countries`);
+    const response = await api.get(`/Exercises/${id}`);
     const { data } = response.data;
 
     return data;
   } catch (error) {
-    console.error("Error al obtener los paises", error);
+    console.error("Error al obtener el perfil del usuario", error);
     return null;
   }
 };
 
-export const getCities = async (countryId: number) => {
+export const getExercises = async (id: number) => {
   try {
-    const response = await api.get(`/Cities/${countryId}`);
+    const response = await api.get(`/DailyStudentExercises/student/${id}`);
     const { data } = response.data;
 
     return data;
   } catch (error) {
-    console.error("Error al obtener las ciudades", error);
+    console.error("Error al obtener el perfil del usuario", error);
     return null;
   }
 };

@@ -53,7 +53,7 @@ function RegisterPage() {
     const fetchCountries = async () => {
       try {
         const countries = await getCountries();
-        console.log(countries);
+
         setCountries(countries);
       } catch (error) {
         console.error("Error al obtener los países:", error);
@@ -71,7 +71,7 @@ function RegisterPage() {
 
     try {
       const cities = await getCities(value);
-      console.log(cities);
+
       setCities(cities ? [cities] : []);
     } catch (error) {
       console.error("Error al obtener las ciudades del pais:", error);
@@ -93,10 +93,9 @@ function RegisterPage() {
 
     setLoading(true);
 
-    console.log(registerForm);
     try {
       const data = await register(registerForm);
-      console.log(data);
+
       setLoading(false);
       navigate({ to: "/login" });
     } catch (error) {
@@ -310,7 +309,6 @@ function RegisterPage() {
                   <Select
                     value={String(registerForm.country)}
                     onValueChange={(value) => {
-                      console.log(value);
                       handleCities(Number(value));
                     }}
                   >
@@ -340,7 +338,6 @@ function RegisterPage() {
                   <Select
                     value={String(registerForm.city)}
                     onValueChange={(value) => {
-                      console.log(value);
                       setRegisterForm({ ...registerForm, city: Number(value) });
                     }}
                   >

@@ -1,6 +1,8 @@
 # Etapa 1: Construcción
 FROM oven/bun:latest AS build
 WORKDIR /app
+ARG VITE_API_URL
+ENV VITE_API_URL=$VITE_API_URL
 
 # CAMBIO AQUÍ: Usamos un comodín para que si no está el lockb, no explote
 COPY package.json bun.lockb* ./

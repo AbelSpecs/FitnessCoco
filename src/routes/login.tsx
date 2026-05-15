@@ -7,7 +7,7 @@ import { Dumbbell } from "lucide-react";
 import { login } from "@/services/auth.service";
 import { useAuthStore } from "@/store/authStore";
 import { UserAuth } from "@/types/auth";
-import { getUser } from "@/services/user.service";
+import { getStudent, getUser, getUserDetails } from "@/services/user.service";
 
 export const Route = createFileRoute("/login")({
   head: () => ({
@@ -38,15 +38,19 @@ function LoginPage() {
 
       const userData = await getUser(id);
       const { firstName } = userData;
+      const studentData = await getStudent(id);
+      const { id: studentId = 0 } = studentData;
       const user: UserAuth = {
         id,
         firstName,
+        studentId: studentId,
+        role: studentId == 0 ? "coach" : "student",
       };
 
       if (token) {
         setAuth(user, token);
       }
-      console.log(id);
+
       navigate({ to: "/perfil/$userId", params: { userId: id } });
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {

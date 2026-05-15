@@ -4,6 +4,10 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { weekPlan } from "@/lib/mock-data";
 import { ChevronRight, Clock, Dumbbell } from "lucide-react";
+import { useEffect, useState } from "react";
+import { getExercises, getRoutine } from "@/services/routine.service";
+import { useAuthStore } from "@/store/authStore";
+import { BadExercise, BadRoutine, DayRoutine, Exercise } from "@/types/exercises";
 
 export const Route = createFileRoute("/rutina/")({
   head: () => ({
@@ -14,7 +18,7 @@ export const Route = createFileRoute("/rutina/")({
   }),
   component: RutinaPage,
   beforeLoad: ({ location }) => {
-    const auth = localStorage.getItem("fityei_user");
+    const auth = localStorage.getItem("pyrosfit_user");
 
     if (!auth) {
       throw redirect({
@@ -30,6 +34,98 @@ export const Route = createFileRoute("/rutina/")({
 function RutinaPage() {
   const today = new Date().getDay();
   const todayIndex = today === 0 ? 6 : today - 1;
+  const { user } = useAuthStore();
+  const [weekRoutineList, setWeekRoutineList] = useState<DayRoutine[]>([]);
+
+  useEffect(() => {
+    const fetchRoutinesData = async () => {
+      try {
+        const exercisesData: BadExercise[] = await getExercises(user!.studentId);
+
+        const exerciseIds = [
+          ...new Set(exercisesData.map((item: BadExercise) => item.exerciseId)),
+        ] as number[];
+
+        const dates = [...new Set(exercisesData.map((item) => item.scheduledDate))];
+
+        const completeDates = dates.map((date) => {
+          const newFecha = new Date(date);
+
+          const completeName = newFecha.toLocaleDateString("es-ES", {
+            weekday: "long",
+            timeZone: "UTC",
+          });
+
+          const initial = newFecha.toLocaleDateString("es-ES", {
+            weekday: "narrow",
+            timeZone: "UTC",
+          });
+
+          return {
+            day: completeName,
+            short: initial,
+            original: date,
+          };
+        });
+
+        const mappedExercises = exercisesData.map((e, id: number) => {
+          const newExercise: Exercise = {
+            id,
+            coachId: e.coachId,
+            exerciseId: e.exerciseId,
+            name: `Ejercicio de la chancla ${id}`,
+            description: `Prueba ${id}`,
+            muscle: `Prueba ${id}`,
+            sets: e.sets,
+            reps: e.reps,
+            restSec: Number(e.restTime),
+          };
+
+          return newExercise;
+        });
+
+        for (let i = 0; i <= exerciseIds.length - 1; i++) {
+          const routineData = await getRoutine(exerciseIds[i]);
+
+          const foundDate = exercisesData.find(
+            (e) => e.exerciseId === exerciseIds[i],
+          )?.scheduledDate;
+          const completeRoutineData: DayRoutine = {
+            id: exerciseIds[i].toString(),
+            day: completeDates.find((date) => date.original === foundDate)!.day,
+            short: completeDates.find((date) => date.original === foundDate)!.short,
+            focus: routineData.name,
+            durationMin: 20,
+            exercises: mappedExercises.filter((e) => e.exerciseId === exerciseIds[i]),
+          };
+
+          setWeekRoutineList((prevDay) => {
+            const listWithoutDuplicate = prevDay.filter(
+              (item) => item.id !== completeRoutineData.id,
+            );
+
+            return [...listWithoutDuplicate, completeRoutineData];
+          });
+        }
+
+        // const weekPlan: DayRoutine[] = [
+        //   {
+        //     id: string;
+        //       day: string;
+        //       short: string;
+        //       focus: string;
+        //       durationMin: number;
+        //       exercises: Exercise[];
+        //       rest?: boolean;
+        //   }
+        // ]
+      } catch (error) {
+        console.error("Error fetching routine data:", error);
+      }
+    };
+
+    fetchRoutinesData();
+  }, [user]);
 
   return (
     <AppShell>
@@ -44,7 +140,7 @@ function RutinaPage() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
-        {weekPlan.map((day, i) => {
+        {weekRoutineList.map((day, i) => {
           const isToday = i === todayIndex;
           return (
             <Link key={day.id} to="/rutina/$dayId" params={{ dayId: day.id }} className="group">
