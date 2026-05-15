@@ -11,10 +11,6 @@ interface ProfileMenuProps {
   align?: "left" | "right";
 }
 
-/**
- * Self-contained profile avatar + dropdown menu.
- * Styled to match the FITYEI black/orange theme but kept independent from AppShell logic.
- */
 export function ProfileMenu({ initial, size = "md", align = "right" }: ProfileMenuProps) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -37,13 +33,8 @@ export function ProfileMenu({ initial, size = "md", align = "right" }: ProfileMe
     };
   }, [open]);
 
-  const handleLogout = async () => {
+  const handleLogout = () => {
     setOpen(false);
-    try {
-      await supabase.auth.signOut();
-    } catch {
-      // ignore — still clear local state
-    }
     logout();
     navigate({ to: "/login" });
   };
