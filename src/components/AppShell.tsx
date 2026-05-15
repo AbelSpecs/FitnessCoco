@@ -249,8 +249,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <Button variant="ghost" size="icon" aria-label="Notificaciones">
                 <Bell className="h-4 w-4" />
               </Button>
-              <div className="lg:hidden h-9 w-9 rounded-full bg-gradient-primary flex items-center justify-center font-display text-base shrink-0">
-                {user!.firstName!.charAt(0)}
+              <div className="lg:hidden">
+                <ProfileMenu initial={user!.firstName!.charAt(0)} size="sm" align="right" />
               </div>
             </div>
           </div>
