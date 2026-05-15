@@ -142,9 +142,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         )}
         {collapsed && (
           <div className="p-3 flex justify-center">
-            <div className="h-10 w-10 rounded-full bg-gradient-primary flex items-center justify-center font-display text-lg">
-              {user!.firstName!.charAt(0)}
-            </div>
+            <ProfileMenu initial={user!.firstName!.charAt(0)} align="left" />
           </div>
         )}
       </aside>
