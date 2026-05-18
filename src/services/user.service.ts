@@ -14,15 +14,27 @@ const api = axios.create({
 
 export const updateUser = async (userData: User) => {
   try {
-    const { id, firstName, age, streak, parqCompleted, planType, parqValidUntil, ...dataToSend } =
-      userData;
+    const {
+      id,
+      firstName,
+      lastName,
+      gender,
+      age,
+      streak,
+      planType,
+      parqCompleted,
+      parqValidUntil,
+      coach,
+      ...dataToSend
+    } = userData;
 
-    const newDataToSend = { id: userData.student?.id, student: { userId: id, ...dataToSend } };
+    const newDataToSend = { id: userData.student?.id, ...dataToSend };
+
     const response = await api.put(`/Students/${userData.student?.id}`, newDataToSend);
 
     return response;
   } catch (error) {
-    console.error("Error al guardar en localStorage:", error);
+    console.error("Error al guardar:", error);
   }
 };
 

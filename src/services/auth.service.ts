@@ -1,4 +1,4 @@
-import { LoginCredentials, RegisterCredentials } from "@/types/auth";
+import { CoachStudent, LoginCredentials, RegisterCredentials } from "@/types/auth";
 import axios from "axios";
 // import api from "./api";
 
@@ -13,6 +13,14 @@ const api = axios.create({
 
 export const register = async (credentials: RegisterCredentials) => {
   const response = await api.post("/Users/RegisterUser", credentials);
+
+  const { data } = response.data;
+
+  return data;
+};
+
+export const associateCoach = async (info: CoachStudent) => {
+  const response = await api.post("/CoachStudents", info);
   const { data } = response.data;
 
   return data;
