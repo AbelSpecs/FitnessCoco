@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,8 +12,17 @@ import {
 } from "@/components/ui/select";
 import { Dumbbell } from "lucide-react";
 import { age } from "@/utils/age";
-import { register } from "@/services/auth.service";
-import { RegisterCredentials } from "@/types/auth";
+import { associateCoach, register } from "@/services/auth.service";
+import { CoachStudent, RegisterCredentials } from "@/types/auth";
+import { City, Country } from "@/types/general";
+import { getCities, getCountries } from "@/services/general.service";
+import { notify } from "@/components/NotificationCenter";
+import { Student } from "@/types/user";
+import { createStudent } from "@/services/user.service";
+
+type RegisterSearch = {
+  coachId?: string;
+};
 
 export const Route = createFileRoute("/register-info")({
   head: () => ({
@@ -23,63 +32,157 @@ export const Route = createFileRoute("/register-info")({
     ],
   }),
   component: RegisterInfoPage,
+  validateSearch: (search: Record<string, unknown>): RegisterSearch => {
+    return {
+      coachId: search.coachId as string | undefined,
+    };
+  },
 });
 
 function RegisterInfoPage() {
   const navigate = useNavigate();
-  const [form, setForm] = useState({
-    name: "",
+  const { coachId } = Route.useSearch();
+  const [step, setStep] = useState(1);
+  const [countries, setCountries] = useState<Country[]>([]);
+  const [cities, setCities] = useState<City[]>([]);
+  const [registerForm, setRegisterForm] = useState<RegisterCredentials>({
+    firstName: "",
+    lastName: "",
+    email: "",
+    userName: "",
+    password: "",
+    confirmPassword: "",
+    phoneNumber: "",
+    countryId: 0,
+    cityId: 0,
+    address: "",
     birthdate: "",
-    weight: "",
-    gender: "",
+    weight: 0,
+    fitnessGoal: "muscle",
   });
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  useEffect(() => {
+    const fetchCountries = async () => {
+      try {
+        const countries = await getCountries();
+
+        setCountries(countries);
+      } catch (error) {
+        console.error("Error al obtener los países:", error);
+      }
+    };
+
+    fetchCountries();
+  }, []);
+
+  const handleNextStep = () => setStep((prev) => prev + 1);
+  const handlePreviousStep = () => setStep((prev) => prev - 1);
+
+  const handleCities = async (value: number) => {
+    setRegisterForm({ ...registerForm, countryId: value });
+
+    try {
+      const cities = await getCities(value);
+
+      setCities(cities ? [cities] : []);
+    } catch (error) {
+      console.error("Error al obtener las ciudades del pais:", error);
+    }
+  };
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
-    if (!form.name.trim()) {
+    if (!registerForm.firstName!.trim()) {
       setError("El nombre es obligatorio");
       return;
     }
-    const ageNum = age(form.birthdate);
+
+    if (!registerForm.lastName!.trim()) {
+      setError("El apellido es obligatorio");
+      return;
+    }
+
+    if (!registerForm.email!.trim()) {
+      setError("El email es obligatorio");
+      return;
+    }
+
+    if (!emailRegex.test(registerForm.email!)) {
+      setError("Por favor, introduce un correo electrónico válido");
+      return;
+    }
+
+    if (!registerForm.userName!.trim()) {
+      setError("El usuario es obligatorio");
+      return;
+    }
+
+    if (registerForm.password !== registerForm.confirmPassword) {
+      setError("Las contraseñas no coinciden");
+      return;
+    }
+    if (registerForm.password!.length < 8) {
+      setError("La contraseña debe tener al menos 8 caracteres");
+      return;
+    }
+
+    if (!registerForm.phoneNumber!.trim()) {
+      setError("El usuario es obligatorio");
+      return;
+    }
+
+    if (!registerForm.countryId) {
+      setError("Selecciona un País");
+      return;
+    }
+
+    if (!registerForm.cityId) {
+      setError("Selecciona una Ciudad");
+      return;
+    }
+
+    if (!registerForm.address!.trim()) {
+      setError("La dirección es obligatoria");
+      return;
+    }
+
+    const ageNum = age(registerForm.birthdate);
     if (!ageNum || ageNum < 10 || ageNum > 120) {
       setError("Ingresa una fecha de nacimiento válida");
-      return;
-    }
-    const weightNum = Number(form.weight);
-    if (!weightNum || weightNum < 20 || weightNum > 400) {
-      setError("Ingresa un peso válido (kg)");
-      return;
-    }
-    if (!form.gender) {
-      setError("Selecciona tu género");
       return;
     }
 
     setLoading(true);
 
-    const completeForm: RegisterCredentials = {
-      firstName: form.name,
-      lastName: "",
-      email: "",
-      userName: "",
-      password: "",
-      confirmPassword: "",
-      phoneNumber: "",
-      countryId: 0,
-      cityId: 0,
-      address: "",
-      birthdate: form.birthdate,
-    };
-
     try {
-      // const data = await register(form);
+      const data = await register(registerForm);
+      console.log(data);
+
+      const studentData: Student = {
+        userId: 0,
+        weight: 0,
+        height: 0,
+        bodyFatPercentage: 0,
+        fitnessGoal: "muscle",
+        activityLevel: "",
+        medicalConditions: "",
+        allergies: "",
+        fitnessExperience: "",
+        generalNotes: "",
+      };
+      const clientData = await createStudent(studentData);
+      console.log(clientData);
+
+      const info = await associateCoach({ coachId: Number(coachId), studentId: 2, status: true });
+      console.log(info);
 
       setLoading(false);
+      notify.created("Usuario registrado!");
       navigate({ to: "/login" });
     } catch (error) {
       setLoading(false);
@@ -100,8 +203,8 @@ function RegisterInfoPage() {
             </div>
             <h2 className="text-xl font-semibold">¡Información guardada!</h2>
             <p className="text-sm text-muted-foreground">
-              Gracias <span className="text-foreground font-medium">{form.name}</span>, tus datos se
-              han registrado correctamente.
+              Gracias <span className="text-foreground font-medium">{registerForm.firstName}</span>,
+              tus datos se han registrado correctamente.
             </p>
             <Link to="/login" className="text-primary font-medium hover:underline text-sm">
               Ir a iniciar sesión
@@ -144,72 +247,277 @@ function RegisterInfoPage() {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Nombre</Label>
-              <Input
-                id="name"
-                type="text"
-                placeholder="Nombre"
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                required
-                className="bg-input/60"
-              />
-            </div>
+          <form onSubmit={handleRegister} className="space-y-4">
+            {/* Paso 1: Datos personales */}
+            {step === 1 && (
+              <>
+                <p className="text-sm text-center text-muted-foreground mt-1">
+                  Paso 1 de 3: Información básica
+                </p>
+                <div className="space-y-2">
+                  <div>
+                    <Label htmlFor="firstName">Nombre</Label>
+                    <Input
+                      id="firstName"
+                      type="text"
+                      placeholder="Nombre"
+                      value={registerForm.firstName}
+                      onChange={(e) =>
+                        setRegisterForm({ ...registerForm, firstName: e.target.value })
+                      }
+                      required
+                      className="bg-input/60"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="lastName">Apellido</Label>
+                    <Input
+                      id="lastName"
+                      type="text"
+                      placeholder="Apellido"
+                      value={registerForm.lastName}
+                      onChange={(e) =>
+                        setRegisterForm({ ...registerForm, lastName: e.target.value })
+                      }
+                      required
+                      className="bg-input/60"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="tu@email.com"
+                    value={registerForm.email}
+                    onChange={(e) => setRegisterForm({ ...registerForm, email: e.target.value })}
+                    required
+                    className="bg-input/60"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="userName">UserName</Label>
+                  <Input
+                    id="userName"
+                    type="text"
+                    placeholder="Nombre de usuario"
+                    value={registerForm.userName}
+                    onChange={(e) => setRegisterForm({ ...registerForm, userName: e.target.value })}
+                    required
+                    className="bg-input/60"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="password">Contraseña</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="••••••••"
+                    value={registerForm.password}
+                    onChange={(e) => setRegisterForm({ ...registerForm, password: e.target.value })}
+                    required
+                    autoComplete="new password"
+                    className="bg-input/60"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPassword">Confirmar contraseña</Label>
+                  <Input
+                    id="confirmPassword"
+                    type="password"
+                    placeholder="••••••••"
+                    value={registerForm.confirmPassword}
+                    onChange={(e) =>
+                      setRegisterForm({ ...registerForm, confirmPassword: e.target.value })
+                    }
+                    required
+                    autoComplete="new password"
+                    className="bg-input/60"
+                  />
+                </div>
+                <Button
+                  type="button"
+                  variant="hero"
+                  size="lg"
+                  className="w-full"
+                  onClick={handleNextStep}
+                  disabled={loading}
+                >
+                  {"Siguiente"}
+                </Button>
+              </>
+            )}
+            {step === 2 && (
+              <>
+                <p className="text-sm text-center text-muted-foreground mt-1">
+                  Paso 2 de 3: Información adicional
+                </p>
+                <div className="space-y-2">
+                  <Label htmlFor="birthdate">Fecha de Nacimiento</Label>
+                  <Input
+                    id="birthdate"
+                    type="date"
+                    placeholder="Fecha de Nacimiento"
+                    value={registerForm.birthdate}
+                    onChange={(e) =>
+                      setRegisterForm({ ...registerForm, birthdate: e.target.value })
+                    }
+                    required
+                    className="bg-input/60 dark:[color-scheme:dark] pointer-events-auto cursor-pointer"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="country">Pais</Label>
+                  {/* <Input
+                    id="country"
+                    type="text"
+                    placeholder="Pais"
+                    value={registerForm.country}
+                    onChange={(e) => setRegisterForm({ ...registerForm, country: e.target.value })}
+                    required
+                    className="bg-input/60"
+                    /> */}
+                  <Select
+                    value={String(registerForm.countryId)}
+                    onValueChange={(value) => {
+                      handleCities(Number(value));
+                    }}
+                  >
+                    <SelectTrigger id="country" className="bg-input/60">
+                      <SelectValue placeholder="Selecciona tu país" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {countries?.map((c) => (
+                        <SelectItem key={c.id} value={String(c.id)}>
+                          {c.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="city">Ciudad</Label>
+                  {/* <Input
+                    id="city"
+                    type="text"
+                    placeholder="Ciudad"
+                    value={registerForm.city}
+                    onChange={(e) => setRegisterForm({ ...registerForm, city: e.target.value })}
+                    required
+                    className="bg-input/60"
+                    /> */}
+                  <Select
+                    value={String(registerForm.cityId)}
+                    onValueChange={(value) => {
+                      setRegisterForm({ ...registerForm, cityId: Number(value) });
+                    }}
+                  >
+                    <SelectTrigger id="city" className="bg-input/60">
+                      <SelectValue placeholder="Selecciona la ciudad" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {cities?.map((c) => (
+                        <SelectItem key={c.id} value={String(c.id)}>
+                          {c.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="phoneNumber">Teléfono</Label>
+                  <Input
+                    id="phoneNumber"
+                    type="text"
+                    placeholder="0424-2586514"
+                    value={registerForm.phoneNumber}
+                    onChange={(e) =>
+                      setRegisterForm({ ...registerForm, phoneNumber: e.target.value })
+                    }
+                    required
+                    className="bg-input/60"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="address">Dirección</Label>
+                  <Input
+                    id="address"
+                    type="text"
+                    placeholder="Dirección"
+                    value={registerForm.address}
+                    onChange={(e) => setRegisterForm({ ...registerForm, address: e.target.value })}
+                    required
+                    className="bg-input/60"
+                  />
+                </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="birthdate">Fecha de Nacimiento</Label>
-              <Input
-                id="birthdate"
-                type="date"
-                placeholder="Fecha de Nacimiento"
-                value={form.birthdate}
-                onChange={(e) => {
-                  setForm({ ...form, birthdate: e.target.value });
-                }}
-                required
-                className="bg-input/60 dark:[color-scheme:dark] pointer-events-auto cursor-pointer"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="weight">Peso (kg)</Label>
-              <Input
-                id="weight"
-                type="number"
-                min={20}
-                max={400}
-                step="0.1"
-                placeholder="70"
-                value={form.weight}
-                onChange={(e) => setForm({ ...form, weight: e.target.value })}
-                required
-                className="bg-input/60"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="gender">Género</Label>
-              <Select
-                value={form.gender}
-                onValueChange={(value) => setForm({ ...form, gender: value })}
-              >
-                <SelectTrigger id="gender" className="bg-input/60">
-                  <SelectValue placeholder="Selecciona tu género" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="male">Masculino</SelectItem>
-                  <SelectItem value="female">Femenino</SelectItem>
-                  <SelectItem value="other">Otro</SelectItem>
-                  <SelectItem value="prefer-not-to-say">Prefiero no decirlo</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <Button type="submit" variant="hero" size="lg" className="w-full" disabled={loading}>
-              {loading ? "Registrando..." : "Registrar"}
-            </Button>
+                <div className="flex gap-3 pt-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="lg"
+                    className="flex-1"
+                    onClick={handlePreviousStep}
+                    disabled={loading}
+                  >
+                    {"Anterior"}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="hero"
+                    size="lg"
+                    className="w-full"
+                    onClick={handleNextStep}
+                    disabled={loading}
+                  >
+                    {"Siguiente"}
+                  </Button>
+                </div>
+              </>
+            )}
+            {step === 3 && (
+              <>
+                <p className="text-sm text-center text-muted-foreground mt-1">
+                  Paso 3 de 3: Información del cuerpo
+                </p>
+                <div className="space-y-2">
+                  <Label htmlFor="phoneNumber">Teléfono</Label>
+                  <Input
+                    id="phoneNumber"
+                    type="text"
+                    placeholder="0424-2586514"
+                    value={registerForm.phoneNumber}
+                    onChange={(e) =>
+                      setRegisterForm({ ...registerForm, phoneNumber: e.target.value })
+                    }
+                    required
+                    className="bg-input/60"
+                  />
+                </div>
+                <div className="flex gap-3 pt-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="lg"
+                    className="flex-1"
+                    onClick={handlePreviousStep}
+                    disabled={loading}
+                  >
+                    {"Anterior"}
+                  </Button>
+                  <Button
+                    type="submit"
+                    variant="hero"
+                    size="lg"
+                    className="flex-1"
+                    disabled={loading}
+                  >
+                    {loading ? "Registrando..." : "Registrar"}
+                  </Button>
+                </div>
+              </>
+            )}
           </form>
 
           <p className="text-center text-sm text-muted-foreground">

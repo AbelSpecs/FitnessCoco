@@ -1,3 +1,4 @@
+import { Goal } from "./goals";
 import { User } from "./user";
 
 export interface RegisterCredentials {
@@ -12,6 +13,8 @@ export interface RegisterCredentials {
   cityId: number;
   address: string;
   birthdate: string;
+  weight?: number;
+  fitnessGoal?: Goal;
 }
 
 export interface Auth {
@@ -43,5 +46,5 @@ export interface UserAuth {
 export interface CoachStudent {
   coachId: number;
   studentId: number;
-  status: string;
+  status: boolean;
 }
