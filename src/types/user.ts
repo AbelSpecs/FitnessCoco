@@ -12,6 +12,15 @@ export interface Student {
   fitnessExperience?: string;
   generalNotes?: string;
 }
+
+export interface StudentInfo {
+  id: string;
+  name: string;
+  goal: string;
+  plan: "basic" | "health" | "pro";
+  streak: number;
+}
+
 export interface Coach {
   id?: number;
   userId?: number;

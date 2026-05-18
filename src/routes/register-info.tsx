@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +11,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Dumbbell } from "lucide-react";
+import { age } from "@/utils/age";
+import { register } from "@/services/auth.service";
+import { RegisterCredentials } from "@/types/auth";
 
 export const Route = createFileRoute("/register-info")({
   head: () => ({
@@ -23,9 +26,10 @@ export const Route = createFileRoute("/register-info")({
 });
 
 function RegisterInfoPage() {
+  const navigate = useNavigate();
   const [form, setForm] = useState({
     name: "",
-    age: "",
+    birthdate: "",
     weight: "",
     gender: "",
   });
@@ -33,7 +37,7 @@ function RegisterInfoPage() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
@@ -41,9 +45,9 @@ function RegisterInfoPage() {
       setError("El nombre es obligatorio");
       return;
     }
-    const ageNum = Number(form.age);
+    const ageNum = age(form.birthdate);
     if (!ageNum || ageNum < 10 || ageNum > 120) {
-      setError("Ingresa una edad válida");
+      setError("Ingresa una fecha de nacimiento válida");
       return;
     }
     const weightNum = Number(form.weight);
@@ -57,10 +61,30 @@ function RegisterInfoPage() {
     }
 
     setLoading(true);
-    setTimeout(() => {
+
+    const completeForm: RegisterCredentials = {
+      firstName: form.name,
+      lastName: "",
+      email: "",
+      userName: "",
+      password: "",
+      confirmPassword: "",
+      phoneNumber: "",
+      country: 0,
+      city: 0,
+      address: "",
+      birthdate: form.birthdate,
+    };
+
+    try {
+      // const data = await register(form);
+
       setLoading(false);
-      setSuccess(true);
-    }, 600);
+      navigate({ to: "/login" });
+    } catch (error) {
+      setLoading(false);
+      setError("Error al registrar. Intenta nuevamente.");
+    }
   };
 
   if (success) {
@@ -126,7 +150,7 @@ function RegisterInfoPage() {
               <Input
                 id="name"
                 type="text"
-                placeholder="Tu nombre"
+                placeholder="Nombre"
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
                 required
@@ -135,17 +159,17 @@ function RegisterInfoPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="age">Edad</Label>
+              <Label htmlFor="birthdate">Fecha de Nacimiento</Label>
               <Input
-                id="age"
-                type="number"
-                min={10}
-                max={120}
-                placeholder="25"
-                value={form.age}
-                onChange={(e) => setForm({ ...form, age: e.target.value })}
+                id="birthdate"
+                type="date"
+                placeholder="Fecha de Nacimiento"
+                value={form.birthdate}
+                onChange={(e) => {
+                  setForm({ ...form, birthdate: e.target.value });
+                }}
                 required
-                className="bg-input/60"
+                className="bg-input/60 dark:[color-scheme:dark] pointer-events-auto cursor-pointer"
               />
             </div>
 
@@ -184,7 +208,7 @@ function RegisterInfoPage() {
             </div>
 
             <Button type="submit" variant="hero" size="lg" className="w-full" disabled={loading}>
-              {loading ? "Guardando..." : "Guardar información"}
+              {loading ? "Registrando..." : "Registrar"}
             </Button>
           </form>
 

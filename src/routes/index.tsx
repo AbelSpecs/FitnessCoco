@@ -65,19 +65,30 @@ function Dashboard() {
             <h1 className="font-display text-3xl sm:text-4xl lg:text-6xl mb-3 leading-none">
               Hola, {user!.firstName!.split(" ")[0]}.
               <br />
-              <span className="text-gradient">Es hora de entrenar.</span>
+              {user?.role === "student" ? (
+                <span className="text-gradient">Es hora de entrenar.</span>
+              ) : (
+                <span className="text-gradient">Tienes clientes que atender.</span>
+              )}
             </h1>
-            <p className="text-sm sm:text-base text-muted-foreground max-w-md mb-5 sm:mb-6">
-              Hoy te toca <strong className="text-foreground">{todayPlan.focus}</strong> ·{" "}
-              {todayPlan.durationMin} min · {todayPlan.exercises.length} ejercicios.
-            </p>
+            {user?.role === "student" && (
+              <p className="text-sm sm:text-base text-muted-foreground max-w-md mb-5 sm:mb-6">
+                Hoy te toca <strong className="text-foreground">{todayPlan.focus}</strong> ·{" "}
+                {todayPlan.durationMin} min · {todayPlan.exercises.length} ejercicios.
+              </p>
+            )}
             <div className="flex flex-col sm:flex-row gap-3">
-              <Button variant="hero" size="lg" asChild className="w-full sm:w-auto">
-                <Link to="/rutina">
-                  <Zap className="h-4 w-4" />
-                  Iniciar entrenamiento
-                </Link>
-              </Button>
+              {user?.role === "student" && (
+                <Button variant="hero" size="lg" asChild className="w-full sm:w-auto">
+                  <Link
+                    to="/rutina/$studentId"
+                    params={{ studentId: user?.studentId?.toString() ?? "" }}
+                  >
+                    <Zap className="h-4 w-4" />
+                    Iniciar entrenamiento
+                  </Link>
+                </Button>
+              )}
               <Button variant="glass" size="lg" asChild className="w-full sm:w-auto">
                 <Link to="/progreso">Ver progreso</Link>
               </Button>
@@ -98,8 +109,18 @@ function Dashboard() {
               value={goalLabels[user!.fitnessGoal!].split(" ")[1]}
               hint={goalLabels[user!.fitnessGoal!]}
             /> */}
-            <StatTile icon={Trophy} label="PRs este mes" value="4" hint="récords personales" />
-            <StatTile icon={TrendingUp} label="Volumen" value="+18%" hint="vs mes pasado" />
+            <StatTile
+              icon={Trophy}
+              label="Mejor cliente esta semana"
+              value="4"
+              hint="récords personales"
+            />
+            <StatTile
+              icon={TrendingUp}
+              label="Volumen de clientes"
+              value="+18%"
+              hint="vs mes pasado"
+            />
           </div>
         </div>
       </section>
@@ -191,20 +212,20 @@ function Dashboard() {
         </Card>
 
         {/* Volume chart */}
-        <Card className="lg:col-span-3 bg-gradient-card border-border p-6">
-          <div className="flex items-center justify-between mb-4">
+        {/* <Card className="lg:col-span-3 bg-gradient-card border-border p-6"> */}
+        {/* <div className="flex items-center justify-between mb-4">
             <div>
               <p className="text-xs uppercase tracking-widest text-muted-foreground">
                 Volumen de entrenamiento
               </p>
               <h2 className="font-display text-3xl">Últimas 12 semanas</h2>
             </div>
-            <Button variant="ghost" size="sm" asChild>
-              {/* <Link to="/progreso">Ver todo</Link> */}
-            </Button>
-          </div>
-          <div className="h-64">
-            {/* <ResponsiveContainer width="100%" height={250}>
+            <Button variant="ghost" size="sm" asChild> */}
+        {/* <Link to="/progreso">Ver todo</Link> */}
+        {/* </Button>
+          </div> */}
+        {/* <div className="h-64"> */}
+        {/* <ResponsiveContainer width="100%" height={250}>
               <AreaChart data={volumeData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
                 <defs>
                   <linearGradient id="volumeGrad" x1="0" y1="0" x2="0" y2="1">
@@ -236,17 +257,17 @@ function Dashboard() {
                 />
               </AreaChart>
             </ResponsiveContainer> */}
-          </div>
-        </Card>
+        {/* </div> */}
+        {/* </Card> */}
 
         {/* Goal progress */}
-        <Card className="lg:col-span-3 bg-gradient-card border-border p-6">
+        {/* <Card className="lg:col-span-3 bg-gradient-card border-border p-6">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 lg:gap-6">
             <GoalRow label="Asistencia mensual" value={84} hint="21 / 25 sesiones" />
             <GoalRow label="Progreso a meta" value={62} hint="Ganar masa muscular" />
             <GoalRow label="Cumplimiento PAR-Q" value={100} hint="Vigente hasta mar 2026" />
           </div>
-        </Card>
+        </Card> */}
       </div>
     </AppShell>
   );

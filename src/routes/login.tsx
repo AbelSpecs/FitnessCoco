@@ -37,14 +37,15 @@ function LoginPage() {
       const { id, token } = data;
 
       const userData = await getUser(id);
+
       const { firstName } = userData;
       const studentData = await getStudent(id);
-      const { id: studentId = 0 } = studentData;
+
       const user: UserAuth = {
         id,
         firstName,
-        studentId: studentId,
-        role: studentId == 0 ? "coach" : "student",
+        studentId: studentData === null ? 0 : studentData.id,
+        role: studentData === null ? "coach" : "student",
       };
 
       if (token) {

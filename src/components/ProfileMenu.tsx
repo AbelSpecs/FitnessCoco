@@ -3,7 +3,6 @@ import { LogOut, User as UserIcon } from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/authStore";
-import { supabase } from "@/integrations/supabase/client";
 
 interface ProfileMenuProps {
   initial: string;

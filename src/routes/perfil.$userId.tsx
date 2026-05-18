@@ -321,7 +321,7 @@ function Perfil() {
               </div>
             )}
 
-            <p className="mt-2 text-sm text-muted-foreground">Muéstraselo a tus alumnos</p>
+            <p className="mt-2 text-sm text-muted-foreground">Muéstraselo a tus futuros clientes</p>
           </div>
         )}
 

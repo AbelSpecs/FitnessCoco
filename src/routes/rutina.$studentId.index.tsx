@@ -1,4 +1,4 @@
-import { createFileRoute, Link, redirect } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect, useParams } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -9,7 +9,7 @@ import { getExercises, getRoutine } from "@/services/routine.service";
 import { useAuthStore } from "@/store/authStore";
 import { BadExercise, BadRoutine, DayRoutine, Exercise } from "@/types/exercises";
 
-export const Route = createFileRoute("/rutina/")({
+export const Route = createFileRoute("/rutina/$studentId/")({
   head: () => ({
     meta: [
       { title: "Rutina semanal — PYROSFIT" },
@@ -34,13 +34,14 @@ export const Route = createFileRoute("/rutina/")({
 function RutinaPage() {
   const today = new Date().getDay();
   const todayIndex = today === 0 ? 6 : today - 1;
-  const { user } = useAuthStore();
+  // const { user } = useAuthStore();
+  const { studentId } = useParams({ from: "/rutina/$studentId/" });
   const [weekRoutineList, setWeekRoutineList] = useState<DayRoutine[]>([]);
 
   useEffect(() => {
     const fetchRoutinesData = async () => {
       try {
-        const exercisesData: BadExercise[] = await getExercises(user!.studentId);
+        const exercisesData: BadExercise[] = await getExercises(Number(studentId));
 
         const exerciseIds = [
           ...new Set(exercisesData.map((item: BadExercise) => item.exerciseId)),
@@ -125,7 +126,7 @@ function RutinaPage() {
     };
 
     fetchRoutinesData();
-  }, [user]);
+  }, [studentId]);
 
   return (
     <AppShell>

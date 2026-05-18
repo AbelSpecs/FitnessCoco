@@ -29,7 +29,7 @@ export interface LoginCredentials {
   password: string;
 }
 
-type Role = "student" | "coach";
+export type Role = "student" | "coach";
 
 export interface UserAuth {
   id: number;

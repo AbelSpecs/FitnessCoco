@@ -25,6 +25,7 @@ import {
   ResponsiveContainer,
   CartesianGrid,
 } from "recharts";
+import { useAuthStore } from "@/store/authStore";
 
 export const Route = createFileRoute("/rutina/$dayId")({
   loader: ({ params }) => {
@@ -48,11 +49,12 @@ export const Route = createFileRoute("/rutina/$dayId")({
 
 function DayDetail() {
   const { day } = Route.useLoaderData() as { day: DayPlan };
+  const { user } = useAuthStore();
 
   return (
     <AppShell>
       <Button variant="ghost" size="sm" asChild className="mb-4 -ml-2">
-        <Link to="/rutina">
+        <Link to="/rutina/$studentId" params={{ studentId: user?.studentId?.toString() ?? "" }}>
           <ArrowLeft className="h-4 w-4" /> Volver a la semana
         </Link>
       </Button>
