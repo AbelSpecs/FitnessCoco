@@ -10,6 +10,7 @@ import {
   Search,
   Menu,
   X,
+  Users,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
@@ -19,15 +20,28 @@ import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 import { useAuthStore } from "@/store/authStore";
 import { ProfileMenu } from "@/components/ProfileMenu";
+import { Role } from "@/types/auth";
 
 const nav = [
-  { to: "/", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/rutina", label: "Rutina", icon: Calendar },
+  {
+    to: "/",
+    label: "Dashboard",
+    icon: LayoutDashboard,
+    roles: ["coach", "student"] as Role[],
+  },
+  { to: "/rutina/$studentId", label: "Rutina", icon: Calendar, roles: ["student"] as Role[] },
   // { to: "/progreso", label: "Progreso", icon: TrendingUp },
   {
     to: "/perfil/$userId",
     label: "Perfil",
     icon: User,
+    roles: ["coach", "student"] as Role[],
+  },
+  {
+    to: "/clientes",
+    label: "Clientes",
+    icon: Users,
+    roles: ["coach"] as Role[],
   },
   // { to: "/par-q", label: "PAR-Q", icon: HeartPulse },
 ] as const;
@@ -37,6 +51,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const { user } = useAuthStore();
+
+  const visibleItems = nav.filter((item) => {
+    if (!item.roles) return true;
+    if (!user?.role) return false;
+    return item.roles.includes(user.role as Role);
+  });
 
   useEffect(() => {
     setMobileOpen(false);
@@ -55,8 +75,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {});
 
-  const isActive = (to: string) =>
-    to === "/" ? location.pathname === "/" : location.pathname.startsWith(to);
+  const isActive = (to: string) => {
+    const firstSection = "/" + to.split("/")[1] || to;
+
+    return to === "/" ? location.pathname === "/" : location.pathname.startsWith(firstSection);
+  };
 
   return (
     <div className="min-h-screen flex w-full">
@@ -82,14 +105,22 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
 
         <nav className="flex-1 px-3 py-4 space-y-1">
-          {nav.map((item) => {
+          {visibleItems.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.to);
+            if (user?.role && !item.roles.includes(user.role as Role)) {
+              return;
+            }
+
+            const dynamicParam = item.label.includes("Rutina")
+              ? { studentId: user?.studentId?.toString() ?? "" }
+              : { userId: user?.id?.toString() ?? "" };
+
             return (
               <Link
                 key={item.to}
                 to={item.to}
-                params={{ userId: user?.id?.toString() ?? "" }}
+                params={dynamicParam}
                 title={collapsed ? item.label : undefined}
                 className={cn(
                   "flex items-center gap-3 rounded-lg text-sm transition-all",
@@ -176,14 +207,22 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </div>
 
             <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-              {nav.map((item) => {
+              {visibleItems.map((item) => {
                 const Icon = item.icon;
                 const active = isActive(item.to);
+                if (user?.role && !item.roles.includes(user.role as Role)) {
+                  return;
+                }
+
+                const dynamicParam = item.label.includes("Rutina")
+                  ? { studentId: user?.studentId?.toString() ?? "" }
+                  : { userId: user?.id?.toString() ?? "" };
+
                 return (
                   <Link
                     key={item.to}
                     to={item.to}
-                    params={{ userId: user?.id?.toString() ?? "" }}
+                    params={dynamicParam}
                     className={cn(
                       "flex items-center gap-3 px-3 py-3 rounded-lg text-sm transition-all",
                       active
@@ -231,15 +270,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <p className="font-display text-xl sm:text-2xl tracking-wider truncate">PYROSFIT</p>
             </div>
 
-            <div className="hidden md:flex items-center gap-2 max-w-md flex-1 lg:ml-0">
-              <div className="relative w-full">
-                {/* <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /> */}
-                <input
+            {/* <div className="hidden md:flex items-center gap-2 max-w-md flex-1 lg:ml-0">
+              <div className="relative w-full"> */}
+            {/* <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /> */}
+            {/* <input
                   placeholder="Buscar ejercicio, rutina…"
                   className="w-full h-10 rounded-lg bg-input/60 border border-border pl-9 pr-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-                />
-              </div>
-            </div>
+                /> */}
+            {/* </div>
+            </div> */}
 
             <div className="flex items-center gap-1 sm:gap-2">
               <Button variant="ghost" size="icon" aria-label="Notificaciones">
@@ -259,15 +298,23 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       {/* Mobile bottom nav */}
       <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 backdrop-blur-xl bg-sidebar/90 border-t border-sidebar-border safe-bottom">
-        <div className={`grid grid-cols-${nav.length}`}>
-          {nav.map((item) => {
+        <div className={`grid grid-cols-${visibleItems.length}`}>
+          {visibleItems.map((item) => {
+            if (user?.role && !item.roles.includes(user.role as Role)) {
+              return;
+            }
+
+            const dynamicParam = item.label.includes("Rutina")
+              ? { studentId: user?.studentId?.toString() ?? "" }
+              : { userId: user?.id?.toString() ?? "" };
             const Icon = item.icon;
             const active = isActive(item.to);
+
             return (
               <Link
                 key={item.to}
                 to={item.to}
-                params={{ userId: user?.id?.toString() ?? "" }}
+                params={dynamicParam}
                 className={cn(
                   "flex flex-col items-center gap-1 py-2.5 text-[10px] font-medium uppercase tracking-wider",
                   active ? "text-primary" : "text-muted-foreground",

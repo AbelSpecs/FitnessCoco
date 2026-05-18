@@ -16,6 +16,7 @@ import { get } from "http";
 import { getCities, getCountries } from "@/services/general.service";
 import { City, Country } from "@/types/general";
 import { RegisterCredentials } from "@/types/auth";
+import { age } from "@/utils/age";
 
 export const Route = createFileRoute("/register")({
   head: () => ({
@@ -48,6 +49,7 @@ function RegisterPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
   useEffect(() => {
     const fetchCountries = async () => {
@@ -82,12 +84,63 @@ function RegisterPage() {
     e.preventDefault();
     setError("");
 
+    if (!registerForm.firstName!.trim()) {
+      setError("El nombre es obligatorio");
+      return;
+    }
+
+    if (!registerForm.lastName!.trim()) {
+      setError("El apellido es obligatorio");
+      return;
+    }
+
+    if (!registerForm.email!.trim()) {
+      setError("El email es obligatorio");
+      return;
+    }
+
+    if (!emailRegex.test(registerForm.email!)) {
+      setError("Por favor, introduce un correo electrónico válido");
+      return;
+    }
+
+    if (!registerForm.userName!.trim()) {
+      setError("El usuario es obligatorio");
+      return;
+    }
+
     if (registerForm.password !== registerForm.confirmPassword) {
       setError("Las contraseñas no coinciden");
       return;
     }
-    if (registerForm.password.length < 8) {
+    if (registerForm.password!.length < 8) {
       setError("La contraseña debe tener al menos 8 caracteres");
+      return;
+    }
+
+    if (!registerForm.phoneNumber!.trim()) {
+      setError("El usuario es obligatorio");
+      return;
+    }
+
+    if (!registerForm.country) {
+      setError("Selecciona un País");
+      return;
+    }
+
+    if (!registerForm.city) {
+      setError("Selecciona una Ciudad");
+      return;
+    }
+
+    if (!registerForm.address!.trim()) {
+      setError("La dirección es obligatoria");
+      return;
+    }
+
+    const ageNum = age(registerForm.birthdate);
+    if (!ageNum || ageNum < 10 || ageNum > 120) {
+      setError("Ingresa una fecha de nacimiento válida");
       return;
     }
 
@@ -247,6 +300,7 @@ function RegisterPage() {
                     value={registerForm.password}
                     onChange={(e) => setRegisterForm({ ...registerForm, password: e.target.value })}
                     required
+                    autoComplete="new password"
                     className="bg-input/60"
                   />
                 </div>
@@ -261,6 +315,7 @@ function RegisterPage() {
                       setRegisterForm({ ...registerForm, confirmPassword: e.target.value })
                     }
                     required
+                    autoComplete="new password"
                     className="bg-input/60"
                   />
                 </div>
@@ -286,7 +341,7 @@ function RegisterPage() {
                   <Input
                     id="phoneNumber"
                     type="text"
-                    placeholder="123-456-7890"
+                    placeholder="0424-2586514"
                     value={registerForm.phoneNumber}
                     onChange={(e) =>
                       setRegisterForm({ ...registerForm, phoneNumber: e.target.value })
@@ -369,14 +424,14 @@ function RegisterPage() {
                   <Label htmlFor="birthdate">Fecha de Nacimiento</Label>
                   <Input
                     id="birthdate"
-                    type="text"
+                    type="date"
                     placeholder="Fecha de Nacimiento"
                     value={registerForm.birthdate}
                     onChange={(e) =>
                       setRegisterForm({ ...registerForm, birthdate: e.target.value })
                     }
                     required
-                    className="bg-input/60"
+                    className="bg-input/60 dark:[color-scheme:dark] pointer-events-auto cursor-pointer"
                   />
                 </div>
                 <div className="flex gap-3 pt-2">
