@@ -1,4 +1,4 @@
-import { User } from "@/types/user";
+import { Student, User } from "@/types/user";
 
 import axios from "axios";
 // import api from "./api";
@@ -11,6 +11,19 @@ const api = axios.create({
     "Content-Type": "application/json",
   },
 });
+
+export const createStudent = async (studentData: Student) => {
+  try {
+    const response = await api.post("/Students", studentData);
+    console.log(response);
+    const { data } = response.data;
+
+    return data;
+  } catch (error) {
+    console.error("Error al crear el perfil del cliente", error);
+    return null;
+  }
+};
 
 export const updateUser = async (userData: User) => {
   try {
