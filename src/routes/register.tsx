@@ -11,12 +11,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Dumbbell } from "lucide-react";
-import { register } from "@/services/auth.service";
+import { associateCoach, register } from "@/services/auth.service";
 import { get } from "http";
 import { getCities, getCountries } from "@/services/general.service";
 import { City, Country } from "@/types/general";
 import { RegisterCredentials } from "@/types/auth";
 import { age } from "@/utils/age";
+import { notify } from "@/components/NotificationCenter";
 
 export const Route = createFileRoute("/register")({
   head: () => ({
@@ -41,8 +42,8 @@ function RegisterPage() {
     password: "",
     confirmPassword: "",
     phoneNumber: "",
-    country: 0,
-    city: 0,
+    countryId: 0,
+    cityId: 0,
     address: "",
     birthdate: "",
   });
@@ -69,7 +70,7 @@ function RegisterPage() {
   const handlePreviousStep = () => setStep(1);
 
   const handleCities = async (value: number) => {
-    setRegisterForm({ ...registerForm, country: value });
+    setRegisterForm({ ...registerForm, countryId: value });
 
     try {
       const cities = await getCities(value);
@@ -123,12 +124,12 @@ function RegisterPage() {
       return;
     }
 
-    if (!registerForm.country) {
+    if (!registerForm.countryId) {
       setError("Selecciona un País");
       return;
     }
 
-    if (!registerForm.city) {
+    if (!registerForm.cityId) {
       setError("Selecciona una Ciudad");
       return;
     }
@@ -149,7 +150,10 @@ function RegisterPage() {
     try {
       const data = await register(registerForm);
 
+      // const info = await associateCoach({1, });
+
       setLoading(false);
+      notify.created("Usuario registrado!");
       navigate({ to: "/login" });
     } catch (error) {
       setLoading(false);
@@ -337,17 +341,17 @@ function RegisterPage() {
                   Paso 2 de 2: Información adicional
                 </p>
                 <div className="space-y-2">
-                  <Label htmlFor="phoneNumber">Teléfono</Label>
+                  <Label htmlFor="birthdate">Fecha de Nacimiento</Label>
                   <Input
-                    id="phoneNumber"
-                    type="text"
-                    placeholder="0424-2586514"
-                    value={registerForm.phoneNumber}
+                    id="birthdate"
+                    type="date"
+                    placeholder="Fecha de Nacimiento"
+                    value={registerForm.birthdate}
                     onChange={(e) =>
-                      setRegisterForm({ ...registerForm, phoneNumber: e.target.value })
+                      setRegisterForm({ ...registerForm, birthdate: e.target.value })
                     }
                     required
-                    className="bg-input/60"
+                    className="bg-input/60 dark:[color-scheme:dark] pointer-events-auto cursor-pointer"
                   />
                 </div>
                 <div className="space-y-2">
@@ -360,9 +364,9 @@ function RegisterPage() {
                     onChange={(e) => setRegisterForm({ ...registerForm, country: e.target.value })}
                     required
                     className="bg-input/60"
-                  /> */}
+                    /> */}
                   <Select
-                    value={String(registerForm.country)}
+                    value={String(registerForm.countryId)}
                     onValueChange={(value) => {
                       handleCities(Number(value));
                     }}
@@ -389,11 +393,11 @@ function RegisterPage() {
                     onChange={(e) => setRegisterForm({ ...registerForm, city: e.target.value })}
                     required
                     className="bg-input/60"
-                  /> */}
+                    /> */}
                   <Select
-                    value={String(registerForm.city)}
+                    value={String(registerForm.cityId)}
                     onValueChange={(value) => {
-                      setRegisterForm({ ...registerForm, city: Number(value) });
+                      setRegisterForm({ ...registerForm, cityId: Number(value) });
                     }}
                   >
                     <SelectTrigger id="city" className="bg-input/60">
@@ -409,6 +413,20 @@ function RegisterPage() {
                   </Select>
                 </div>
                 <div className="space-y-2">
+                  <Label htmlFor="phoneNumber">Teléfono</Label>
+                  <Input
+                    id="phoneNumber"
+                    type="text"
+                    placeholder="0424-2586514"
+                    value={registerForm.phoneNumber}
+                    onChange={(e) =>
+                      setRegisterForm({ ...registerForm, phoneNumber: e.target.value })
+                    }
+                    required
+                    className="bg-input/60"
+                  />
+                </div>
+                <div className="space-y-2">
                   <Label htmlFor="address">Dirección</Label>
                   <Input
                     id="address"
@@ -418,20 +436,6 @@ function RegisterPage() {
                     onChange={(e) => setRegisterForm({ ...registerForm, address: e.target.value })}
                     required
                     className="bg-input/60"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="birthdate">Fecha de Nacimiento</Label>
-                  <Input
-                    id="birthdate"
-                    type="date"
-                    placeholder="Fecha de Nacimiento"
-                    value={registerForm.birthdate}
-                    onChange={(e) =>
-                      setRegisterForm({ ...registerForm, birthdate: e.target.value })
-                    }
-                    required
-                    className="bg-input/60 dark:[color-scheme:dark] pointer-events-auto cursor-pointer"
                   />
                 </div>
                 <div className="flex gap-3 pt-2">

@@ -8,6 +8,8 @@ import { login } from "@/services/auth.service";
 import { useAuthStore } from "@/store/authStore";
 import { UserAuth } from "@/types/auth";
 import { getStudent, getUser, getUserDetails } from "@/services/user.service";
+import { notify } from "@/components/NotificationCenter";
+import Spinner, { SpinnerOverlay } from "@/components/Spinner";
 
 export const Route = createFileRoute("/login")({
   head: () => ({
@@ -51,7 +53,7 @@ function LoginPage() {
       if (token) {
         setAuth(user, token);
       }
-
+      notify.success("Logueado con exito!");
       navigate({ to: "/perfil/$userId", params: { userId: id } });
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
@@ -103,13 +105,11 @@ function LoginPage() {
               Ingresa tus credenciales para continuar
             </p>
           </div>
-
           {error && (
             <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-3 text-sm text-destructive">
               {error}
             </div>
           )}
-
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="userName">Usuario</Label>
@@ -120,6 +120,7 @@ function LoginPage() {
                 value={userName}
                 onChange={(e) => setUserName(e.target.value)}
                 required
+                autoComplete="username"
                 className="bg-input/60"
               />
             </div>
@@ -132,6 +133,7 @@ function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                autoComplete="current-password"
                 className="bg-input/60"
               />
             </div>
@@ -139,7 +141,6 @@ function LoginPage() {
               {isLoading ? "Ingresando" : "Ingresar"}
             </Button>
           </form>
-
           {/* <div className="relative">
             <div className="absolute inset-0 flex items-center">
               <span className="w-full border-t border-border" />
@@ -176,13 +177,13 @@ function LoginPage() {
             </svg>
             Google
           </Button> */}
-
           <p className="text-center text-sm text-muted-foreground">
             ¿No tienes cuenta?{" "}
             <Link to="/register" className="text-primary font-medium hover:underline">
               Regístrate
             </Link>
           </p>
+          {isLoading && <SpinnerOverlay label="Iniciando" />}
         </div>
       </div>
     </div>

@@ -9,10 +9,12 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ChangeEvent, useEffect, useState } from "react";
 import { CheckCircle2, HeartPulse, Pencil } from "lucide-react";
 import { Goal, goalLabels } from "@/types/goals";
-import { User } from "@/types/user";
+import { Student, User } from "@/types/user";
 import { getUserDetails, getQr, updateUser } from "@/services/user.service";
 import { age } from "@/utils/age";
 import { useAuthStore } from "@/store/authStore";
+import { notify } from "@/components/NotificationCenter";
+import Spinner, { SpinnerInline, SpinnerOverlay } from "@/components/Spinner";
 
 export const Route = createFileRoute("/perfil/$userId")({
   head: () => ({
@@ -43,6 +45,9 @@ function Perfil() {
   const [QrBase64, setQrBase64] = useState("");
   const [userData, setUserData] = useState<User | null>(null);
   const [userCompleteData, setUserCompleteData] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  // const [isLoadingTwo, setIsLoadingTwo] = useState(false);
+  const [isLoadingLabel, setIsLoadingLabel] = useState("");
   const { userId } = useParams({ from: "/perfil/$userId" });
 
   useEffect(() => {
@@ -50,6 +55,8 @@ function Perfil() {
 
     const fetchUserData = async () => {
       try {
+        setIsLoadingLabel("Iniciando");
+        setIsLoading(true);
         const user = await getUserDetails(Number(userId));
         const { student = {}, coach = {} } = user;
 
@@ -67,7 +74,7 @@ function Perfil() {
               userId: student.userId,
               weight: student.weight,
               height: student.height,
-              fitnessGoal: student.fitnessGoal,
+              fitnessGoal: student.fitnessGoal as Goal,
               bodyFatPercentage: student.bodyFatPercentage,
               activityLevel: student.activityLevel,
               medicalConditions: student.medicalConditions,
@@ -88,7 +95,7 @@ function Perfil() {
               userId: student.userId,
               weight: student.weight,
               height: student.height,
-              fitnessGoal: student.fitnessGoal,
+              fitnessGoal: student.fitnessGoal as Goal,
               bodyFatPercentage: student.bodyFatPercentage,
               activityLevel: student.activityLevel,
               medicalConditions: student.medicalConditions,
@@ -112,7 +119,10 @@ function Perfil() {
           });
         }
       } catch (e) {
+        setIsLoading(false);
         console.error("Error fetching user data:", e);
+      } finally {
+        setIsLoading(false);
       }
     };
 
@@ -121,8 +131,7 @@ function Perfil() {
 
   const handleInputOnChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { value, name } = e.target;
-
-    setUserData({ ...userData, [name]: value });
+    setUserData({ ...userData, student: { ...userData?.student, [name]: value } });
   };
 
   const handleRadioOnChange = (e: Goal) => {
@@ -130,12 +139,23 @@ function Perfil() {
   };
 
   const handleSaveUser = async () => {
+    setIsLoadingLabel("Guardando...");
+    setIsLoading(true);
     if (userData) {
       setUserCompleteData(userData);
-      const updatedUser = await updateUser(userData);
+
+      try {
+        const updatedUser = await updateUser(userData);
+      } catch (error) {
+        setIsLoading(false);
+        console.error("Error saving data:", error);
+        notify.error("Error guardando la data");
+      } finally {
+        setIsLoading(false);
+      }
     }
     setEdition(true);
-    alert("Cambios guardados (simulado)");
+    notify.success("Cambios guardados");
   };
 
   const handleCancel = () => {
@@ -274,7 +294,7 @@ function Perfil() {
             <Card className="lg:col-span-2 bg-gradient-card border-border p-6">
               <h3 className="font-display text-2xl mb-5">Objetivos</h3>
               <RadioGroup
-                value={goal}
+                value={userData?.student?.fitnessGoal as Goal}
                 onValueChange={(v) => {
                   setGoal(v as Goal);
 
@@ -282,24 +302,26 @@ function Perfil() {
                 }}
                 className="grid grid-cols-1 sm:grid-cols-2 gap-3"
               >
-                {(Object.keys(goalLabels) as Goal[]).map((g) => (
-                  <div
-                    key={g}
-                    className={`flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-all ${
-                      goal === g
-                        ? "bg-gradient-primary border-primary-glow shadow-glow text-primary-foreground"
-                        : "bg-background/40 border-border hover:border-primary/50"
-                    }`}
-                  >
-                    <RadioGroupItem
-                      value={g}
-                      id={g}
-                      className="border-current"
-                      disabled={edition}
-                    />
-                    <span className="font-medium">{goalLabels[g]}</span>
-                  </div>
-                ))}
+                {(Object.keys(goalLabels) as Goal[]).map((g) => {
+                  return (
+                    <div
+                      key={g}
+                      className={`flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-all ${
+                        goal === g
+                          ? "bg-gradient-primary border-primary-glow shadow-glow text-primary-foreground"
+                          : "bg-background/40 border-border hover:border-primary/50"
+                      }`}
+                    >
+                      <RadioGroupItem
+                        value={g}
+                        id={g}
+                        className="border-current"
+                        disabled={edition}
+                      />
+                      <span className="font-medium">{goalLabels[g]}</span>
+                    </div>
+                  );
+                })}
               </RadioGroup>
             </Card>
           </>
@@ -380,6 +402,7 @@ function Perfil() {
           </>
         )}
       </div>
+      {isLoading && <SpinnerOverlay label={isLoadingLabel} />}
     </AppShell>
   );
 }

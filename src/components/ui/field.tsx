@@ -16,7 +16,7 @@ export const Field = ({
   defaultValue?: string;
   value?: string;
   autoComplete?: boolean;
-  type?: string;
+  type?: React.HTMLInputTypeAttribute;
   disabled?: boolean;
   onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }) => {

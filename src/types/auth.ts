@@ -8,8 +8,8 @@ export interface RegisterCredentials {
   password: string;
   confirmPassword: string;
   phoneNumber: string;
-  country: number;
-  city: number;
+  countryId: number;
+  cityId: number;
   address: string;
   birthdate: string;
 }
@@ -38,4 +38,10 @@ export interface UserAuth {
   email?: string;
   firstName?: string;
   role?: Role;
+}
+
+export interface CoachStudent {
+  coachId: number;
+  studentId: number;
+  status: string;
 }

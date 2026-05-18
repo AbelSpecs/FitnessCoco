@@ -70,8 +70,8 @@ function RegisterInfoPage() {
       password: "",
       confirmPassword: "",
       phoneNumber: "",
-      country: 0,
-      city: 0,
+      countryId: 0,
+      cityId: 0,
       address: "",
       birthdate: form.birthdate,
     };
