@@ -19,6 +19,8 @@ import { getCities, getCountries } from "@/services/general.service";
 import { notify } from "@/components/NotificationCenter";
 import { Student } from "@/types/user";
 import { createStudent } from "@/services/user.service";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Goal, goalLabels } from "@/types/goals";
 
 type RegisterSearch = {
   coachId?: string;
@@ -45,6 +47,7 @@ function RegisterInfoPage() {
   const [step, setStep] = useState(1);
   const [countries, setCountries] = useState<Country[]>([]);
   const [cities, setCities] = useState<City[]>([]);
+  const [goal, setGoal] = useState<Goal | null>(null);
   const [registerForm, setRegisterForm] = useState<RegisterCredentials>({
     firstName: "",
     lastName: "",
@@ -58,7 +61,7 @@ function RegisterInfoPage() {
     address: "",
     birthdate: "",
     weight: 0,
-    fitnessGoal: "muscle",
+    fitnessGoal: undefined,
   });
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
@@ -81,6 +84,10 @@ function RegisterInfoPage() {
 
   const handleNextStep = () => setStep((prev) => prev + 1);
   const handlePreviousStep = () => setStep((prev) => prev - 1);
+
+  const handleRadioOnChange = (e: Goal) => {
+    setRegisterForm({ ...registerForm, fitnessGoal: e });
+  };
 
   const handleCities = async (value: number) => {
     setRegisterForm({ ...registerForm, countryId: value });
@@ -157,6 +164,27 @@ function RegisterInfoPage() {
       return;
     }
 
+    const weightValue = registerForm.weight ? Number(registerForm.weight) : NaN;
+    if (isNaN(weightValue)) {
+      setError("El peso es obligatorio");
+      return;
+    }
+
+    const MIN_WEIGHT = 30;
+    const MAX_WEIGHT = 300;
+
+    if (weightValue < MIN_WEIGHT || weightValue > MAX_WEIGHT) {
+      setError(`El peso debe estar entre ${MIN_WEIGHT} y ${MAX_WEIGHT} kg`);
+      return;
+    }
+
+    const selectedGoal = registerForm.fitnessGoal || goal;
+
+    if (!selectedGoal || !selectedGoal.toString().trim()) {
+      setError("Debes seleccionar al menos un objetivo para continuar");
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -164,11 +192,11 @@ function RegisterInfoPage() {
       console.log(data);
 
       const studentData: Student = {
-        userId: 0,
-        weight: 0,
+        userId: data.id,
+        weight: registerForm.weight,
         height: 0,
         bodyFatPercentage: 0,
-        fitnessGoal: "muscle",
+        fitnessGoal: registerForm.fitnessGoal,
         activityLevel: "",
         medicalConditions: "",
         allergies: "",
@@ -178,7 +206,11 @@ function RegisterInfoPage() {
       const clientData = await createStudent(studentData);
       console.log(clientData);
 
-      const info = await associateCoach({ coachId: Number(coachId), studentId: 2, status: true });
+      const info = await associateCoach({
+        coachId: Number(coachId),
+        studentId: clientData.id,
+        status: true,
+      });
       console.log(info);
 
       setLoading(false);
@@ -479,22 +511,47 @@ function RegisterInfoPage() {
             {step === 3 && (
               <>
                 <p className="text-sm text-center text-muted-foreground mt-1">
-                  Paso 3 de 3: Información del cuerpo
+                  Paso 3 de 3: Información sobre el entrenamiento
                 </p>
                 <div className="space-y-2">
-                  <Label htmlFor="phoneNumber">Teléfono</Label>
+                  <Label htmlFor="weight">Peso</Label>
                   <Input
-                    id="phoneNumber"
-                    type="text"
-                    placeholder="0424-2586514"
-                    value={registerForm.phoneNumber}
+                    id="weight"
+                    type="number"
+                    placeholder="Peso (kg)"
+                    value={registerForm.weight}
                     onChange={(e) =>
-                      setRegisterForm({ ...registerForm, phoneNumber: e.target.value })
+                      setRegisterForm({ ...registerForm, weight: Number(e.target.value) })
                     }
                     required
                     className="bg-input/60"
                   />
                 </div>
+                <Label>Objetivos</Label>
+                <RadioGroup
+                  value={registerForm?.fitnessGoal as Goal}
+                  onValueChange={(v) => {
+                    setGoal(v as Goal);
+                    handleRadioOnChange(v as Goal);
+                  }}
+                  className="grid grid-cols-1 sm:grid-cols-2 gap-2"
+                >
+                  {(Object.keys(goalLabels) as Goal[]).map((g) => {
+                    return (
+                      <div
+                        key={g}
+                        className={`flex items-center gap-2.5 py-2 px-3.5 rounded-lg border cursor-pointer transition-all ${
+                          goal === g
+                            ? "bg-gradient-primary border-primary-glow shadow-glow text-primary-foreground"
+                            : "bg-background/40 border-border hover:border-primary/50"
+                        }`}
+                      >
+                        <RadioGroupItem value={g} id={g} className="h-4 w-4 border-current" />
+                        <span className="text-sm font-medium leading-none">{goalLabels[g]}</span>
+                      </div>
+                    );
+                  })}
+                </RadioGroup>
                 <div className="flex gap-3 pt-2">
                   <Button
                     type="button"
