@@ -61,7 +61,7 @@ function RegisterInfoPage() {
     address: "",
     birthdate: "",
     weight: 0,
-    fitnessGoal: undefined,
+    fitnessGoal: "muscle",
   });
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);

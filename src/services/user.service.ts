@@ -1,4 +1,4 @@
-import { Student, User } from "@/types/user";
+import { Coach, Student, User } from "@/types/user";
 
 import axios from "axios";
 // import api from "./api";
@@ -21,6 +21,19 @@ export const createStudent = async (studentData: Student) => {
     return data;
   } catch (error) {
     console.error("Error al crear el perfil del cliente", error);
+    return null;
+  }
+};
+
+export const createCoach = async (coachData: Coach) => {
+  try {
+    const response = await api.post("/Coaches", coachData);
+    console.log(response);
+    const { data } = response.data;
+
+    return data;
+  } catch (error) {
+    console.error("Error al crear el perfil del coach", error);
     return null;
   }
 };

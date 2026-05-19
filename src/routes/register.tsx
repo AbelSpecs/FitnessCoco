@@ -18,6 +18,8 @@ import { City, Country } from "@/types/general";
 import { RegisterCredentials } from "@/types/auth";
 import { age } from "@/utils/age";
 import { notify } from "@/components/NotificationCenter";
+import { Coach } from "@/types/user";
+import { createCoach } from "@/services/user.service";
 
 export const Route = createFileRoute("/register")({
   head: () => ({
@@ -150,10 +152,17 @@ function RegisterPage() {
     try {
       const data = await register(registerForm);
 
-      // const info = await associateCoach({1, });
+      const coachToCreate: Coach = {
+        userId: data.id,
+        bio: "",
+        certifications: "",
+      };
+
+      const coachData = await createCoach(coachToCreate);
+      console.log(coachData);
 
       setLoading(false);
-      notify.created("Usuario registrado!");
+      notify.created("Coach registrado!");
       navigate({ to: "/login" });
     } catch (error) {
       setLoading(false);
