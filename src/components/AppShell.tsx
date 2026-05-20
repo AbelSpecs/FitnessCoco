@@ -38,7 +38,7 @@ const nav = [
     roles: ["coach", "student"] as Role[],
   },
   {
-    to: "/clientes",
+    to: "/clientes/$coachId",
     label: "Clientes",
     icon: Users,
     roles: ["coach"] as Role[],
@@ -57,6 +57,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     if (!user?.role) return false;
     return item.roles.includes(user.role as Role);
   });
+
+  const paramMappers: Record<string, () => Record<string, string>> = {
+    Rutina: () => ({ studentId: user?.studentId?.toString() ?? "" }),
+    Perfil: () => ({ userId: user?.id?.toString() ?? "" }),
+    Clientes: () => ({ coachId: user?.coachId?.toString() ?? "" }),
+    Dashboard: () => ({}),
+  };
 
   useEffect(() => {
     setMobileOpen(false);
@@ -112,9 +119,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               return;
             }
 
-            const dynamicParam = item.label.includes("Rutina")
-              ? { studentId: user?.studentId?.toString() ?? "" }
-              : { userId: user?.id?.toString() ?? "" };
+            const matchedKey = Object.keys(paramMappers).find((key) => item.label.includes(key))!;
+            const dynamicParam = paramMappers[matchedKey]();
 
             return (
               <Link
@@ -214,9 +220,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   return;
                 }
 
-                const dynamicParam = item.label.includes("Rutina")
-                  ? { studentId: user?.studentId?.toString() ?? "" }
-                  : { userId: user?.id?.toString() ?? "" };
+                const matchedKey = Object.keys(paramMappers).find((key) =>
+                  item.label.includes(key),
+                )!;
+                const dynamicParam = paramMappers[matchedKey]();
 
                 return (
                   <Link
@@ -304,9 +311,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               return;
             }
 
-            const dynamicParam = item.label.includes("Rutina")
-              ? { studentId: user?.studentId?.toString() ?? "" }
-              : { userId: user?.id?.toString() ?? "" };
+            const matchedKey = Object.keys(paramMappers).find((key) => item.label.includes(key))!;
+            const dynamicParam = paramMappers[matchedKey]();
             const Icon = item.icon;
             const active = isActive(item.to);
 

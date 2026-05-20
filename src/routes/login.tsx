@@ -7,9 +7,11 @@ import { Dumbbell } from "lucide-react";
 import { login } from "@/services/auth.service";
 import { useAuthStore } from "@/store/authStore";
 import { UserAuth } from "@/types/auth";
-import { getStudent, getUser, getUserDetails } from "@/services/user.service";
+import { getUser, getUserDetails } from "@/services/user.service";
 import { notify } from "@/components/NotificationCenter";
 import Spinner, { SpinnerOverlay } from "@/components/Spinner";
+import { getStudent } from "@/services/student.service";
+import { getCoach } from "@/services/coach.service";
 
 export const Route = createFileRoute("/login")({
   head: () => ({
@@ -43,10 +45,13 @@ function LoginPage() {
       const { firstName } = userData;
       const studentData = await getStudent(id);
 
+      const coachData = await getCoach(id);
+
       const user: UserAuth = {
         id,
         firstName,
         studentId: studentData === null ? 0 : studentData.id,
+        coachId: coachData === null ? 0 : coachData.id,
         role: studentData === null ? "coach" : "student",
       };
 

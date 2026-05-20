@@ -189,10 +189,9 @@ function RegisterInfoPage() {
 
     try {
       const data = await register(registerForm);
-      console.log(data);
 
       const studentData: Student = {
-        userId: data.id,
+        userId: Number(data.id),
         weight: registerForm.weight,
         height: 0,
         bodyFatPercentage: 0,
@@ -202,16 +201,16 @@ function RegisterInfoPage() {
         allergies: "",
         fitnessExperience: "",
         generalNotes: "",
+        gymId: 1,
       };
+
       const clientData = await createStudent(studentData);
-      console.log(clientData);
 
       const info = await associateCoach({
         coachId: Number(coachId),
-        studentId: clientData.id,
+        studentId: Number(clientData.id),
         status: true,
       });
-      console.log(info);
 
       setLoading(false);
       notify.created("Usuario registrado!");
@@ -421,7 +420,7 @@ function RegisterInfoPage() {
                     </SelectTrigger>
                     <SelectContent>
                       {countries?.map((c) => (
-                        <SelectItem key={c.id} value={String(c.id)}>
+                        <SelectItem key={c.id} value={String(c.id)} className="focus:text-white">
                           {c.name}
                         </SelectItem>
                       ))}
@@ -450,7 +449,7 @@ function RegisterInfoPage() {
                     </SelectTrigger>
                     <SelectContent>
                       {cities?.map((c) => (
-                        <SelectItem key={c.id} value={String(c.id)}>
+                        <SelectItem key={c.id} value={String(c.id)} className="focus:text-white">
                           {c.name}
                         </SelectItem>
                       ))}

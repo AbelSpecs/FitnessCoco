@@ -14,53 +14,14 @@ const api = axios.create({
 
 export const createStudent = async (studentData: Student) => {
   try {
-    const response = await api.post("/Students", studentData);
-    console.log(response);
+    const response = await api.post("/Students", { student: studentData });
+
     const { data } = response.data;
 
     return data;
   } catch (error) {
     console.error("Error al crear el perfil del cliente", error);
     return null;
-  }
-};
-
-export const createCoach = async (coachData: Coach) => {
-  try {
-    const response = await api.post("/Coaches", coachData);
-    console.log(response);
-    const { data } = response.data;
-
-    return data;
-  } catch (error) {
-    console.error("Error al crear el perfil del coach", error);
-    return null;
-  }
-};
-
-export const updateUser = async (userData: User) => {
-  try {
-    const {
-      id,
-      firstName,
-      lastName,
-      gender,
-      age,
-      streak,
-      planType,
-      parqCompleted,
-      parqValidUntil,
-      coach,
-      ...dataToSend
-    } = userData;
-
-    const newDataToSend = { id: userData.student?.id, ...dataToSend };
-
-    const response = await api.put(`/Students/${userData.student?.id}`, newDataToSend);
-
-    return response;
-  } catch (error) {
-    console.error("Error al guardar:", error);
   }
 };
 
@@ -85,30 +46,4 @@ export const getUser = async (id: number) => {
     console.error("Error al obtener el perfil del usuario", error);
     return null;
   }
-};
-
-export const getStudent = async (id: number) => {
-  try {
-    const response = await api.get(`/Students/user/${id}`);
-    const { data } = response.data;
-
-    if (!data) return null;
-
-    return data;
-  } catch (error) {
-    console.error("Error al obtener el perfil del usuario", error);
-    return null;
-  }
-};
-
-export const getCoach = async (id: number) => {
-  const response = await api.get(`/Coaches/user/${id}`);
-
-  return response.data;
-};
-
-export const getQr = async (id: number) => {
-  const response = await api.get(`/Qrs/GenerateQr/${id}`);
-
-  return response.data;
 };
