@@ -7,9 +7,12 @@ import { ArrowLeft, ChevronRight, Search, Users, Dumbbell } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 import { AppShell } from "@/components/AppShell";
 import { getUserDetails } from "@/services/user.service";
-import { StudentInfo } from "@/types/user";
-import { UserDto } from "@/dtos/userDto";
-export const Route = createFileRoute("/clientes")({
+import { Student, StudentInfo } from "@/types/user";
+import { StudentDto, UserDto } from "@/dtos/userDto";
+import { getStudents } from "@/services/student.service";
+import { getCoachStudents } from "@/services/coach.service";
+
+export const Route = createFileRoute("/clientes/$coachId")({
   head: () => ({
     meta: [
       { title: "Clientes — PyrosFit" },
@@ -31,16 +34,6 @@ export const Route = createFileRoute("/clientes")({
   component: ClientesPage,
 });
 
-const MOCK_CLIENTS: StudentInfo[] = [
-  { id: "1", name: "Diego Martínez", goal: "Ganar masa muscular", plan: "pro", streak: 12 },
-  { id: "2", name: "Lucía Fernández", goal: "Perder grasa", plan: "health", streak: 7 },
-  { id: "3", name: "Carlos Gómez", goal: "Ganar fuerza", plan: "pro", streak: 24 },
-  { id: "4", name: "María López", goal: "Resistencia", plan: "basic", streak: 3 },
-  { id: "5", name: "Andrés Ruiz", goal: "Hipertrofia", plan: "pro", streak: 18 },
-  { id: "6", name: "Sofía Castro", goal: "Recomposición", plan: "health", streak: 9 },
-  { id: "7", name: "Javier Torres", goal: "Movilidad", plan: "basic", streak: 2 },
-  { id: "8", name: "Elena Vidal", goal: "Fuerza máxima", plan: "pro", streak: 31 },
-];
 function ClientesPage() {
   const [query, setQuery] = useState("");
   const [students, setStudents] = useState<StudentInfo[]>([]);
@@ -48,13 +41,14 @@ function ClientesPage() {
 
   useEffect(() => {
     const getCoachClients = async () => {
-      const studentData = await getUserDetails(1); /// esto es temporal mientras @keiver termina el endpoint
-      const studentDataList = [studentData]; // deberia ser un arreglo de clientes
-      const studentListMapped = studentDataList.map((item: UserDto) => {
+      const studentsData = await getCoachStudents(Number(user?.coachId));
+      const { students } = studentsData;
+
+      const studentListMapped = students.map((item: StudentInfo) => {
         const clientList: StudentInfo = {
-          id: item.student.id!.toString(),
-          name: item.student.firstName!,
-          goal: item.student.fitnessGoal!,
+          studentId: item.studentId,
+          name: item.name!,
+          fitnessGoal: item.fitnessGoal!,
           plan: "basic",
           streak: 2,
         };
@@ -66,13 +60,13 @@ function ClientesPage() {
     };
 
     getCoachClients();
-  }, []);
+  }, [user?.coachId]);
 
   const visibleClients = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return students;
     return students.filter(
-      (c) => c.name.toLowerCase().includes(q) || c.goal.toLowerCase().includes(q),
+      (c) => c.name.toLowerCase().includes(q) || c.fitnessGoal.toLowerCase().includes(q),
     );
   }, [query, students]);
   return (
@@ -116,9 +110,9 @@ function ClientesPage() {
             <div className="space-y-3">
               {visibleClients.map((client) => (
                 <Link
-                  key={client.id}
+                  key={client.studentId}
                   to="/rutina/$studentId"
-                  params={{ studentId: client.id.toString() ?? "" }}
+                  params={{ studentId: client.studentId.toString() ?? "" }}
                   className="group block"
                 >
                   <Card className="bg-gradient-card border-border p-4 sm:p-5 hover:border-primary/50 hover:shadow-card transition-all duration-300 hover:-translate-y-0.5">
@@ -139,7 +133,7 @@ function ClientesPage() {
                           </Badge>
                         </div>
                         <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 truncate">
-                          {client.goal}
+                          {client.fitnessGoal}
                         </p>
                         <div className="flex items-center gap-3 text-[11px] sm:text-xs text-muted-foreground mt-1">
                           <span className="flex items-center gap-1">

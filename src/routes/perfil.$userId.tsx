@@ -10,11 +10,13 @@ import { ChangeEvent, useEffect, useState } from "react";
 import { CheckCircle2, HeartPulse, Pencil } from "lucide-react";
 import { Goal, goalLabels } from "@/types/goals";
 import { Student, User } from "@/types/user";
-import { getUserDetails, getQr, updateUser } from "@/services/user.service";
+import { getUserDetails } from "@/services/user.service";
 import { age } from "@/utils/age";
 import { useAuthStore } from "@/store/authStore";
 import { notify } from "@/components/NotificationCenter";
 import Spinner, { SpinnerInline, SpinnerOverlay } from "@/components/Spinner";
+import { updateStudent } from "@/services/student.service";
+import { getQr } from "@/services/general.service";
 
 export const Route = createFileRoute("/perfil/$userId")({
   head: () => ({
@@ -43,10 +45,10 @@ function Perfil() {
   const [edition, setEdition] = useState(true);
   const [isStudent, setIsStudent] = useState(true);
   const [QrBase64, setQrBase64] = useState("");
+  const [url, setUrl] = useState("");
   const [userData, setUserData] = useState<User | null>(null);
   const [userCompleteData, setUserCompleteData] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  // const [isLoadingTwo, setIsLoadingTwo] = useState(false);
   const [isLoadingLabel, setIsLoadingLabel] = useState("");
   const { userId } = useParams({ from: "/perfil/$userId" });
 
@@ -109,13 +111,23 @@ function Perfil() {
           const { base64 } = coachQr.data;
           setQrBase64(base64);
 
+          const BASE_URL = window.location.origin;
+          const urlToShare = `${BASE_URL}/register-info?coachId=${coach.id}`;
+          setUrl(urlToShare);
+
           setUserData({
             ...userData,
             firstName: coach.firstName,
+            coach: {
+              bio: coach.bio,
+            },
           });
           setUserCompleteData({
             ...userCompleteData,
             firstName: coach.firstName,
+            coach: {
+              bio: coach.bio,
+            },
           });
         }
       } catch (e) {
@@ -129,9 +141,11 @@ function Perfil() {
     fetchUserData();
   }, [userId]);
 
-  const handleInputOnChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputOnChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { value, name } = e.target;
-    setUserData({ ...userData, student: { ...userData?.student, [name]: value } });
+
+    if (isStudent) setUserData({ ...userData, student: { ...userData?.student, [name]: value } });
+    else setUserData({ ...userData, coach: { ...userData?.coach, [name]: value } });
   };
 
   const handleRadioOnChange = (e: Goal) => {
@@ -145,7 +159,7 @@ function Perfil() {
       setUserCompleteData(userData);
 
       try {
-        const updatedUser = await updateUser(userData);
+        const updatedUser = await updateStudent(userData);
       } catch (error) {
         setIsLoading(false);
         console.error("Error saving data:", error);
@@ -161,6 +175,11 @@ function Perfil() {
   const handleCancel = () => {
     setUserData(userCompleteData);
     setEdition(true);
+  };
+
+  const handleShareLink = async () => {
+    await navigator.clipboard.writeText(url);
+    notify.success("Enlace copiado al portapapeles");
   };
 
   return (
@@ -183,8 +202,8 @@ function Perfil() {
             <h2 className="font-display text-3xl mt-4">{userData?.firstName}</h2>
             {!isStudent && (
               <>
-                <p className="text-sm text-muted-foreground">Cliente · Plan Pro</p>
-                <p className="text-sm text-muted-foreground">{userData?.coach?.bio}</p>
+                <p className="text-sm text-muted-foreground">Entrenador</p>
+                {/* <p className="text-sm text-muted-foreground">{userData?.coach?.bio}</p> */}
               </>
             )}
             {isStudent && (
@@ -199,6 +218,32 @@ function Perfil() {
                 </Button>
               </>
             )}
+            {/* {!isStudent && (
+              <>
+                {!edition ? (
+                  <div className="flex flex-col items-center w-full">
+                    <textarea
+                      name="bio"
+                      key="bio"
+                      value={userData?.coach?.bio}
+                      onChange={(e) => {
+                        handleInputOnChange(e);
+                      }}
+                      rows={2}
+                      className="w-full max-w-md p-3 text-sm rounded-lg border border-border bg-background/40 text-foreground resize-none outline-none focus:border-primary transition-all text-center"
+                      placeholder="Escribe una bio"
+                    />
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 gap-2 mt-6 text-center">
+                    <Stat label="Bio" value={`${userData?.coach?.bio}`} />
+                  </div>
+                )}
+                <Button variant="glass" className="mt-6 w-full" onClick={() => setEdition(false)}>
+                  <Pencil className="h-4 w-4" /> Editar
+                </Button>
+              </>
+            )} */}
           </div>
         </Card>
 
@@ -332,11 +377,16 @@ function Perfil() {
             <h3 className="mb-4 font-bold text-lg">Tu Código de Acceso</h3>
 
             {QrBase64 ? (
-              <img
-                src={`data:image/png;base64,${QrBase64}`}
-                alt="Código QR de alumno"
-                className="w-64 h-64 border-4 border-white rounded-md shadow-xl"
-              />
+              <>
+                <img
+                  src={`data:image/png;base64,${QrBase64}`}
+                  alt="Código QR de alumno"
+                  className="w-64 h-64 border-4 border-white rounded-md shadow-xl"
+                />
+                <Button variant="outline" className="mt-4" onClick={handleShareLink}>
+                  Compartir enlace
+                </Button>
+              </>
             ) : (
               <div className="w-64 h-64 bg-gray-200 animate-pulse flex items-center justify-center">
                 Generando QR...

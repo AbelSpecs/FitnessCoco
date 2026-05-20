@@ -14,10 +14,10 @@ import { Route as RegisterRouteImport } from './routes/register'
 import { Route as ProgresoRouteImport } from './routes/progreso'
 import { Route as ParQRouteImport } from './routes/par-q'
 import { Route as LoginRouteImport } from './routes/login'
-import { Route as ClientesRouteImport } from './routes/clientes'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as RutinaDayIdRouteImport } from './routes/rutina.$dayId'
 import { Route as PerfilUserIdRouteImport } from './routes/perfil.$userId'
+import { Route as ClientesCoachIdRouteImport } from './routes/clientes.$coachId'
 import { Route as RutinaStudentIdIndexRouteImport } from './routes/rutina.$studentId.index'
 
 const RegisterInfoRoute = RegisterInfoRouteImport.update({
@@ -45,11 +45,6 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ClientesRoute = ClientesRouteImport.update({
-  id: '/clientes',
-  path: '/clientes',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -65,6 +60,11 @@ const PerfilUserIdRoute = PerfilUserIdRouteImport.update({
   path: '/perfil/$userId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ClientesCoachIdRoute = ClientesCoachIdRouteImport.update({
+  id: '/clientes/$coachId',
+  path: '/clientes/$coachId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RutinaStudentIdIndexRoute = RutinaStudentIdIndexRouteImport.update({
   id: '/rutina/$studentId/',
   path: '/rutina/$studentId/',
@@ -73,24 +73,24 @@ const RutinaStudentIdIndexRoute = RutinaStudentIdIndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/clientes': typeof ClientesRoute
   '/login': typeof LoginRoute
   '/par-q': typeof ParQRoute
   '/progreso': typeof ProgresoRoute
   '/register': typeof RegisterRoute
   '/register-info': typeof RegisterInfoRoute
+  '/clientes/$coachId': typeof ClientesCoachIdRoute
   '/perfil/$userId': typeof PerfilUserIdRoute
   '/rutina/$dayId': typeof RutinaDayIdRoute
   '/rutina/$studentId/': typeof RutinaStudentIdIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/clientes': typeof ClientesRoute
   '/login': typeof LoginRoute
   '/par-q': typeof ParQRoute
   '/progreso': typeof ProgresoRoute
   '/register': typeof RegisterRoute
   '/register-info': typeof RegisterInfoRoute
+  '/clientes/$coachId': typeof ClientesCoachIdRoute
   '/perfil/$userId': typeof PerfilUserIdRoute
   '/rutina/$dayId': typeof RutinaDayIdRoute
   '/rutina/$studentId': typeof RutinaStudentIdIndexRoute
@@ -98,12 +98,12 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/clientes': typeof ClientesRoute
   '/login': typeof LoginRoute
   '/par-q': typeof ParQRoute
   '/progreso': typeof ProgresoRoute
   '/register': typeof RegisterRoute
   '/register-info': typeof RegisterInfoRoute
+  '/clientes/$coachId': typeof ClientesCoachIdRoute
   '/perfil/$userId': typeof PerfilUserIdRoute
   '/rutina/$dayId': typeof RutinaDayIdRoute
   '/rutina/$studentId/': typeof RutinaStudentIdIndexRoute
@@ -112,36 +112,36 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/clientes'
     | '/login'
     | '/par-q'
     | '/progreso'
     | '/register'
     | '/register-info'
+    | '/clientes/$coachId'
     | '/perfil/$userId'
     | '/rutina/$dayId'
     | '/rutina/$studentId/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/clientes'
     | '/login'
     | '/par-q'
     | '/progreso'
     | '/register'
     | '/register-info'
+    | '/clientes/$coachId'
     | '/perfil/$userId'
     | '/rutina/$dayId'
     | '/rutina/$studentId'
   id:
     | '__root__'
     | '/'
-    | '/clientes'
     | '/login'
     | '/par-q'
     | '/progreso'
     | '/register'
     | '/register-info'
+    | '/clientes/$coachId'
     | '/perfil/$userId'
     | '/rutina/$dayId'
     | '/rutina/$studentId/'
@@ -149,12 +149,12 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  ClientesRoute: typeof ClientesRoute
   LoginRoute: typeof LoginRoute
   ParQRoute: typeof ParQRoute
   ProgresoRoute: typeof ProgresoRoute
   RegisterRoute: typeof RegisterRoute
   RegisterInfoRoute: typeof RegisterInfoRoute
+  ClientesCoachIdRoute: typeof ClientesCoachIdRoute
   PerfilUserIdRoute: typeof PerfilUserIdRoute
   RutinaDayIdRoute: typeof RutinaDayIdRoute
   RutinaStudentIdIndexRoute: typeof RutinaStudentIdIndexRoute
@@ -197,13 +197,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/clientes': {
-      id: '/clientes'
-      path: '/clientes'
-      fullPath: '/clientes'
-      preLoaderRoute: typeof ClientesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/': {
       id: '/'
       path: '/'
@@ -225,6 +218,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PerfilUserIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/clientes/$coachId': {
+      id: '/clientes/$coachId'
+      path: '/clientes/$coachId'
+      fullPath: '/clientes/$coachId'
+      preLoaderRoute: typeof ClientesCoachIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/rutina/$studentId/': {
       id: '/rutina/$studentId/'
       path: '/rutina/$studentId'
@@ -237,12 +237,12 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  ClientesRoute: ClientesRoute,
   LoginRoute: LoginRoute,
   ParQRoute: ParQRoute,
   ProgresoRoute: ProgresoRoute,
   RegisterRoute: RegisterRoute,
   RegisterInfoRoute: RegisterInfoRoute,
+  ClientesCoachIdRoute: ClientesCoachIdRoute,
   PerfilUserIdRoute: PerfilUserIdRoute,
   RutinaDayIdRoute: RutinaDayIdRoute,
   RutinaStudentIdIndexRoute: RutinaStudentIdIndexRoute,

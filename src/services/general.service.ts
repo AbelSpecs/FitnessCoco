@@ -33,3 +33,9 @@ export const getCities = async (countryId: number) => {
     return null;
   }
 };
+
+export const getQr = async (id: number) => {
+  const response = await api.get(`/Qrs/GenerateQr/${id}`);
+
+  return response.data;
+};

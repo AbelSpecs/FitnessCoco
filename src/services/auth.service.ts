@@ -13,7 +13,6 @@ const api = axios.create({
 
 export const register = async (credentials: RegisterCredentials) => {
   const response = await api.post("/Users/RegisterUser", credentials);
-  console.log(response);
 
   const { data } = response.data;
 
@@ -22,7 +21,7 @@ export const register = async (credentials: RegisterCredentials) => {
 
 export const associateCoach = async (info: CoachStudent) => {
   const response = await api.post("/CoachStudents", info);
-  console.log(response);
+
   const { data } = response.data;
 
   return data;

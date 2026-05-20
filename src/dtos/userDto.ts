@@ -18,6 +18,7 @@ export interface StudentDto {
   allergies?: string;
   fitnessExperience?: string;
   generalNotes?: string;
+  gymId?: number;
 }
 
 export interface CoachDto {

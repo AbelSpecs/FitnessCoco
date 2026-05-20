@@ -11,12 +11,13 @@ export interface Student {
   allergies?: string;
   fitnessExperience?: string;
   generalNotes?: string;
+  gymId?: number;
 }
 
 export interface StudentInfo {
-  id: string;
+  studentId: string;
   name: string;
-  goal: string;
+  fitnessGoal: string;
   plan: "basic" | "health" | "pro";
   streak: number;
 }

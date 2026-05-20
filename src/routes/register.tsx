@@ -19,7 +19,7 @@ import { RegisterCredentials } from "@/types/auth";
 import { age } from "@/utils/age";
 import { notify } from "@/components/NotificationCenter";
 import { Coach } from "@/types/user";
-import { createCoach } from "@/services/user.service";
+import { createCoach } from "@/services/coach.service";
 
 export const Route = createFileRoute("/register")({
   head: () => ({
@@ -159,7 +159,6 @@ function RegisterPage() {
       };
 
       const coachData = await createCoach(coachToCreate);
-      console.log(coachData);
 
       setLoading(false);
       notify.created("Coach registrado!");
@@ -385,7 +384,7 @@ function RegisterPage() {
                     </SelectTrigger>
                     <SelectContent>
                       {countries?.map((c) => (
-                        <SelectItem key={c.id} value={String(c.id)}>
+                        <SelectItem key={c.id} value={String(c.id)} className="focus:text-white">
                           {c.name}
                         </SelectItem>
                       ))}
@@ -414,7 +413,7 @@ function RegisterPage() {
                     </SelectTrigger>
                     <SelectContent>
                       {cities?.map((c) => (
-                        <SelectItem key={c.id} value={String(c.id)}>
+                        <SelectItem key={c.id} value={String(c.id)} className="focus:text-white">
                           {c.name}
                         </SelectItem>
                       ))}
