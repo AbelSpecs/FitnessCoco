@@ -66,6 +66,19 @@ export const getStudent = async (id: number) => {
   }
 };
 
+export const getStudentById = async (id: number) => {
+  try {
+    const response = await api.get(`Students/${id}`);
+    const { data } = response.data;
+
+    if (!data) return null;
+
+    return data;
+  } catch (error) {
+    console.error("Error al obtener el perfil del usuario", error);
+  }
+};
+
 export const getStudents = async () => {
   try {
     const response = await api.get(`/Students`);
