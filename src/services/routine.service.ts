@@ -1,3 +1,4 @@
+import { DailyStudentExerciseDto, ExerciseDto } from "@/dtos/exerciseDto";
 import axios from "axios";
 // import api from "./api";
 
@@ -10,6 +11,18 @@ const api = axios.create({
   },
 });
 
+export const postRoutine = async (routineData: ExerciseDto) => {
+  try {
+    const response = await api.post("/Exercises", routineData);
+    const { data } = response.data;
+
+    return data;
+  } catch (error) {
+    console.error("Error al crear la rutina", error);
+    return null;
+  }
+};
+
 export const getRoutine = async (id: number) => {
   try {
     const response = await api.get(`/Exercises/${id}`);
@@ -18,6 +31,18 @@ export const getRoutine = async (id: number) => {
     return data;
   } catch (error) {
     console.error("Error al obtener el perfil del usuario", error);
+    return null;
+  }
+};
+
+export const postExercise = async (exerciseData: DailyStudentExerciseDto) => {
+  try {
+    const response = await api.post("/DailyStudentExercises", exerciseData);
+    const { data } = response.data;
+
+    return data;
+  } catch (error) {
+    console.error("Error al crear el ejercicio", error);
     return null;
   }
 };

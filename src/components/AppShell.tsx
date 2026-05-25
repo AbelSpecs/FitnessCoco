@@ -38,7 +38,7 @@ const nav = [
     roles: ["coach", "student"] as Role[],
   },
   {
-    to: "/clientes/$coachId",
+    to: "/clientes",
     label: "Clientes",
     icon: Users,
     roles: ["coach"] as Role[],
@@ -61,7 +61,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const paramMappers: Record<string, () => Record<string, string>> = {
     Rutina: () => ({ studentId: user?.studentId?.toString() ?? "" }),
     Perfil: () => ({ userId: user?.id?.toString() ?? "" }),
-    Clientes: () => ({ coachId: user?.coachId?.toString() ?? "" }),
+    Clientes: () => ({}),
     Dashboard: () => ({}),
   };
 
@@ -79,8 +79,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       document.body.style.overflow = "";
     };
   }, [mobileOpen]);
-
-  useEffect(() => {});
 
   const isActive = (to: string) => {
     const firstSection = "/" + to.split("/")[1] || to;

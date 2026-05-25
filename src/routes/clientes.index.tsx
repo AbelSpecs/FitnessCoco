@@ -12,7 +12,7 @@ import { StudentDto, UserDto } from "@/dtos/userDto";
 import { getStudents } from "@/services/student.service";
 import { getCoachStudents } from "@/services/coach.service";
 
-export const Route = createFileRoute("/clientes/$coachId")({
+export const Route = createFileRoute("/clientes/")({
   head: () => ({
     meta: [
       { title: "Clientes — PyrosFit" },
@@ -111,7 +111,7 @@ function ClientesPage() {
               {visibleClients.map((client) => (
                 <Link
                   key={client.studentId}
-                  to="/rutina/$studentId"
+                  to="/clientes/$studentId"
                   params={{ studentId: client.studentId.toString() ?? "" }}
                   className="group block"
                 >
