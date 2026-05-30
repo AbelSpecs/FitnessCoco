@@ -52,6 +52,7 @@ import {
 import { DayRoutine, ExerciseDraft, RoutineDraft } from "@/types/exercises";
 import { determineDate } from "@/utils/determineDate";
 import DatePicker from "@/components/DatePicker";
+import { SpinnerInline, SpinnerOverlay } from "@/components/Spinner";
 
 const emptyExercise = (): ExerciseDraft => ({
   id: `ex-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
@@ -89,6 +90,7 @@ function ClientRoutinesPage() {
   const [getRoutineForm, setGetRoutineForm] = useState<Partial<RoutineDraft>>({
     exercises: [emptyExercise()],
   });
+  const [isLoading, setIsLoading] = useState(false);
 
   // show form states
   const [showForm, setShowForm] = useState(false);
@@ -106,9 +108,11 @@ function ClientRoutinesPage() {
       muscleGroup: "",
       exercises: [emptyExercise()],
     });
+    setSelectedDate(new Date());
   };
 
   useEffect(() => {
+    setIsLoading(true);
     const fetchStudentData = async () => {
       try {
         const studentResponse = await getStudentById(Number(studentId));
@@ -153,8 +157,10 @@ function ClientRoutinesPage() {
         });
 
         setRoutines(formattedRoutine);
+        setIsLoading(false);
       } catch (error) {
         console.error("Error fetching routines:", error);
+        setIsLoading(false);
       }
     };
 
@@ -188,7 +194,6 @@ function ClientRoutinesPage() {
 
     try {
       const exerciseDeleted = await deleteExercise(Number(pendingDelete.id));
-      console.log(exerciseDeleted);
     } catch (error) {
       console.error("Error al eliminar la rutina", error);
     }
@@ -200,7 +205,7 @@ function ClientRoutinesPage() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    console.log(name, value);
+
     setRoutineForm((prev) => ({ ...prev, [name]: value }));
   };
 
@@ -247,8 +252,6 @@ function ClientRoutinesPage() {
         scheduledDate: selectedDate!.toISOString(),
         rest: false,
       };
-      console.log(selectedDate?.toISOString());
-      console.log(newRoutine);
 
       const exercisesData: DailyStudentExerciseDto[] = routineForm.exercises.map((e) => ({
         assign: {
@@ -288,7 +291,6 @@ function ClientRoutinesPage() {
   const handlefetchExercises = async (id: string) => {
     try {
       const dailyExercises: GetDailyStudentExerciseDto[] = await getExercises(Number(studentId));
-      console.log(dailyExercises);
 
       const filteredDailyExercises = dailyExercises.filter(
         (item) => item.exerciseId.toString() === id,
@@ -637,6 +639,7 @@ function ClientRoutinesPage() {
               >
                 <Plus className="h-4 w-4 mr-1" /> Crear la primera
               </Button>
+              {isLoading && <SpinnerOverlay />}
             </Card>
           ) : (
             <div className="space-y-3">
