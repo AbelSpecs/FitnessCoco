@@ -92,7 +92,7 @@ function ClientRoutinesPage() {
 
   // show form states
   const [showForm, setShowForm] = useState(false);
-  const [getShowForm, setGetShowForm] = useState(false);
+  const [getShowForm, setGetShowForm] = useState<number | string>("");
   // Post state
   const [routineForm, setRoutineForm] = useState<RoutineDraft>({
     routineName: "",
@@ -205,10 +205,6 @@ function ClientRoutinesPage() {
   };
 
   const handleSaveRoutine = async () => {
-    // if (!routineName.trim()) {
-    //   notify.error("Falta el nombre", "Indica un nombre para la rutina");
-    //   return;
-    // }
     if (!routineForm.muscleGroup.trim()) {
       notify.error("Falta el grupo muscular", "Indica el grupo muscular principal");
       return;
@@ -239,16 +235,20 @@ function ClientRoutinesPage() {
         id: savedRoutine.id.toString(),
         focus: routineForm.muscleGroup,
         day:
-          routineForm.exercises.length > 0
+          routineForm.exercises.length > 0 &&
+          !isNaN(new Date(routineForm.exercises[0].scheduledDate).getTime())
             ? determineDate(routineForm.exercises[0].scheduledDate).day
             : determineDate(selectedDate!.toISOString()).day,
         short:
-          routineForm.exercises.length > 0
+          routineForm.exercises.length > 0 &&
+          !isNaN(new Date(routineForm.exercises[0].scheduledDate).getTime())
             ? determineDate(routineForm.exercises[0].scheduledDate).short
             : determineDate(selectedDate!.toISOString()).short,
+        scheduledDate: selectedDate!.toISOString(),
         rest: false,
       };
       console.log(selectedDate?.toISOString());
+      console.log(newRoutine);
 
       const exercisesData: DailyStudentExerciseDto[] = routineForm.exercises.map((e) => ({
         assign: {
@@ -312,7 +312,7 @@ function ClientRoutinesPage() {
         ...prev,
         exercises: mappedDailyExercises,
       }));
-      setGetShowForm(true);
+      setGetShowForm(id);
     } catch (error) {
       console.error("Error al obtener los ejercicios", error);
     }
@@ -659,10 +659,32 @@ function ClientRoutinesPage() {
                       <div className="flex items-center gap-3 text-[11px] sm:text-xs text-muted-foreground mt-1 flex-wrap">
                         <span className="flex items-center gap-1">
                           <Calendar className="h-3 w-3 text-primary-glow" />
-                          Asignada para: {routine.day}{" "}
-                          {new Date(routine.scheduledDate!).toLocaleDateString()}
+                          {(() => {
+                            const fechaCruda =
+                              routine.scheduledDate || routine.exercises?.[0]?.scheduledDate;
+
+                            if (!fechaCruda) return <span>Sin fecha asignada</span>;
+
+                            const parsedDate = new Date(fechaCruda);
+                            const esValida = !isNaN(parsedDate.getTime());
+
+                            return esValida ? (
+                              <>
+                                <span>Asignada para: </span>
+                                <span className="font-semibold text-foreground">
+                                  {parsedDate.toLocaleDateString("es-ES", {
+                                    day: "2-digit",
+                                    month: "2-digit",
+                                    year: "numeric",
+                                    timeZone: "UTC",
+                                  })}
+                                </span>
+                              </>
+                            ) : (
+                              <span>Cargando fecha...</span>
+                            );
+                          })()}
                         </span>
-                        {/* <span>{routine.}</span> */}
                       </div>
                     </div>
                     <div className="flex items-center gap-2 ml-auto">
@@ -685,7 +707,7 @@ function ClientRoutinesPage() {
                       </Button>
                     </div>
                   </div>
-                  {getShowForm && (
+                  {getShowForm === routine.id && (
                     <div className="space-y-3 mb-3">
                       {getRoutineForm.exercises!.map((ex, idx) => (
                         <div
@@ -819,7 +841,7 @@ function ClientRoutinesPage() {
                           variant="outline"
                           className="border-border hover:text-white"
                           onClick={() => {
-                            setGetShowForm(false);
+                            setGetShowForm("");
                           }}
                         >
                           Cancelar

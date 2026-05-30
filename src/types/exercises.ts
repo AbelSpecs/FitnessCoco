@@ -7,7 +7,7 @@ export interface Exercise {
   muscle?: string;
   videoUrl?: string;
   isCustom?: boolean;
-
+  scheduledDate?: string;
   sets: number;
   reps: string;
   restSec: number;
