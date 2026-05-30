@@ -58,3 +58,14 @@ export const getExercises = async (id: number) => {
     return null;
   }
 };
+
+export const deleteExercise = async (id: number) => {
+  try {
+    const response = await api.delete(`/Exercises/${id}`);
+    const { data } = response.data;
+    return response.data;
+  } catch (error) {
+    console.error("Error al eliminar el ejercicio", error);
+    return null;
+  }
+};

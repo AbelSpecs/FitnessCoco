@@ -1,4 +1,4 @@
-import { createFileRoute, Link, redirect, useParams } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect, useParams, notFound } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -7,7 +7,8 @@ import { ChevronRight, Clock, Dumbbell } from "lucide-react";
 import { useEffect, useState } from "react";
 import { getExercises, getRoutine } from "@/services/routine.service";
 import { useAuthStore } from "@/store/authStore";
-import { BadExercise, BadRoutine, DayRoutine, Exercise } from "@/types/exercises";
+import { BadExercise, BadRoutine, CompleteDate, DayRoutine, Exercise } from "@/types/exercises";
+import { determineDates } from "@/utils/determineDate";
 
 export const Route = createFileRoute("/rutina/$studentId/")({
   head: () => ({
@@ -19,6 +20,11 @@ export const Route = createFileRoute("/rutina/$studentId/")({
   component: RutinaPage,
   beforeLoad: ({ location }) => {
     const auth = localStorage.getItem("pyrosfit_user");
+    const role = auth && JSON.parse(auth).role !== "student";
+
+    if (role) {
+      throw new Error("Unauthorized");
+    }
 
     if (!auth) {
       throw redirect({
@@ -49,25 +55,7 @@ function RutinaPage() {
 
         const dates = [...new Set(exercisesData.map((item) => item.scheduledDate))];
 
-        const completeDates = dates.map((date) => {
-          const newFecha = new Date(date);
-
-          const completeName = newFecha.toLocaleDateString("es-ES", {
-            weekday: "long",
-            timeZone: "UTC",
-          });
-
-          const initial = newFecha.toLocaleDateString("es-ES", {
-            weekday: "narrow",
-            timeZone: "UTC",
-          });
-
-          return {
-            day: completeName,
-            short: initial,
-            original: date,
-          };
-        });
+        const completeDates: CompleteDate[] = determineDates(dates);
 
         const mappedExercises = exercisesData.map((e, id: number) => {
           const newExercise: Exercise = {
@@ -144,7 +132,7 @@ function RutinaPage() {
         {weekRoutineList.map((day, i) => {
           const isToday = i === todayIndex;
           return (
-            <Link key={day.id} to="/rutina/$dayId" params={{ dayId: day.id }} className="group">
+            <Link key={day.id} to="/rutina/$dayId" params={{ dayId: day.id! }} className="group">
               <Card
                 className={`relative overflow-hidden p-6 h-full transition-all duration-300 hover:-translate-y-1 ${
                   isToday
@@ -178,7 +166,7 @@ function RutinaPage() {
                     </span>
                     <span className="flex items-center gap-1">
                       <Dumbbell className="h-3 w-3" />
-                      {day.exercises.length} ej.
+                      {day.exercises!.length} ej.
                     </span>
                   </div>
                 )}

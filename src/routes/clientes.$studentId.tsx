@@ -28,26 +28,30 @@ import {
   Timer,
 } from "lucide-react";
 import { notify } from "@/components/NotificationCenter";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
 import { AppShell } from "@/components/AppShell";
 import { getStudentById } from "@/services/student.service";
 import { getUser } from "@/services/user.service";
-import { set } from "react-hook-form";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { postExercise, postRoutine } from "@/services/routine.service";
+import {
+  deleteExercise,
+  getExercises,
+  getRoutine,
+  postExercise,
+  postRoutine,
+} from "@/services/routine.service";
 import { useAuthStore } from "@/store/authStore";
-import { DailyStudentExerciseDto, ExerciseDto } from "@/dtos/exerciseDto";
-
-type ExerciseDraft = {
-  id: string;
-  name: string;
-  muscle: string;
-  sets: string;
-  reps: string;
-  weight: string;
-  coaNotes: string;
-  restSec: string;
-};
+import {
+  DailyStudentExerciseDto,
+  ExerciseDto,
+  GetDailyStudentExerciseDto,
+  GetExerciseDto,
+} from "@/dtos/exerciseDto";
+import { DayRoutine, ExerciseDraft, RoutineDraft } from "@/types/exercises";
+import { determineDate } from "@/utils/determineDate";
+import DatePicker from "@/components/DatePicker";
 
 const emptyExercise = (): ExerciseDraft => ({
   id: `ex-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
@@ -58,6 +62,7 @@ const emptyExercise = (): ExerciseDraft => ({
   weight: "",
   coaNotes: "",
   restSec: "",
+  scheduledDate: "",
 });
 
 export const Route = createFileRoute("/clientes/$studentId")({
@@ -69,143 +74,38 @@ export const Route = createFileRoute("/clientes/$studentId")({
   }),
   component: ClientRoutinesPage,
 });
-type Routine = {
-  id: string;
-  name: string;
-  focus: string;
-  days: number;
-  createdAt: string;
-};
-const MOCK_CLIENTS: Record<string, { name: string; goal: string; plan: string }> = {
-  "1": { name: "Diego Martínez", goal: "Ganar masa muscular", plan: "pro" },
-  "2": { name: "Lucía Fernández", goal: "Perder grasa", plan: "health" },
-  "3": { name: "Carlos Gómez", goal: "Ganar fuerza", plan: "pro" },
-  "4": { name: "María López", goal: "Resistencia", plan: "basic" },
-  "5": { name: "Andrés Ruiz", goal: "Hipertrofia", plan: "pro" },
-  "6": { name: "Sofía Castro", goal: "Recomposición", plan: "health" },
-  "7": { name: "Javier Torres", goal: "Movilidad", plan: "basic" },
-  "8": { name: "Elena Vidal", goal: "Fuerza máxima", plan: "pro" },
-};
-const INITIAL_ROUTINES: Routine[] = [
-  { id: "r1", name: "Push / Pull / Legs", focus: "Hipertrofia", days: 6, createdAt: "12 mar 2026" },
-  { id: "r2", name: "Full Body 3x", focus: "Fuerza general", days: 3, createdAt: "02 feb 2026" },
-  { id: "r3", name: "Upper / Lower", focus: "Volumen", days: 4, createdAt: "18 ene 2026" },
-];
+
 function ClientRoutinesPage() {
   const { studentId } = useParams({ from: "/clientes/$studentId" });
   const { user } = useAuthStore();
   const navigate = useNavigate();
-  //   const client = useMemo(
-  //     () => MOCK_CLIENTS[studentId] ?? { name: "Cliente", goal: "—", plan: "basic" },
-  //     [studentId],
-  //   );
+
+  // Get States
   const [client, setClient] = useState({ name: "Cliente", goal: "—", plan: "basic" });
-  const [routines, setRoutines] = useState<Routine[]>(INITIAL_ROUTINES);
-  const [pendingDelete, setPendingDelete] = useState<Routine | null>(null);
+  const [routines, setRoutines] = useState<DayRoutine[]>([]);
+  const [pendingDelete, setPendingDelete] = useState<DayRoutine | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
+  const [selectedDateSearch, setSelectedDateSearch] = useState<Date | undefined>(new Date());
+  const [getRoutineForm, setGetRoutineForm] = useState<Partial<RoutineDraft>>({
+    exercises: [emptyExercise()],
+  });
 
+  // show form states
   const [showForm, setShowForm] = useState(false);
-  const [routineName, setRoutineName] = useState("");
-  const [muscleGroup, setMuscleGroup] = useState("");
-  const [exercises, setExercises] = useState<ExerciseDraft[]>([emptyExercise()]);
+  const [getShowForm, setGetShowForm] = useState(false);
+  // Post state
+  const [routineForm, setRoutineForm] = useState<RoutineDraft>({
+    routineName: "",
+    muscleGroup: "",
+    exercises: [emptyExercise()],
+  });
+
   const resetForm = () => {
-    setRoutineName("");
-    setMuscleGroup("");
-    setExercises([emptyExercise()]);
-  };
-
-  const handleAdd = () => {
-    setShowForm((s) => !s);
-  };
-
-  const updateExercise = (id: string, patch: Partial<ExerciseDraft>) =>
-    setExercises((prev) => prev.map((e) => (e.id === id ? { ...e, ...patch } : e)));
-  const addExercise = () => setExercises((prev) => [...prev, emptyExercise()]);
-  const removeExercise = (id: string) =>
-    setExercises((prev) => (prev.length > 1 ? prev.filter((e) => e.id !== id) : prev));
-
-  const confirmDelete = () => {
-    if (!pendingDelete) return;
-    setRoutines((prev) => prev.filter((r) => r.id !== pendingDelete.id));
-    notify.deleted("Rutina eliminada", `${pendingDelete.name} se quitó de ${client.name}`);
-    setPendingDelete(null);
-  };
-
-  const handleSaveRoutine = async () => {
-    if (!routineName.trim()) {
-      notify.error("Falta el nombre", "Indica un nombre para la rutina");
-      return;
-    }
-    if (!muscleGroup.trim()) {
-      notify.error("Falta el grupo muscular", "Indica el grupo muscular principal");
-      return;
-    }
-    const incomplete = exercises.some(
-      (e) => !e.name.trim() || !e.sets || !e.reps.trim() || !e.restSec,
-    );
-    if (incomplete) {
-      notify.error("Ejercicios incompletos", "Completa todos los campos de cada ejercicio");
-      return;
-    }
-    const newRoutine: Routine = {
-      id: `r-${Date.now()}`,
-      name: routineName.trim(),
-      focus: muscleGroup.trim(),
-      days: exercises.length,
-      createdAt: new Date().toLocaleDateString("es-ES", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      }),
-    };
-
-    const routineData: ExerciseDto = {
-      exercise: {
-        coachId: user!.coachId!,
-        name: routineName.trim(),
-        description: `Rutina enfocada en ${muscleGroup.trim()} con ${exercises.length} ejercicios.`,
-        muscleGroup: muscleGroup.trim(),
-        videoUrl: "",
-        isCustom: false,
-      },
-    };
-
-    try {
-      const savedRoutine = await postRoutine(routineData);
-
-      const exercisesData: DailyStudentExerciseDto[] = exercises.map((e) => ({
-        assign: {
-          coachId: user!.coachId!,
-          studentId: Number(studentId),
-          exerciseId: savedRoutine.exerciseId,
-          scheduledDate: new Date().toISOString(),
-          sets: Number(e.sets),
-          reps: e.reps,
-          weight: Number(e.weight),
-          restTime: e.restSec,
-          coachNotes: e.coaNotes,
-        },
-      }));
-
-      exercisesData.forEach(async (exData) => {
-        await postExercise(exData);
-      });
-
-      // if (!savedRoutine) throw new Error("No se recibió respuesta del servidor");
-    } catch (error) {
-      console.error("Error al guardar la rutina", error);
-      notify.error("Error al guardar", "Ocurrió un error al guardar la rutina. Intenta de nuevo.");
-      return;
-    }
-
-    setRoutines((prev) => [newRoutine, ...prev]);
-    notify.created(
-      "Rutina creada",
-      `${newRoutine.name} con ${exercises.length} ${
-        exercises.length === 1 ? "ejercicio" : "ejercicios"
-      } para ${client.name}`,
-    );
-    resetForm();
-    setShowForm(false);
+    setRoutineForm({
+      routineName: "",
+      muscleGroup: "",
+      exercises: [emptyExercise()],
+    });
   };
 
   useEffect(() => {
@@ -227,8 +127,197 @@ function ClientRoutinesPage() {
       }
     };
 
+    const fetchRoutines = async () => {
+      try {
+        const dailyExercises: GetDailyStudentExerciseDto[] = await getExercises(Number(studentId));
+
+        const exerciseIds = dailyExercises.map(
+          (item: GetDailyStudentExerciseDto) => item.exerciseId,
+        );
+
+        const routines = await Promise.all(exerciseIds.map((item: number) => getRoutine(item)));
+
+        const formattedRoutine: DayRoutine[] = routines.map((item: GetExerciseDto) => {
+          const completeDay = determineDate(
+            dailyExercises.find((e) => e.exerciseId === item.id)?.scheduledDate ?? "",
+          );
+
+          return {
+            id: item.id.toString(),
+            day: completeDay.day,
+            short: completeDay.short,
+            muscle: item.muscleGroup,
+            focus: item.muscleGroup,
+            scheduledDate: dailyExercises.find((e) => e.exerciseId === item.id)?.scheduledDate,
+          };
+        });
+
+        setRoutines(formattedRoutine);
+      } catch (error) {
+        console.error("Error fetching routines:", error);
+      }
+    };
+
     fetchStudentData();
+    fetchRoutines();
   }, [studentId]);
+
+  const handleAdd = () => {
+    setShowForm((s) => !s);
+  };
+
+  const updateExercise = (id: string, patch: Partial<ExerciseDraft>) => {
+    setRoutineForm((prev) => ({
+      ...prev,
+      exercises: prev.exercises.map((item) => (item.id === id ? { ...item, ...patch } : item)),
+    }));
+  };
+
+  const addExercise = () =>
+    setRoutineForm((prev) => ({ ...prev, exercises: [...prev.exercises, emptyExercise()] }));
+
+  const removeExercise = (id: string) =>
+    setRoutineForm((prev) => ({
+      ...prev,
+      exercises:
+        prev.exercises.length > 1 ? prev.exercises.filter((e) => e.id !== id) : prev.exercises,
+    }));
+
+  const confirmDelete = async () => {
+    if (!pendingDelete) return;
+
+    try {
+      const exerciseDeleted = await deleteExercise(Number(pendingDelete.id));
+      console.log(exerciseDeleted);
+    } catch (error) {
+      console.error("Error al eliminar la rutina", error);
+    }
+
+    setRoutines((prev) => prev.filter((r) => r.id !== pendingDelete.id));
+    notify.deleted("Rutina eliminada", `${pendingDelete.focus} se quitó de ${client.name}`);
+    setPendingDelete(null);
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    console.log(name, value);
+    setRoutineForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSaveRoutine = async () => {
+    // if (!routineName.trim()) {
+    //   notify.error("Falta el nombre", "Indica un nombre para la rutina");
+    //   return;
+    // }
+    if (!routineForm.muscleGroup.trim()) {
+      notify.error("Falta el grupo muscular", "Indica el grupo muscular principal");
+      return;
+    }
+    const incomplete = routineForm.exercises.some(
+      (e) => !e.name.trim() || !e.sets || !e.reps.trim() || !e.restSec,
+    );
+    if (incomplete) {
+      notify.error("Ejercicios incompletos", "Completa todos los campos de cada ejercicio");
+      return;
+    }
+
+    const routineData: ExerciseDto = {
+      exercise: {
+        coachId: user!.coachId!,
+        name: "Rutina sin título",
+        description: `Rutina enfocada en ${routineForm.muscleGroup.trim()} con ${routineForm.exercises.length} ejercicios.`,
+        muscleGroup: routineForm.muscleGroup.trim(),
+        videoUrl: "",
+        isCustom: false,
+      },
+    };
+
+    try {
+      const savedRoutine = await postRoutine(routineData);
+
+      const newRoutine: DayRoutine = {
+        id: savedRoutine.id.toString(),
+        focus: routineForm.muscleGroup,
+        day:
+          routineForm.exercises.length > 0
+            ? determineDate(routineForm.exercises[0].scheduledDate).day
+            : determineDate(selectedDate!.toISOString()).day,
+        short:
+          routineForm.exercises.length > 0
+            ? determineDate(routineForm.exercises[0].scheduledDate).short
+            : determineDate(selectedDate!.toISOString()).short,
+        rest: false,
+      };
+      console.log(selectedDate?.toISOString());
+
+      const exercisesData: DailyStudentExerciseDto[] = routineForm.exercises.map((e) => ({
+        assign: {
+          coachId: user!.coachId!,
+          studentId: Number(studentId),
+          exerciseId: savedRoutine.id,
+          scheduledDate: selectedDate!.toISOString(),
+          sets: Number(e.sets),
+          reps: e.reps,
+          weight: Number(e.weight),
+          restTime: e.restSec,
+          coachNotes: e.coaNotes,
+        },
+      }));
+
+      exercisesData.forEach(async (exData) => {
+        await postExercise(exData);
+      });
+
+      setRoutines((prev) => [newRoutine, ...prev]);
+      notify.created(
+        "Rutina creada",
+        `${newRoutine.focus} con ${routineForm.exercises.length} ${
+          routineForm.exercises.length === 1 ? "ejercicio" : "ejercicios"
+        } para ${client.name}`,
+      );
+    } catch (error) {
+      console.error("Error al guardar la rutina", error);
+      notify.error("Error al guardar", "Ocurrió un error al guardar la rutina. Intenta de nuevo.");
+      return;
+    }
+
+    resetForm();
+    setShowForm(false);
+  };
+
+  const handlefetchExercises = async (id: string) => {
+    try {
+      const dailyExercises: GetDailyStudentExerciseDto[] = await getExercises(Number(studentId));
+      console.log(dailyExercises);
+
+      const filteredDailyExercises = dailyExercises.filter(
+        (item) => item.exerciseId.toString() === id,
+      );
+
+      const mappedDailyExercises: ExerciseDraft[] = filteredDailyExercises.map(
+        (e, index: number) => ({
+          id: index.toString(),
+          name: "Ejercicio de la chancla",
+          muscle: "Prueba",
+          sets: e.sets.toString(),
+          reps: e.reps,
+          weight: e.weight.toString(),
+          coaNotes: e.coachNotes,
+          restSec: e.restTime,
+          scheduledDate: e.scheduledDate,
+        }),
+      );
+
+      setGetRoutineForm((prev) => ({
+        ...prev,
+        exercises: mappedDailyExercises,
+      }));
+      setGetShowForm(true);
+    } catch (error) {
+      console.error("Error al obtener los ejercicios", error);
+    }
+  };
+
   return (
     <AppShell>
       <div className="min-h-screen bg-background text-foreground relative overflow-hidden">
@@ -296,25 +385,40 @@ function ClientRoutinesPage() {
               <div className="grid sm:grid-cols-2 gap-4 mb-5">
                 <div>
                   <Label className="text-[11px] uppercase tracking-widest text-muted-foreground">
-                    Nombre de la rutina
+                    Grupo muscular principal
                   </Label>
                   <Input
-                    value={routineName}
-                    onChange={(e) => setRoutineName(e.target.value)}
-                    placeholder="Push / Pull / Legs"
+                    value={routineForm.muscleGroup}
+                    name="muscleGroup"
+                    onChange={(e) => handleInputChange(e)}
+                    placeholder="Tren superior, pierna..."
                     maxLength={80}
                     className="mt-1.5 bg-background/60 border-border focus-visible:ring-primary/40"
                   />
                 </div>
                 <div>
                   <Label className="text-[11px] uppercase tracking-widest text-muted-foreground">
-                    Grupo muscular principal
+                    Nombre de la rutina (opcional)
                   </Label>
                   <Input
-                    value={muscleGroup}
-                    onChange={(e) => setMuscleGroup(e.target.value)}
-                    placeholder="Tren superior, pierna..."
+                    value={routineForm.routineName}
+                    name="routineName"
+                    onChange={(e) => handleInputChange(e)}
+                    placeholder="Push / Pull / Legs"
                     maxLength={80}
+                    className="mt-1.5 bg-background/60 border-border focus-visible:ring-primary/40"
+                  />
+                </div>
+              </div>
+              <div className="grid sm:grid-cols-2 gap-4 mb-5">
+                <div>
+                  <Label className="text-[11px] uppercase tracking-widest text-muted-foreground">
+                    Fecha Rutina
+                  </Label>
+                  <DatePicker
+                    value={selectedDate}
+                    onChange={(date) => setSelectedDate(date)}
+                    placeholder="Fecha Rutina"
                     className="mt-1.5 bg-background/60 border-border focus-visible:ring-primary/40"
                   />
                 </div>
@@ -325,11 +429,12 @@ function ClientRoutinesPage() {
                   Ejercicios
                 </h3>
                 <span className="text-xs text-muted-foreground">
-                  {exercises.length} {exercises.length === 1 ? "ejercicio" : "ejercicios"}
+                  {routineForm.exercises.length}{" "}
+                  {routineForm.exercises.length === 1 ? "ejercicio" : "ejercicios"}
                 </span>
               </div>
               <div className="space-y-3 mb-3">
-                {exercises.map((ex, idx) => (
+                {routineForm.exercises.map((ex, idx) => (
                   <div
                     key={ex.id}
                     className="rounded-lg border border-border bg-background/40 p-3 sm:p-4"
@@ -348,7 +453,7 @@ function ClientRoutinesPage() {
                         size="sm"
                         className="text-destructive hover:bg-destructive/10 hover:text-destructive disabled:opacity-30"
                         onClick={() => removeExercise(ex.id)}
-                        disabled={exercises.length === 1}
+                        disabled={routineForm.exercises.length === 1}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -360,6 +465,7 @@ function ClientRoutinesPage() {
                         </Label>
                         <Input
                           value={ex.name}
+                          name="name"
                           onChange={(e) => updateExercise(ex.id, { name: e.target.value })}
                           placeholder="Press banca"
                           maxLength={80}
@@ -372,6 +478,7 @@ function ClientRoutinesPage() {
                         </Label>
                         <Input
                           value={ex.muscle}
+                          name="muscle"
                           onChange={(e) => updateExercise(ex.id, { muscle: e.target.value })}
                           placeholder="Pecho"
                           maxLength={60}
@@ -386,6 +493,7 @@ function ClientRoutinesPage() {
                         </Label>
                         <Input
                           type="number"
+                          name="sets"
                           min={1}
                           max={20}
                           value={ex.sets}
@@ -400,6 +508,7 @@ function ClientRoutinesPage() {
                         </Label>
                         <Input
                           value={ex.reps}
+                          name="reps"
                           onChange={(e) => updateExercise(ex.id, { reps: e.target.value })}
                           placeholder="8-10"
                           maxLength={20}
@@ -412,6 +521,7 @@ function ClientRoutinesPage() {
                         </Label>
                         <Input
                           type="number"
+                          name="restSec"
                           min={0}
                           max={600}
                           value={ex.restSec}
@@ -428,6 +538,7 @@ function ClientRoutinesPage() {
                         </Label>
                         <Input
                           type="number"
+                          name="weight"
                           min={1}
                           max={100}
                           value={ex.weight}
@@ -442,6 +553,7 @@ function ClientRoutinesPage() {
                         </Label>
                         <Input
                           value={ex.coaNotes}
+                          name="coaNotes"
                           onChange={(e) => updateExercise(ex.id, { coaNotes: e.target.value })}
                           placeholder="Notas del entrenador"
                           maxLength={30}
@@ -463,7 +575,7 @@ function ClientRoutinesPage() {
               <div className="flex items-center gap-3 justify-end flex-wrap">
                 <Button
                   variant="outline"
-                  className="border-border"
+                  className="border-border hover:text-white"
                   onClick={() => {
                     setShowForm(false);
                     resetForm();
@@ -480,6 +592,29 @@ function ClientRoutinesPage() {
               </div>
             </Card>
           )}
+          <Card className="bg-gradient-card border-border p-4 sm:p-5 mb-4 flex items-center gap-3 sm:gap-4 flex-wrap">
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="h-9 w-9 rounded-lg bg-primary/10 border border-primary/30 flex items-center justify-center shrink-0">
+                <Calendar className="h-4 w-4 text-primary-glow" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[10px] uppercase tracking-[0.25em] text-primary-glow leading-tight">
+                  Fecha de los ejercicios
+                </p>
+                <p className="text-xs text-muted-foreground truncate">
+                  Selecciona el día para asignar la rutina
+                </p>
+              </div>
+            </div>
+            <div className="ml-auto">
+              <DatePicker
+                value={selectedDateSearch}
+                onChange={(date) => setSelectedDateSearch(date)}
+                placeholder="Elegir fecha"
+                size="sm"
+              />
+            </div>
+          </Card>
 
           <div className="mb-4 flex items-center justify-between">
             <h2 className="font-display text-xl sm:text-2xl flex items-center gap-2">
@@ -516,25 +651,26 @@ function ClientRoutinesPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <h3 className="font-display text-lg sm:text-xl leading-tight truncate">
-                        {routine.name}
-                      </h3>
-                      <p className="text-xs sm:text-sm text-muted-foreground truncate">
                         {routine.focus}
-                      </p>
+                      </h3>
+                      {/* <p className="font-display text-lg sm:text-xl leading-tight truncate">
+                        {routine.}
+                      </p> */}
                       <div className="flex items-center gap-3 text-[11px] sm:text-xs text-muted-foreground mt-1 flex-wrap">
                         <span className="flex items-center gap-1">
                           <Calendar className="h-3 w-3 text-primary-glow" />
-                          {routine.days} días / semana
+                          Asignada para: {routine.day}{" "}
+                          {new Date(routine.scheduledDate!).toLocaleDateString()}
                         </span>
-                        <span>Creada {routine.createdAt}</span>
+                        {/* <span>{routine.}</span> */}
                       </div>
                     </div>
                     <div className="flex items-center gap-2 ml-auto">
                       <Button
                         variant="outline"
                         size="sm"
-                        className="border-border hover:border-primary/50 hover:bg-primary/10"
-                        //   onClick={() => navigate({ to: "/rutina" })}
+                        className="border-border hover:border-primary/50 hover:bg-primary/10 hover:text-white"
+                        onClick={() => handlefetchExercises(routine.id!)}
                       >
                         <Eye className="h-4 w-4 mr-1" /> Ver
                         <ChevronRight className="h-3 w-3 ml-0.5 opacity-60" />
@@ -549,6 +685,148 @@ function ClientRoutinesPage() {
                       </Button>
                     </div>
                   </div>
+                  {getShowForm && (
+                    <div className="space-y-3 mb-3">
+                      {getRoutineForm.exercises!.map((ex, idx) => (
+                        <div
+                          key={ex.id}
+                          className="rounded-lg border border-border bg-background/40 p-3 sm:p-4"
+                        >
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-2">
+                              <div className="h-7 w-7 rounded-md bg-primary/10 border border-primary/30 flex items-center justify-center text-[11px] font-display text-primary-glow">
+                                {idx + 1}
+                              </div>
+                              <span className="text-[10px] uppercase tracking-widest text-muted-foreground">
+                                Ejercicio
+                              </span>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-destructive hover:bg-destructive/10 hover:text-destructive disabled:opacity-30"
+                              onClick={() => removeExercise(ex.id)}
+                              disabled={getRoutineForm.exercises!.length === 1}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                          <div className="grid sm:grid-cols-2 gap-3 mb-3">
+                            <div>
+                              <Label className="text-[10px] uppercase tracking-widest text-muted-foreground">
+                                Nombre
+                              </Label>
+                              <Input
+                                value={ex.name}
+                                onChange={(e) => updateExercise(ex.id, { name: e.target.value })}
+                                placeholder="Press banca"
+                                maxLength={80}
+                                className="mt-1.5 bg-background/60 border-border focus-visible:ring-primary/40"
+                              />
+                            </div>
+                            <div>
+                              <Label className="text-[10px] uppercase tracking-widest text-muted-foreground">
+                                Músculo
+                              </Label>
+                              <Input
+                                value={ex.muscle}
+                                onChange={(e) => updateExercise(ex.id, { muscle: e.target.value })}
+                                placeholder="Pecho"
+                                maxLength={60}
+                                className="mt-1.5 bg-background/60 border-border focus-visible:ring-primary/40"
+                              />
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                            <div>
+                              <Label className="text-[10px] uppercase tracking-widest text-muted-foreground flex items-center gap-1">
+                                <Layers className="h-3 w-3" /> Series
+                              </Label>
+                              <Input
+                                type="number"
+                                min={1}
+                                max={20}
+                                value={ex.sets}
+                                onChange={(e) => updateExercise(ex.id, { sets: e.target.value })}
+                                placeholder="4"
+                                className="mt-1.5 bg-background/60 border-border focus-visible:ring-primary/40"
+                              />
+                            </div>
+                            <div>
+                              <Label className="text-[10px] uppercase tracking-widest text-muted-foreground flex items-center gap-1">
+                                <Repeat className="h-3 w-3" /> Reps
+                              </Label>
+                              <Input
+                                value={ex.reps}
+                                onChange={(e) => updateExercise(ex.id, { reps: e.target.value })}
+                                placeholder="8-10"
+                                maxLength={20}
+                                className="mt-1.5 bg-background/60 border-border focus-visible:ring-primary/40"
+                              />
+                            </div>
+                            <div>
+                              <Label className="text-[10px] uppercase tracking-widest text-muted-foreground flex items-center gap-1">
+                                <Timer className="h-3 w-3" /> Descanso (s)
+                              </Label>
+                              <Input
+                                type="number"
+                                min={0}
+                                max={600}
+                                value={ex.restSec}
+                                onChange={(e) => updateExercise(ex.id, { restSec: e.target.value })}
+                                placeholder="90"
+                                className="mt-1.5 bg-background/60 border-border focus-visible:ring-primary/40"
+                              />
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-2 gap-2 sm:gap-3 mt-3">
+                            <div>
+                              <Label className="text-[10px] uppercase tracking-widest text-muted-foreground flex items-center gap-1">
+                                <Layers className="h-3 w-3" /> Peso (kg)
+                              </Label>
+                              <Input
+                                type="number"
+                                min={1}
+                                max={100}
+                                value={ex.weight}
+                                onChange={(e) => updateExercise(ex.id, { weight: e.target.value })}
+                                placeholder="10 kg"
+                                className="mt-1.5 bg-background/60 border-border focus-visible:ring-primary/40"
+                              />
+                            </div>
+                            <div>
+                              <Label className="text-[10px] uppercase tracking-widest text-muted-foreground flex items-center gap-1">
+                                <Repeat className="h-3 w-3" /> Coach Notes
+                              </Label>
+                              <Input
+                                value={ex.coaNotes}
+                                onChange={(e) =>
+                                  updateExercise(ex.id, { coaNotes: e.target.value })
+                                }
+                                placeholder="Notas del entrenador"
+                                maxLength={30}
+                                className="mt-1.5 bg-background/60 border-border focus-visible:ring-primary/40"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                      <div className="flex items-center gap-3 justify-end flex-wrap">
+                        <Button variant="outline" className="border-border hover:text-white ">
+                          Actualizar
+                        </Button>
+                        <Button
+                          variant="outline"
+                          className="border-border hover:text-white"
+                          onClick={() => {
+                            setGetShowForm(false);
+                          }}
+                        >
+                          Cancelar
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </Card>
               ))}
             </div>
@@ -565,7 +843,7 @@ function ClientRoutinesPage() {
               </AlertDialogTitle>
               <AlertDialogDescription>
                 Vas a eliminar{" "}
-                <span className="text-foreground font-medium">{pendingDelete?.name}</span> de{" "}
+                <span className="text-foreground font-medium">{pendingDelete?.focus}</span> de{" "}
                 {client.name}. Esta acción no se puede deshacer.
               </AlertDialogDescription>
             </AlertDialogHeader>
