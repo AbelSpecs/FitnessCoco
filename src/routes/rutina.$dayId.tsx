@@ -1,4 +1,4 @@
-import { createFileRoute, Link, notFound } from "@tanstack/react-router";
+import { createFileRoute, Link, notFound, redirect } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -45,6 +45,18 @@ export const Route = createFileRoute("/rutina/$dayId")({
       <p>Día no encontrado.</p>
     </AppShell>
   ),
+  beforeLoad: ({ location }) => {
+    const auth = localStorage.getItem("pyrosfit_user");
+
+    if (!auth) {
+      throw redirect({
+        to: "/login",
+        search: {
+          redirect: location.href,
+        },
+      });
+    }
+  },
 });
 
 function DayDetail() {

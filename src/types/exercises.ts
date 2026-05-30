@@ -7,7 +7,7 @@ export interface Exercise {
   muscle?: string;
   videoUrl?: string;
   isCustom?: boolean;
-
+  scheduledDate?: string;
   sets: number;
   reps: string;
   restSec: number;
@@ -16,13 +16,14 @@ export interface Exercise {
 }
 
 export interface DayRoutine {
-  id: string;
-  day: string;
-  short: string;
-  focus: string;
-  durationMin: number;
-  exercises: Exercise[];
+  id?: string;
+  day?: string;
+  short?: string;
+  focus?: string;
+  durationMin?: number;
+  exercises?: Exercise[];
   rest?: boolean;
+  scheduledDate?: string;
 }
 
 export interface BadRoutine {
@@ -44,36 +45,29 @@ export interface BadExercise {
   studentId: number;
   weight: number;
 }
+// interface for the dates calculated in the routine page
+export interface CompleteDate {
+  day: string;
+  short: string;
+  original: string;
+}
 
-// interface Routine {
-//   id: number;
-//   coachId: number;
-//   studentId: number;
-//   exerciseId: number;
-//   name: string;
-//   durationMin: number;
-//   scheduleDate: date;
-//   coachNotes: text;
-//   studentNotes: Text;
-//   isCompleted: boolean;
-//   rest: boolean;
-// }
+// interface for the exercises form
+export interface ExerciseDraft {
+  id: string;
+  name: string;
+  muscle: string;
+  sets: string;
+  reps: string;
+  weight: string;
+  coaNotes: string;
+  restSec: string;
+  scheduledDate: string;
+}
 
-// interface Exercise {
-//   id: number;
-//   coachId: number;
-//   name: string;
-//   description: string;
-//   muscle or MuscleGroup: string;
-//   sets: number;
-//   reps: string or number;
-//   weight: number;
-//   rpe: number; // esto seria del 1 al 10
-//   restTime: string;
-//   coachNotes: string;
-//   studentNotes: string;
-//   isCompleted: boolean;
-//   isCustom: boolean;
-//   videoUrl: string;
-
-// }
+// interface for the routine form
+export interface RoutineDraft {
+  routineName: string;
+  muscleGroup: string;
+  exercises: ExerciseDraft[];
+}
