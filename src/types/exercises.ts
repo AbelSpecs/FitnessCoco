@@ -1,4 +1,4 @@
-// Type Exercise for Exercises View
+// Type Exercise for Exercises View (Coach)
 
 export interface DailyExerciseSets {
   id: number;
@@ -69,4 +69,16 @@ export interface CompleteDate {
 export interface NewExercise {
   name: string;
   muscleGroupId: number;
+}
+
+// (Client)
+export interface DayRoutine {
+  id: number;
+  name: string;
+  short: string;
+  scheduledDate: string;
+  rest: boolean;
+  muscleGroupName: string;
+  estimated: string;
+  exercises: Exercise[];
 }
