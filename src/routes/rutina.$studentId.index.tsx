@@ -3,12 +3,18 @@ import { AppShell } from "@/components/AppShell";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { weekPlan } from "@/lib/mock-data";
-import { ChevronRight, Clock, Dumbbell } from "lucide-react";
+import { Calendar, ChevronRight, Clock, Dumbbell } from "lucide-react";
 import { useEffect, useState } from "react";
-import { getExercises, getRoutine } from "@/services/routine.service";
 import { useAuthStore } from "@/store/authStore";
-import { BadExercise, BadRoutine, CompleteDate, DayRoutine, Exercise } from "@/types/exercises";
-import { determineDates } from "@/utils/determineDate";
+import { CompleteDate, DailyExerciseSets, Exercise } from "@/types/exercises";
+import { determineDate, determineDates } from "@/utils/determineDate";
+import {
+  getDailyStudentExercisesByStudentId,
+  getDailyStudentExercisesByStudentIdAndDate,
+} from "@/services/routine.service";
+import { GetDailyStudentExerciseDto } from "@/dtos/exerciseDto";
+import DatePicker from "@/components/DatePicker";
+import { DateRange } from "react-day-picker";
 
 export const Route = createFileRoute("/rutina/$studentId/")({
   head: () => ({
@@ -42,72 +48,39 @@ function RutinaPage() {
   const todayIndex = today === 0 ? 6 : today - 1;
   // const { user } = useAuthStore();
   const { studentId } = useParams({ from: "/rutina/$studentId/" });
-  const [weekRoutineList, setWeekRoutineList] = useState<DayRoutine[]>([]);
+  const [selectedDateSearch, setSelectedDateSearch] = useState<DateRange | undefined>({
+    from: new Date(),
+    to: new Date(),
+  });
+  const [weekRoutineList, setWeekRoutineList] = useState<Exercise[]>([]);
 
   useEffect(() => {
     const fetchRoutinesData = async () => {
       try {
-        const exercisesData: BadExercise[] = await getExercises(Number(studentId));
+        const exercisesData: GetDailyStudentExerciseDto[] =
+          await getDailyStudentExercisesByStudentIdAndDate(Number(studentId));
 
-        const exerciseIds = [
-          ...new Set(exercisesData.map((item: BadExercise) => item.exerciseId)),
-        ] as number[];
+        const mappedExercises: Exercise[] = exercisesData.map((e) => {
+          const completeDate: CompleteDate = determineDate(e.scheduledDate);
 
-        const dates = [...new Set(exercisesData.map((item) => item.scheduledDate))];
-
-        const completeDates: CompleteDate[] = determineDates(dates);
-
-        const mappedExercises = exercisesData.map((e, id: number) => {
           const newExercise: Exercise = {
-            id,
+            dailyExerciseId: e.id,
             coachId: e.coachId,
             exerciseId: e.exerciseId,
-            name: `Ejercicio de la chancla ${id}`,
-            description: `Prueba ${id}`,
-            muscle: `Prueba ${id}`,
-            sets: e.sets,
-            reps: e.reps,
-            restSec: Number(e.restTime),
+            studentId: e.studentId,
+            exerciseName: e.exerciseName,
+            muscleGroupName: e.muscleGroupName,
+            coachNotes: e.coachNotes,
+            scheduledDate: e.scheduledDate,
+            day: completeDate.day,
+            short: completeDate.short,
+            dailyExerciseSets: e.dailyExerciseSets as DailyExerciseSets[],
           };
 
           return newExercise;
         });
 
-        for (let i = 0; i <= exerciseIds.length - 1; i++) {
-          const routineData = await getRoutine(exerciseIds[i]);
-
-          const foundDate = exercisesData.find(
-            (e) => e.exerciseId === exerciseIds[i],
-          )?.scheduledDate;
-          const completeRoutineData: DayRoutine = {
-            id: exerciseIds[i].toString(),
-            day: completeDates.find((date) => date.original === foundDate)!.day,
-            short: completeDates.find((date) => date.original === foundDate)!.short,
-            focus: routineData.name,
-            durationMin: 20,
-            exercises: mappedExercises.filter((e) => e.exerciseId === exerciseIds[i]),
-          };
-
-          setWeekRoutineList((prevDay) => {
-            const listWithoutDuplicate = prevDay.filter(
-              (item) => item.id !== completeRoutineData.id,
-            );
-
-            return [...listWithoutDuplicate, completeRoutineData];
-          });
-        }
-
-        // const weekPlan: DayRoutine[] = [
-        //   {
-        //     id: string;
-        //       day: string;
-        //       short: string;
-        //       focus: string;
-        //       durationMin: number;
-        //       exercises: Exercise[];
-        //       rest?: boolean;
-        //   }
-        // ]
+        setWeekRoutineList(mappedExercises);
       } catch (error) {
         console.error("Error fetching routine data:", error);
       }
@@ -115,6 +88,22 @@ function RutinaPage() {
 
     fetchRoutinesData();
   }, [studentId]);
+
+  const handleSearchDatePickerDate = (date: DateRange | undefined) => {
+    if (!date) return;
+
+    console.log(date);
+
+    // const tzOffset = date.getTimezoneOffset() * 60000;
+
+    // const localISOTime = new Date(date.getTime() - tzOffset);
+
+    // const safeISOString = localISOTime.toISOString();
+
+    // console.log(safeISOString);
+
+    // setSelectedDateSearch(new Date(safeISOString));
+  };
 
   return (
     <AppShell>
@@ -127,7 +116,31 @@ function RutinaPage() {
           Pulsa cualquier día para ver los ejercicios, registrar tu sesión y consultar el historial.
         </p>
       </div>
-
+      <Card className="bg-gradient-card border-border p-4 sm:p-5 mb-4 flex items-center gap-3 sm:gap-4 flex-wrap">
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="h-9 w-9 rounded-lg bg-primary/10 border border-primary/30 flex items-center justify-center shrink-0">
+            <Calendar className="h-4 w-4 text-primary-glow" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[10px] uppercase tracking-[0.25em] text-primary-glow leading-tight">
+              Fecha de los ejercicios
+            </p>
+            <p className="text-xs text-muted-foreground truncate">
+              Selecciona día para buscar rutinas asignadas a esa fecha.
+            </p>
+          </div>
+        </div>
+        <div className="ml-auto">
+          <DatePicker
+            value={selectedDateSearch}
+            onChange={(date) => handleSearchDatePickerDate(date)}
+            placeholder="Elegir fecha"
+            size="lg"
+            className="mt-1.5 bg-background/60 border-border focus-visible:ring-primary/40"
+            mode="range"
+          />
+        </div>
+      </Card>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
         {weekRoutineList.map((day, i) => {
           const isToday = i === todayIndex;

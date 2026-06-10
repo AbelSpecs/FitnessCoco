@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -13,6 +14,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import {
   ArrowLeft,
   Plus,
@@ -26,6 +35,8 @@ import {
   Layers,
   Repeat,
   Timer,
+  RefreshCw,
+  Sparkles,
 } from "lucide-react";
 import { notify } from "@/components/NotificationCenter";
 import { format } from "date-fns";
@@ -37,33 +48,52 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   deleteExercise,
-  getExercises,
-  getRoutine,
+  getDailyStudentExercisesByStudentId,
+  getDailyStudentExercisesByStudentIdAndDate,
+  getExercise,
+  getExerciseByMuscleGroupId,
+  getExerciseByMuscleGroupName,
+  getMuscleGroups,
+  postDailyStudentExercises,
   postExercise,
-  postRoutine,
 } from "@/services/routine.service";
 import { useAuthStore } from "@/store/authStore";
 import {
+  DailyExerciseSetsDto,
   DailyStudentExerciseDto,
   ExerciseDto,
+  GetDailyExerciseSetsDto,
   GetDailyStudentExerciseDto,
   GetExerciseDto,
+  GetMuscleGroupDto,
 } from "@/dtos/exerciseDto";
-import { DayRoutine, ExerciseDraft, RoutineDraft } from "@/types/exercises";
+import {
+  DailyExerciseSets,
+  DailyExerciseSetsForm,
+  Exercise,
+  ExerciseForm,
+  ExerciseSelect,
+  MuscleGroupSelect,
+  NewExercise,
+} from "@/types/exercises";
 import { determineDate } from "@/utils/determineDate";
 import DatePicker from "@/components/DatePicker";
 import { SpinnerInline, SpinnerOverlay } from "@/components/Spinner";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
-const emptyExercise = (): ExerciseDraft => ({
+const emptySet = (): DailyExerciseSetsForm => ({
   id: `ex-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-  name: "",
-  muscle: "",
-  sets: "",
-  reps: "",
-  weight: "",
-  coaNotes: "",
-  restSec: "",
-  scheduledDate: "",
+  setNumber: "",
+  targetReps: "",
+  targetWeight: "",
+  restTime: "",
+  isAchieved: false,
 });
 
 export const Route = createFileRoute("/clientes/$studentId")({
@@ -83,34 +113,61 @@ function ClientRoutinesPage() {
 
   // Get States
   const [client, setClient] = useState({ name: "Cliente", goal: "—", plan: "basic" });
-  const [routines, setRoutines] = useState<DayRoutine[]>([]);
-  const [pendingDelete, setPendingDelete] = useState<DayRoutine | null>(null);
+  const [routines, setRoutines] = useState<Exercise[]>([]);
+  const [muscleGroups, setMuscleGroups] = useState<MuscleGroupSelect[]>([]);
+  const [exercises, setExercises] = useState<ExerciseSelect[]>([]);
+  const [pendingDelete, setPendingDelete] = useState<Exercise | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [selectedDateSearch, setSelectedDateSearch] = useState<Date | undefined>(new Date());
-  const [getRoutineForm, setGetRoutineForm] = useState<Partial<RoutineDraft>>({
-    exercises: [emptyExercise()],
-  });
+  const [getExerciseSetForm, setGetExerciseSetRoutineForm] = useState<DailyExerciseSets[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+
+  // new exercise
+  const [pendingExercises, setPendingExercises] = useState<NewExercise[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
+  const [showNewExerciseDialog, setShowNewExerciseDialog] = useState(false);
+  const [newExerciseForm, setNewExerciseForm] = useState<NewExercise>({
+    name: "",
+    muscleGroupId: 0,
+  });
 
   // show form states
   const [showForm, setShowForm] = useState(false);
   const [getShowForm, setGetShowForm] = useState<number | string>("");
   // Post state
-  const [routineForm, setRoutineForm] = useState<RoutineDraft>({
-    routineName: "",
-    muscleGroup: "",
-    exercises: [emptyExercise()],
+  const [routineForm, setRoutineForm] = useState<ExerciseForm>({
+    exerciseId: 0,
+    exerciseName: "",
+    muscleGroupId: 0,
+    muscleGroupName: "",
+    description: "",
+    coachNotes: "",
+    scheduledDate: new Date().toISOString(),
+    dailyExerciseSets: [emptySet()],
   });
 
   const resetForm = () => {
     setRoutineForm({
-      routineName: "",
-      muscleGroup: "",
-      exercises: [emptyExercise()],
+      exerciseId: 0,
+      exerciseName: "",
+      muscleGroupId: 0,
+      muscleGroupName: "",
+      description: "",
+      coachNotes: "",
+      scheduledDate: new Date().toISOString(),
+      dailyExerciseSets: [emptySet()],
     });
     setSelectedDate(new Date());
   };
 
+  const newExerciseFormReset = () => {
+    setNewExerciseForm({
+      name: "",
+      muscleGroupId: 0,
+    });
+  };
+
+  // refactorizar esto con un Promise.all para traer los datos del cliente y las rutinas en paralelo
   useEffect(() => {
     setIsLoading(true);
     const fetchStudentData = async () => {
@@ -133,30 +190,40 @@ function ClientRoutinesPage() {
 
     const fetchRoutines = async () => {
       try {
-        const dailyExercises: GetDailyStudentExerciseDto[] = await getExercises(Number(studentId));
-
-        const exerciseIds = dailyExercises.map(
-          (item: GetDailyStudentExerciseDto) => item.exerciseId,
-        );
-
-        const routines = await Promise.all(exerciseIds.map((item: number) => getRoutine(item)));
-
-        const formattedRoutine: DayRoutine[] = routines.map((item: GetExerciseDto) => {
-          const completeDay = determineDate(
-            dailyExercises.find((e) => e.exerciseId === item.id)?.scheduledDate ?? "",
+        const dailyExercises: GetDailyStudentExerciseDto[] =
+          await getDailyStudentExercisesByStudentIdAndDate(
+            Number(studentId),
+            selectedDateSearch!.toISOString(),
           );
 
-          return {
-            id: item.id.toString(),
-            day: completeDay.day,
-            short: completeDay.short,
-            muscle: item.muscleGroup,
-            focus: item.muscleGroup,
-            scheduledDate: dailyExercises.find((e) => e.exerciseId === item.id)?.scheduledDate,
-          };
-        });
+        console.log(dailyExercises);
 
-        setRoutines(formattedRoutine);
+        const completeExercisesMapped: Exercise[] = dailyExercises.map(
+          (item: GetDailyStudentExerciseDto) => {
+            console.log(item);
+            const completeDay = determineDate(item.scheduledDate).day;
+            const shortDay = determineDate(item.scheduledDate).short;
+
+            const exerciseMapped: Exercise = {
+              dailyExerciseId: item.id,
+              exerciseId: item.exerciseId,
+              coachId: item.coachId,
+              studentId: item.studentId,
+              exerciseName: item.exerciseName,
+              muscleGroupName: item.muscleGroupName,
+              coachNotes: item.coachNotes,
+              scheduledDate: item.scheduledDate,
+              day: completeDay,
+              short: shortDay,
+              dailyExerciseSets: item.dailyExerciseSets.map((set) => set),
+            };
+
+            return exerciseMapped;
+          },
+        );
+
+        console.log(completeExercisesMapped);
+        setRoutines(completeExercisesMapped);
         setIsLoading(false);
       } catch (error) {
         console.error("Error fetching routines:", error);
@@ -164,118 +231,242 @@ function ClientRoutinesPage() {
       }
     };
 
+    const fetchMuscleGroups = async () => {
+      try {
+        const muscleGroups = await getMuscleGroups();
+        console.log(muscleGroups);
+        const muscleGroupsMapped: MuscleGroupSelect[] = muscleGroups.map(
+          (m: GetMuscleGroupDto) => ({ id: m.id, name: m.name }),
+        );
+
+        setMuscleGroups(muscleGroupsMapped);
+      } catch (error) {
+        console.error("Error al traer los grupos musculares", error);
+      }
+    };
+
     fetchStudentData();
     fetchRoutines();
-  }, [studentId]);
+    fetchMuscleGroups();
+  }, [studentId, selectedDateSearch]);
 
   const handleAdd = () => {
     setShowForm((s) => !s);
   };
 
-  const updateExercise = (id: string, patch: Partial<ExerciseDraft>) => {
+  const updateSet = (id: string, patch: Partial<DailyExerciseSets>) => {
     setRoutineForm((prev) => ({
       ...prev,
-      exercises: prev.exercises.map((item) => (item.id === id ? { ...item, ...patch } : item)),
+      dailyExerciseSets: prev.dailyExerciseSets.map((item) =>
+        item.id === id ? { ...item, ...patch } : item,
+      ),
     }));
   };
 
-  const addExercise = () =>
-    setRoutineForm((prev) => ({ ...prev, exercises: [...prev.exercises, emptyExercise()] }));
-
-  const removeExercise = (id: string) =>
+  const addSet = () =>
     setRoutineForm((prev) => ({
       ...prev,
-      exercises:
-        prev.exercises.length > 1 ? prev.exercises.filter((e) => e.id !== id) : prev.exercises,
+      dailyExerciseSets: [...prev.dailyExerciseSets, emptySet()],
+    }));
+
+  const removeSet = (id: string) =>
+    setRoutineForm((prev) => ({
+      ...prev,
+      dailyExerciseSets:
+        prev.dailyExerciseSets.length > 1
+          ? prev.dailyExerciseSets.filter((s) => s.id !== id)
+          : prev.dailyExerciseSets,
     }));
 
   const confirmDelete = async () => {
     if (!pendingDelete) return;
 
     try {
-      const exerciseDeleted = await deleteExercise(Number(pendingDelete.id));
+      const exerciseDeleted = await deleteExercise(Number(pendingDelete.dailyExerciseId));
     } catch (error) {
       console.error("Error al eliminar la rutina", error);
     }
 
-    setRoutines((prev) => prev.filter((r) => r.id !== pendingDelete.id));
-    notify.deleted("Rutina eliminada", `${pendingDelete.focus} se quitó de ${client.name}`);
+    setRoutines((prev) => prev.filter((r) => r.dailyExerciseId !== pendingDelete.dailyExerciseId));
+    notify.deleted("Rutina eliminada", `${pendingDelete.exerciseName} se quitó de ${client.name}`);
     setPendingDelete(null);
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>, isNew: boolean = false) => {
     const { name, value } = e.target;
+
+    if (isNew) {
+      setNewExerciseForm((prev) => ({ ...prev, [name]: value }));
+      return;
+    }
 
     setRoutineForm((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSaveRoutine = async () => {
-    if (!routineForm.muscleGroup.trim()) {
-      notify.error("Falta el grupo muscular", "Indica el grupo muscular principal");
-      return;
-    }
-    const incomplete = routineForm.exercises.some(
-      (e) => !e.name.trim() || !e.sets || !e.reps.trim() || !e.restSec,
-    );
-    if (incomplete) {
-      notify.error("Ejercicios incompletos", "Completa todos los campos de cada ejercicio");
+  const handleExercises = async (muscleGroupId: number, isNew: boolean = false) => {
+    if (isNew) {
+      setNewExerciseForm((prev) => ({ ...prev, muscleGroupId: muscleGroupId }));
       return;
     }
 
-    const routineData: ExerciseDto = {
+    setRoutineForm((prev) => ({ ...prev, muscleGroupId: muscleGroupId }));
+    try {
+      const exercises = await getExerciseByMuscleGroupId(muscleGroupId);
+      console.log(exercises);
+      setExercises(exercises);
+    } catch (error) {
+      console.error("Error al obtener los ejercicios", error);
+    }
+  };
+
+  const handleSearchDatePickerDate = (date: Date | undefined) => {
+    if (!date) return;
+
+    console.log(date);
+
+    const tzOffset = date.getTimezoneOffset() * 60000;
+
+    const localISOTime = new Date(date.getTime() - tzOffset);
+
+    const safeISOString = localISOTime.toISOString();
+
+    console.log(safeISOString);
+
+    setSelectedDateSearch(new Date(safeISOString));
+  };
+
+  const handleSaveNewExercise = async () => {
+    const name = newExerciseForm.name.trim();
+    if (!name) {
+      notify.error("Falta el nombre", "Escribe el nombre del ejercicio");
+      return;
+    }
+    if (exercises.some((e) => e.name.toLowerCase() === name.toLowerCase())) {
+      notify.error("Ya existe", "Ese ejercicio ya está en la lista");
+      return;
+    }
+
+    const newExercise: ExerciseDto = {
       exercise: {
         coachId: user!.coachId!,
-        name: "Rutina sin título",
-        description: `Rutina enfocada en ${routineForm.muscleGroup.trim()} con ${routineForm.exercises.length} ejercicios.`,
-        muscleGroup: routineForm.muscleGroup.trim(),
+        name: newExerciseForm.name,
+        description: "",
+        muscleGroupId: newExerciseForm.muscleGroupId!,
         videoUrl: "",
-        isCustom: false,
+        isCustom: true,
       },
     };
 
     try {
-      const savedRoutine = await postRoutine(routineData);
+      const newExerciseResponse = await postExercise(newExercise);
+      setPendingExercises([
+        ...pendingExercises,
+        {
+          name: newExerciseForm.name,
+          muscleGroupId: newExerciseForm.muscleGroupId!,
+        } as NewExercise,
+      ]);
 
-      const newRoutine: DayRoutine = {
-        id: savedRoutine.id.toString(),
-        focus: routineForm.muscleGroup,
-        day:
-          routineForm.exercises.length > 0 &&
-          !isNaN(new Date(routineForm.exercises[0].scheduledDate).getTime())
-            ? determineDate(routineForm.exercises[0].scheduledDate).day
-            : determineDate(selectedDate!.toISOString()).day,
-        short:
-          routineForm.exercises.length > 0 &&
-          !isNaN(new Date(routineForm.exercises[0].scheduledDate).getTime())
-            ? determineDate(routineForm.exercises[0].scheduledDate).short
-            : determineDate(selectedDate!.toISOString()).short,
+      setNewExerciseForm({
+        name: "",
+        muscleGroupId: 0,
+      });
+      notify.created("Ejercicio guardado", `Pulsa el botón de refrescar para verlo en la lista`);
+    } catch (error) {
+      console.error("Error al crear el ejercicio", error);
+      notify.error("Error al crear", "Ocurrió un error al crear el ejercicio. Intenta de nuevo.");
+      return;
+    }
+
+    setShowNewExerciseDialog(false);
+  };
+
+  const handleRefreshExercises = async () => {
+    if (refreshing) return;
+    setRefreshing(true);
+
+    try {
+      const exercises = await getExerciseByMuscleGroupId(routineForm.muscleGroupId);
+      setExercises(exercises);
+      setRefreshing(false);
+    } catch (error) {
+      setRefreshing(false);
+      console.error("Error al refrescar", error);
+    }
+  };
+
+  const handleSaveRoutine = async () => {
+    if (!routineForm.muscleGroupId) {
+      notify.error("Falta el grupo muscular", "Selecciona grupo muscular");
+      return;
+    }
+
+    if (!routineForm.exerciseId) {
+      notify.error("Falta el ejercicio", "Selecciona ejercicio");
+      return;
+    }
+
+    const incomplete = routineForm.dailyExerciseSets.some((e) => !e.targetReps || !e.targetWeight);
+    if (incomplete) {
+      notify.error("Sets incompletos", "Completa los campos para cada serie");
+      return;
+    }
+
+    const dailyExerciseSetsData: DailyExerciseSetsDto[] = routineForm.dailyExerciseSets.map(
+      (set, index) => {
+        return {
+          id: 0,
+          dailyStudentExerciseId: 0,
+          setNumber: Number(index + 1),
+          targetReps: Number(set.targetReps),
+          targetWeight: Number(set.targetWeight),
+          restTime: set.restTime,
+          isAchieved: false,
+        };
+      },
+    );
+
+    const dailyExerciseData: DailyStudentExerciseDto = {
+      assign: {
+        coachId: user!.coachId!,
+        studentId: Number(studentId),
+        exerciseId: routineForm.exerciseId,
         scheduledDate: selectedDate!.toISOString(),
-        rest: false,
+        dailyExerciseSets: dailyExerciseSetsData,
+        coachNotes: routineForm.coachNotes!,
+      },
+    };
+
+    try {
+      const exercisesResponse = await postDailyStudentExercises(dailyExerciseData);
+
+      const exerciseExtraData = await getExercise(exercisesResponse.exerciseId);
+
+      const completeDay = determineDate(exercisesResponse.scheduledDate).day;
+      const shortDay = determineDate(exercisesResponse.scheduledDate).short;
+
+      const newRoutine: Exercise = {
+        exerciseId: exercisesResponse.exerciseId,
+        coachId: exercisesResponse.coachId,
+        dailyExerciseId: exercisesResponse.id,
+        studentId: exercisesResponse.studentId,
+        exerciseName: exerciseExtraData.name,
+        muscleGroupName: exerciseExtraData.muscleGroup,
+        coachNotes: exercisesResponse.coachNotes,
+        scheduledDate: exercisesResponse.scheduledDate,
+        day: completeDay,
+        short: shortDay,
+        dailyExerciseSets: exercisesResponse.dailyExerciseSets.map(
+          (set: GetDailyExerciseSetsDto) => set,
+        ),
       };
 
-      const exercisesData: DailyStudentExerciseDto[] = routineForm.exercises.map((e) => ({
-        assign: {
-          coachId: user!.coachId!,
-          studentId: Number(studentId),
-          exerciseId: savedRoutine.id,
-          scheduledDate: selectedDate!.toISOString(),
-          sets: Number(e.sets),
-          reps: e.reps,
-          weight: Number(e.weight),
-          restTime: e.restSec,
-          coachNotes: e.coaNotes,
-        },
-      }));
-
-      exercisesData.forEach(async (exData) => {
-        await postExercise(exData);
-      });
-
       setRoutines((prev) => [newRoutine, ...prev]);
+
       notify.created(
         "Rutina creada",
-        `${newRoutine.focus} con ${routineForm.exercises.length} ${
-          routineForm.exercises.length === 1 ? "ejercicio" : "ejercicios"
+        `${newRoutine.exerciseName} con ${routineForm.dailyExerciseSets.length} ${
+          routineForm.dailyExerciseSets.length === 1 ? "ejercicio" : "ejercicios"
         } para ${client.name}`,
       );
     } catch (error) {
@@ -288,36 +479,10 @@ function ClientRoutinesPage() {
     setShowForm(false);
   };
 
-  const handlefetchExercises = async (id: string) => {
-    try {
-      const dailyExercises: GetDailyStudentExerciseDto[] = await getExercises(Number(studentId));
-
-      const filteredDailyExercises = dailyExercises.filter(
-        (item) => item.exerciseId.toString() === id,
-      );
-
-      const mappedDailyExercises: ExerciseDraft[] = filteredDailyExercises.map(
-        (e, index: number) => ({
-          id: index.toString(),
-          name: "Ejercicio de la chancla",
-          muscle: "Prueba",
-          sets: e.sets.toString(),
-          reps: e.reps,
-          weight: e.weight.toString(),
-          coaNotes: e.coachNotes,
-          restSec: e.restTime,
-          scheduledDate: e.scheduledDate,
-        }),
-      );
-
-      setGetRoutineForm((prev) => ({
-        ...prev,
-        exercises: mappedDailyExercises,
-      }));
-      setGetShowForm(id);
-    } catch (error) {
-      console.error("Error al obtener los ejercicios", error);
-    }
+  const handleViewExerciseDetails = async (exercise: Exercise) => {
+    console.log(exercise);
+    setGetExerciseSetRoutineForm(exercise.dailyExerciseSets);
+    setGetShowForm(exercise.dailyExerciseId);
   };
 
   return (
@@ -386,41 +551,128 @@ function ClientRoutinesPage() {
               </div>
               <div className="grid sm:grid-cols-2 gap-4 mb-5">
                 <div>
+                  <Label
+                    className="text-[11px] uppercase tracking-widest text-muted-foreground"
+                    htmlFor="muscleGroup"
+                  >
+                    Grupo Muscular
+                  </Label>
+                  <Select
+                    value={routineForm.muscleGroupId ? String(routineForm.muscleGroupId) : ""}
+                    onValueChange={(value) => {
+                      handleExercises(Number(value));
+                    }}
+                  >
+                    <SelectTrigger id="muscleGroup" className="bg-input/60">
+                      <SelectValue placeholder="Selecciona el grupo Muscular" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {muscleGroups?.map((m) => (
+                        <SelectItem key={m.id} value={String(m.id)} className="focus:text-white">
+                          {m.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-center justify-end">
+                  <div className="w-[100%]">
+                    <Label
+                      className="text-[11px] uppercase tracking-widest text-muted-foreground"
+                      htmlFor="exercise"
+                    >
+                      Ejercicio
+                    </Label>
+                    <Select
+                      value={routineForm.muscleGroupId ? String(routineForm.exerciseId) : ""}
+                      onValueChange={(value) => {
+                        setRoutineForm((prev) => ({ ...prev, exerciseId: Number(value) }));
+                      }}
+                    >
+                      <SelectTrigger id="exercise" className="bg-input/60">
+                        <SelectValue placeholder="Selecciona el Ejercicio" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {exercises?.map((e: ExerciseSelect) => (
+                          <SelectItem key={e.id} value={String(e.id)} className="focus:text-white">
+                            {e.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <div className="text-center mb-5">
+                      <button
+                        type="button"
+                        onClick={() => setShowNewExerciseDialog(true)}
+                        className="text-xs sm:text-sm text-muted-foreground transition-colors underline-offset-4"
+                      >
+                        ¿No encuentras el ejercicio?{" "}
+                        <span className="text-primary-glow font-medium cursor-pointer">
+                          Crea uno
+                        </span>
+                      </button>
+                    </div>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleRefreshExercises}
+                    disabled={refreshing}
+                    title={
+                      pendingExercises.length > 0
+                        ? `Refrescar (${pendingExercises.length} ${pendingExercises.length === 1 ? "" : "s"})`
+                        : "Refrescar lista de ejercicios"
+                    }
+                    className="relative h-7 w-7 rounded-md border border-border hover:bg-primary/10 hover:border-primary/50 hover:text-primary-glow"
+                  >
+                    <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`} />
+                    {pendingExercises.length > 0 && !refreshing && (
+                      <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-primary shadow-glow" />
+                    )}
+                  </Button>
+                </div>
+                {/* <div className="flex items-center gap-2"></div> */}
+              </div>
+
+              <div className="grid sm:grid-cols-2 gap-4 mb-5">
+                <div>
                   <Label className="text-[11px] uppercase tracking-widest text-muted-foreground">
-                    Grupo muscular principal
+                    Notas del Entrenador
                   </Label>
                   <Input
-                    value={routineForm.muscleGroup}
-                    name="muscleGroup"
+                    value={routineForm.coachNotes}
+                    name="coachNotes"
                     onChange={(e) => handleInputChange(e)}
-                    placeholder="Tren superior, pierna..."
-                    maxLength={80}
+                    placeholder="Notas"
+                    maxLength={500}
                     className="mt-1.5 bg-background/60 border-border focus-visible:ring-primary/40"
                   />
                 </div>
                 <div>
                   <Label className="text-[11px] uppercase tracking-widest text-muted-foreground">
-                    Nombre de la rutina (opcional)
+                    Notas del Cliente
                   </Label>
                   <Input
-                    value={routineForm.routineName}
-                    name="routineName"
+                    value={routineForm.studentNotes}
+                    name="studentNotes"
                     onChange={(e) => handleInputChange(e)}
-                    placeholder="Push / Pull / Legs"
-                    maxLength={80}
+                    placeholder="Notas del cliente"
+                    maxLength={500}
                     className="mt-1.5 bg-background/60 border-border focus-visible:ring-primary/40"
+                    disabled
                   />
                 </div>
               </div>
               <div className="grid sm:grid-cols-2 gap-4 mb-5">
                 <div>
                   <Label className="text-[11px] uppercase tracking-widest text-muted-foreground">
-                    Fecha Rutina
+                    Fecha Ejercicio
                   </Label>
                   <DatePicker
                     value={selectedDate}
                     onChange={(date) => setSelectedDate(date)}
-                    placeholder="Fecha Rutina"
+                    placeholder="Fecha Ejercicio"
                     className="mt-1.5 bg-background/60 border-border focus-visible:ring-primary/40"
                   />
                 </div>
@@ -428,137 +680,87 @@ function ClientRoutinesPage() {
               <div className="flex items-center justify-between mb-3">
                 <h3 className="font-display text-base flex items-center gap-2">
                   <Layers className="h-4 w-4 text-primary-glow" />
-                  Ejercicios
+                  Series
                 </h3>
                 <span className="text-xs text-muted-foreground">
-                  {routineForm.exercises.length}{" "}
-                  {routineForm.exercises.length === 1 ? "ejercicio" : "ejercicios"}
+                  {routineForm.dailyExerciseSets.length}{" "}
+                  {routineForm.dailyExerciseSets.length === 1 ? "serie" : "series"}
                 </span>
               </div>
               <div className="space-y-3 mb-3">
-                {routineForm.exercises.map((ex, idx) => (
+                {routineForm.dailyExerciseSets.map((set, index) => (
                   <div
-                    key={ex.id}
+                    key={set.id}
                     className="rounded-lg border border-border bg-background/40 p-3 sm:p-4"
                   >
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-2">
                         <div className="h-7 w-7 rounded-md bg-primary/10 border border-primary/30 flex items-center justify-center text-[11px] font-display text-primary-glow">
-                          {idx + 1}
+                          {index + 1}
                         </div>
                         <span className="text-[10px] uppercase tracking-widest text-muted-foreground">
-                          Ejercicio
+                          Serie
                         </span>
                       </div>
                       <Button
                         variant="ghost"
                         size="sm"
                         className="text-destructive hover:bg-destructive/10 hover:text-destructive disabled:opacity-30"
-                        onClick={() => removeExercise(ex.id)}
-                        disabled={routineForm.exercises.length === 1}
+                        onClick={() => removeSet(set.id.toString())}
+                        disabled={routineForm.dailyExerciseSets.length === 1}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
-                    <div className="grid sm:grid-cols-2 gap-3 mb-3">
-                      <div>
-                        <Label className="text-[10px] uppercase tracking-widest text-muted-foreground">
-                          Nombre
-                        </Label>
-                        <Input
-                          value={ex.name}
-                          name="name"
-                          onChange={(e) => updateExercise(ex.id, { name: e.target.value })}
-                          placeholder="Press banca"
-                          maxLength={80}
-                          className="mt-1.5 bg-background/60 border-border focus-visible:ring-primary/40"
-                        />
-                      </div>
-                      <div>
-                        <Label className="text-[10px] uppercase tracking-widest text-muted-foreground">
-                          Músculo
-                        </Label>
-                        <Input
-                          value={ex.muscle}
-                          name="muscle"
-                          onChange={(e) => updateExercise(ex.id, { muscle: e.target.value })}
-                          placeholder="Pecho"
-                          maxLength={60}
-                          className="mt-1.5 bg-background/60 border-border focus-visible:ring-primary/40"
-                        />
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                    <div className="grid sm:grid-cols-3 gap-3 mb-3">
                       <div>
                         <Label className="text-[10px] uppercase tracking-widest text-muted-foreground flex items-center gap-1">
-                          <Layers className="h-3 w-3" /> Series
+                          Repeticiones
                         </Label>
                         <Input
+                          value={set.targetReps}
+                          name="targetReps"
+                          onChange={(e) =>
+                            updateSet(set.id.toString(), { targetReps: e.target.value })
+                          }
+                          placeholder="12"
                           type="number"
-                          name="sets"
                           min={1}
-                          max={20}
-                          value={ex.sets}
-                          onChange={(e) => updateExercise(ex.id, { sets: e.target.value })}
-                          placeholder="4"
+                          max={50}
                           className="mt-1.5 bg-background/60 border-border focus-visible:ring-primary/40"
                         />
                       </div>
-                      <div>
-                        <Label className="text-[10px] uppercase tracking-widest text-muted-foreground flex items-center gap-1">
-                          <Repeat className="h-3 w-3" /> Reps
-                        </Label>
-                        <Input
-                          value={ex.reps}
-                          name="reps"
-                          onChange={(e) => updateExercise(ex.id, { reps: e.target.value })}
-                          placeholder="8-10"
-                          maxLength={20}
-                          className="mt-1.5 bg-background/60 border-border focus-visible:ring-primary/40"
-                        />
-                      </div>
-                      <div>
-                        <Label className="text-[10px] uppercase tracking-widest text-muted-foreground flex items-center gap-1">
-                          <Timer className="h-3 w-3" /> Descanso (s)
-                        </Label>
-                        <Input
-                          type="number"
-                          name="restSec"
-                          min={0}
-                          max={600}
-                          value={ex.restSec}
-                          onChange={(e) => updateExercise(ex.id, { restSec: e.target.value })}
-                          placeholder="90"
-                          className="mt-1.5 bg-background/60 border-border focus-visible:ring-primary/40"
-                        />
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2 sm:gap-3 mt-3">
                       <div>
                         <Label className="text-[10px] uppercase tracking-widest text-muted-foreground flex items-center gap-1">
                           <Layers className="h-3 w-3" /> Peso (kg)
                         </Label>
                         <Input
                           type="number"
-                          name="weight"
+                          name="targetWeight"
                           min={1}
-                          max={100}
-                          value={ex.weight}
-                          onChange={(e) => updateExercise(ex.id, { weight: e.target.value })}
-                          placeholder="10 kg"
+                          max={500}
+                          value={set.targetWeight}
+                          onChange={(e) =>
+                            updateSet(set.id.toString(), { targetWeight: e.target.value })
+                          }
+                          placeholder="100"
                           className="mt-1.5 bg-background/60 border-border focus-visible:ring-primary/40"
                         />
                       </div>
                       <div>
                         <Label className="text-[10px] uppercase tracking-widest text-muted-foreground flex items-center gap-1">
-                          <Repeat className="h-3 w-3" /> Coach Notes
+                          <Repeat className="h-3 w-3" /> Descanso (s)
                         </Label>
                         <Input
-                          value={ex.coaNotes}
-                          name="coaNotes"
-                          onChange={(e) => updateExercise(ex.id, { coaNotes: e.target.value })}
-                          placeholder="Notas del entrenador"
-                          maxLength={30}
+                          value={set.restTime}
+                          name="restTime"
+                          onChange={(e) =>
+                            updateSet(set.id.toString(), { restTime: e.target.value })
+                          }
+                          placeholder="90"
+                          type="number"
+                          min={0}
+                          max={1200}
                           className="mt-1.5 bg-background/60 border-border focus-visible:ring-primary/40"
                         />
                       </div>
@@ -567,12 +769,12 @@ function ClientRoutinesPage() {
                 ))}
               </div>
               <Button
-                onClick={addExercise}
+                onClick={addSet}
                 variant="outline"
                 className="w-full border-dashed border-primary/40 hover:bg-primary/10 hover:border-primary/60 mb-5"
               >
                 <Plus className="h-4 w-4 mr-1 text-white" />{" "}
-                <span className="text-white">Añadir otro ejercicio</span>
+                <span className="text-white">Añadir otro set</span>
               </Button>
               <div className="flex items-center gap-3 justify-end flex-wrap">
                 <Button
@@ -604,16 +806,17 @@ function ClientRoutinesPage() {
                   Fecha de los ejercicios
                 </p>
                 <p className="text-xs text-muted-foreground truncate">
-                  Selecciona el día para asignar la rutina
+                  Selecciona día para buscar rutinas asignadas a esa fecha.
                 </p>
               </div>
             </div>
             <div className="ml-auto">
               <DatePicker
                 value={selectedDateSearch}
-                onChange={(date) => setSelectedDateSearch(date)}
+                onChange={(date) => handleSearchDatePickerDate(date)}
                 placeholder="Elegir fecha"
-                size="sm"
+                size="lg"
+                className="mt-1.5 bg-background/60 border-border focus-visible:ring-primary/40"
               />
             </div>
           </Card>
@@ -643,217 +846,236 @@ function ClientRoutinesPage() {
             </Card>
           ) : (
             <div className="space-y-3">
-              {routines.map((routine) => (
-                <Card
-                  key={routine.id}
-                  className="bg-gradient-card border-border p-4 sm:p-5 hover:border-primary/50 hover:shadow-card transition-all duration-300"
-                >
-                  <div className="flex items-center gap-4 flex-wrap sm:flex-nowrap">
-                    <div className="h-12 w-12 rounded-xl bg-primary/10 border border-primary/30 flex items-center justify-center shrink-0">
-                      <Dumbbell className="h-5 w-5 text-primary-glow" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-display text-lg sm:text-xl leading-tight truncate">
-                        {routine.focus}
-                      </h3>
-                      {/* <p className="font-display text-lg sm:text-xl leading-tight truncate">
+              {routines.map((routine) => {
+                const today = new Date();
+                const routineDay = new Date(routine.scheduledDate);
+                today.setHours(0, 0, 0, 0);
+                routineDay.setHours(0, 0, 0, 0);
+                const isFutureRoutine = routineDay.getTime() > today.getTime();
+                return (
+                  <Card
+                    key={routine.exerciseId}
+                    className="bg-gradient-card border-border p-4 sm:p-5 hover:border-primary/50 hover:shadow-card transition-all duration-300"
+                  >
+                    <div className="flex items-center gap-4 flex-wrap sm:flex-nowrap mb-5">
+                      <div className="h-12 w-12 rounded-xl bg-primary/10 border border-primary/30 flex items-center justify-center shrink-0">
+                        <Dumbbell className="h-5 w-5 text-primary-glow" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-display text-lg sm:text-xl leading-tight truncate">
+                          {routine.exerciseName}
+                        </h3>
+                        {/* <p className="font-display text-lg sm:text-xl leading-tight truncate">
                         {routine.}
                       </p> */}
-                      <div className="flex items-center gap-3 text-[11px] sm:text-xs text-muted-foreground mt-1 flex-wrap">
-                        <span className="flex items-center gap-1">
-                          <Calendar className="h-3 w-3 text-primary-glow" />
-                          {(() => {
-                            const fechaCruda =
-                              routine.scheduledDate || routine.exercises?.[0]?.scheduledDate;
+                        <div className="flex items-center gap-3 text-[11px] sm:text-xs text-muted-foreground mt-1 flex-wrap">
+                          <span className="flex items-center gap-1">
+                            <Calendar className="h-3 w-3 text-primary-glow" />
+                            {(() => {
+                              const fechaCruda = routine.scheduledDate;
 
-                            if (!fechaCruda) return <span>Sin fecha asignada</span>;
+                              if (!fechaCruda) return <span>Sin fecha asignada</span>;
 
-                            const parsedDate = new Date(fechaCruda);
-                            const esValida = !isNaN(parsedDate.getTime());
+                              const parsedDate = new Date(fechaCruda);
+                              const esValida = !isNaN(parsedDate.getTime());
 
-                            return esValida ? (
-                              <>
-                                <span>Asignada para: </span>
-                                <span className="font-semibold text-foreground">
-                                  {parsedDate.toLocaleDateString("es-ES", {
-                                    day: "2-digit",
-                                    month: "2-digit",
-                                    year: "numeric",
-                                    timeZone: "UTC",
-                                  })}
-                                </span>
-                              </>
-                            ) : (
-                              <span>Cargando fecha...</span>
-                            );
-                          })()}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 ml-auto">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="border-border hover:border-primary/50 hover:bg-primary/10 hover:text-white"
-                        onClick={() => handlefetchExercises(routine.id!)}
-                      >
-                        <Eye className="h-4 w-4 mr-1" /> Ver
-                        <ChevronRight className="h-3 w-3 ml-0.5 opacity-60" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                        onClick={() => setPendingDelete(routine)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                  {getShowForm === routine.id && (
-                    <div className="space-y-3 mb-3">
-                      {getRoutineForm.exercises!.map((ex, idx) => (
-                        <div
-                          key={ex.id}
-                          className="rounded-lg border border-border bg-background/40 p-3 sm:p-4"
-                        >
-                          <div className="flex items-center justify-between mb-3">
-                            <div className="flex items-center gap-2">
-                              <div className="h-7 w-7 rounded-md bg-primary/10 border border-primary/30 flex items-center justify-center text-[11px] font-display text-primary-glow">
-                                {idx + 1}
-                              </div>
-                              <span className="text-[10px] uppercase tracking-widest text-muted-foreground">
-                                Ejercicio
-                              </span>
-                            </div>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-destructive hover:bg-destructive/10 hover:text-destructive disabled:opacity-30"
-                              onClick={() => removeExercise(ex.id)}
-                              disabled={getRoutineForm.exercises!.length === 1}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                          <div className="grid sm:grid-cols-2 gap-3 mb-3">
-                            <div>
-                              <Label className="text-[10px] uppercase tracking-widest text-muted-foreground">
-                                Nombre
-                              </Label>
-                              <Input
-                                value={ex.name}
-                                onChange={(e) => updateExercise(ex.id, { name: e.target.value })}
-                                placeholder="Press banca"
-                                maxLength={80}
-                                className="mt-1.5 bg-background/60 border-border focus-visible:ring-primary/40"
-                              />
-                            </div>
-                            <div>
-                              <Label className="text-[10px] uppercase tracking-widest text-muted-foreground">
-                                Músculo
-                              </Label>
-                              <Input
-                                value={ex.muscle}
-                                onChange={(e) => updateExercise(ex.id, { muscle: e.target.value })}
-                                placeholder="Pecho"
-                                maxLength={60}
-                                className="mt-1.5 bg-background/60 border-border focus-visible:ring-primary/40"
-                              />
-                            </div>
-                          </div>
-                          <div className="grid grid-cols-3 gap-2 sm:gap-3">
-                            <div>
-                              <Label className="text-[10px] uppercase tracking-widest text-muted-foreground flex items-center gap-1">
-                                <Layers className="h-3 w-3" /> Series
-                              </Label>
-                              <Input
-                                type="number"
-                                min={1}
-                                max={20}
-                                value={ex.sets}
-                                onChange={(e) => updateExercise(ex.id, { sets: e.target.value })}
-                                placeholder="4"
-                                className="mt-1.5 bg-background/60 border-border focus-visible:ring-primary/40"
-                              />
-                            </div>
-                            <div>
-                              <Label className="text-[10px] uppercase tracking-widest text-muted-foreground flex items-center gap-1">
-                                <Repeat className="h-3 w-3" /> Reps
-                              </Label>
-                              <Input
-                                value={ex.reps}
-                                onChange={(e) => updateExercise(ex.id, { reps: e.target.value })}
-                                placeholder="8-10"
-                                maxLength={20}
-                                className="mt-1.5 bg-background/60 border-border focus-visible:ring-primary/40"
-                              />
-                            </div>
-                            <div>
-                              <Label className="text-[10px] uppercase tracking-widest text-muted-foreground flex items-center gap-1">
-                                <Timer className="h-3 w-3" /> Descanso (s)
-                              </Label>
-                              <Input
-                                type="number"
-                                min={0}
-                                max={600}
-                                value={ex.restSec}
-                                onChange={(e) => updateExercise(ex.id, { restSec: e.target.value })}
-                                placeholder="90"
-                                className="mt-1.5 bg-background/60 border-border focus-visible:ring-primary/40"
-                              />
-                            </div>
-                          </div>
-                          <div className="grid grid-cols-2 gap-2 sm:gap-3 mt-3">
-                            <div>
-                              <Label className="text-[10px] uppercase tracking-widest text-muted-foreground flex items-center gap-1">
-                                <Layers className="h-3 w-3" /> Peso (kg)
-                              </Label>
-                              <Input
-                                type="number"
-                                min={1}
-                                max={100}
-                                value={ex.weight}
-                                onChange={(e) => updateExercise(ex.id, { weight: e.target.value })}
-                                placeholder="10 kg"
-                                className="mt-1.5 bg-background/60 border-border focus-visible:ring-primary/40"
-                              />
-                            </div>
-                            <div>
-                              <Label className="text-[10px] uppercase tracking-widest text-muted-foreground flex items-center gap-1">
-                                <Repeat className="h-3 w-3" /> Coach Notes
-                              </Label>
-                              <Input
-                                value={ex.coaNotes}
-                                onChange={(e) =>
-                                  updateExercise(ex.id, { coaNotes: e.target.value })
-                                }
-                                placeholder="Notas del entrenador"
-                                maxLength={30}
-                                className="mt-1.5 bg-background/60 border-border focus-visible:ring-primary/40"
-                              />
-                            </div>
-                          </div>
+                              return esValida ? (
+                                <>
+                                  <span>Asignada para: </span>
+                                  <span className="font-semibold text-foreground">
+                                    {parsedDate.toLocaleDateString("es-ES", {
+                                      day: "2-digit",
+                                      month: "2-digit",
+                                      year: "numeric",
+                                      timeZone: "UTC",
+                                    })}
+                                  </span>
+                                </>
+                              ) : (
+                                <span>Cargando fecha...</span>
+                              );
+                            })()}
+                          </span>
                         </div>
-                      ))}
-                      <div className="flex items-center gap-3 justify-end flex-wrap">
-                        <Button variant="outline" className="border-border hover:text-white ">
-                          Actualizar
-                        </Button>
+                      </div>
+                      <div className="flex items-center gap-2 ml-auto">
                         <Button
                           variant="outline"
-                          className="border-border hover:text-white"
-                          onClick={() => {
-                            setGetShowForm("");
-                          }}
+                          size="sm"
+                          className="border-border hover:border-primary/50 hover:bg-primary/10 hover:text-white"
+                          onClick={() => handleViewExerciseDetails(routine)}
                         >
-                          Cancelar
+                          <Eye className="h-4 w-4 mr-1" /> Ver
+                          <ChevronRight className="h-3 w-3 ml-0.5 opacity-60" />
                         </Button>
+                        {isFutureRoutine && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                            onClick={() => setPendingDelete(routine)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
                       </div>
                     </div>
-                  )}
-                </Card>
-              ))}
+                    {getShowForm === routine.dailyExerciseId && (
+                      <div className="space-y-3 mb-3">
+                        <div className="grid grid-cols-2 gap-2 sm:gap-3 mt-3">
+                          <div>
+                            <Label className="text-[10px] uppercase tracking-widest text-muted-foreground flex items-center gap-1">
+                              Notas del Cliente
+                            </Label>
+                            <Input
+                              value={routineForm.studentNotes}
+                              placeholder="notas del cliente"
+                              className="mt-1.5 bg-background/60 border-border focus-visible:ring-primary/40"
+                              disabled
+                            />
+                          </div>
+                        </div>
+                        {getExerciseSetForm.map((exerciseSet, index) => (
+                          <div
+                            key={exerciseSet.id}
+                            className="rounded-lg border border-border bg-background/40 p-3 sm:p-4"
+                          >
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="flex items-center gap-2">
+                                <div className="h-7 w-7 rounded-md bg-primary/10 border border-primary/30 flex items-center justify-center text-[11px] font-display text-primary-glow">
+                                  {index + 1}
+                                </div>
+                                <span className="text-[10px] uppercase tracking-widest text-muted-foreground">
+                                  Serie
+                                </span>
+                              </div>
+                              {isFutureRoutine && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-destructive hover:bg-destructive/10 hover:text-destructive disabled:opacity-30"
+                                  onClick={() => removeSet(exerciseSet.id.toString())}
+                                  disabled={getExerciseSetForm.length === 1}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              )}
+                            </div>
+                            <div className="grid sm:grid-cols-2 gap-3 mb-3">
+                              <div>
+                                <Label className="text-[10px] uppercase tracking-widest text-muted-foreground">
+                                  Repeticiones
+                                </Label>
+                                <Input
+                                  value={exerciseSet.targetReps}
+                                  onChange={(e) =>
+                                    updateSet(exerciseSet.id.toString(), {
+                                      targetReps: e.target.value,
+                                    })
+                                  }
+                                  placeholder="4"
+                                  className="mt-1.5 bg-background/60 border-border focus-visible:ring-primary/40"
+                                  disabled
+                                />
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                              <div>
+                                <Label className="text-[10px] uppercase tracking-widest text-muted-foreground flex items-center gap-1">
+                                  <Layers className="h-3 w-3" /> Peso (kg)
+                                </Label>
+                                <Input
+                                  value={exerciseSet.targetWeight}
+                                  onChange={(e) =>
+                                    updateSet(exerciseSet.targetWeight.toString(), {
+                                      targetWeight: e.target.value,
+                                    })
+                                  }
+                                  placeholder="10 kg"
+                                  className="mt-1.5 bg-background/60 border-border focus-visible:ring-primary/40"
+                                  disabled
+                                />
+                              </div>
+                              <div>
+                                <Label className="text-[10px] uppercase tracking-widest text-muted-foreground flex items-center gap-1">
+                                  <Repeat className="h-3 w-3" /> Descanso (s)
+                                </Label>
+                                <Input
+                                  value={exerciseSet.restTime}
+                                  onChange={(e) =>
+                                    updateSet(exerciseSet.id.toString(), {
+                                      restTime: e.target.value,
+                                    })
+                                  }
+                                  placeholder="90 s"
+                                  className="mt-1.5 bg-background/60 border-border focus-visible:ring-primary/40"
+                                  disabled
+                                />
+                              </div>
+                              <div>
+                                <Label className="text-[10px] uppercase tracking-widest text-muted-foreground flex items-center gap-1">
+                                  Repeticiones Conseguidas
+                                </Label>
+                                <Input
+                                  type="number"
+                                  min={0}
+                                  max={50}
+                                  value={exerciseSet.actualReps}
+                                  onChange={(e) =>
+                                    updateSet(exerciseSet.id.toString(), {
+                                      actualReps: Number(e.target.value),
+                                    })
+                                  }
+                                  placeholder="90"
+                                  className="mt-1.5 bg-background/60 border-border focus-visible:ring-primary/40"
+                                  disabled
+                                />
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2 sm:gap-3 mt-3">
+                              <div>
+                                <Label className="text-[10px] uppercase tracking-widest text-muted-foreground flex items-center gap-1">
+                                  <Layers className="h-3 w-3" /> Peso Conseguido (kg)
+                                </Label>
+                                <Input
+                                  type="number"
+                                  min={1}
+                                  max={700}
+                                  value={exerciseSet.actualWeight}
+                                  onChange={(e) =>
+                                    updateSet(exerciseSet.id.toString(), {
+                                      actualWeight: Number(e.target.value),
+                                    })
+                                  }
+                                  placeholder="10 kg"
+                                  className="mt-1.5 bg-background/60 border-border focus-visible:ring-primary/40"
+                                  disabled
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                        <div className="flex items-center gap-3 justify-end flex-wrap">
+                          {isFutureRoutine && (
+                            <Button variant="outline" className="border-border hover:text-white ">
+                              Actualizar
+                            </Button>
+                          )}
+                          <Button
+                            variant="outline"
+                            className="border-border hover:text-white"
+                            onClick={() => {
+                              setGetShowForm("");
+                            }}
+                          >
+                            Cancelar
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </Card>
+                );
+              })}
             </div>
           )}
         </div>
@@ -868,8 +1090,8 @@ function ClientRoutinesPage() {
               </AlertDialogTitle>
               <AlertDialogDescription>
                 Vas a eliminar{" "}
-                <span className="text-foreground font-medium">{pendingDelete?.focus}</span> de{" "}
-                {client.name}. Esta acción no se puede deshacer.
+                <span className="text-foreground font-medium">{pendingDelete?.exerciseName}</span>{" "}
+                de {client.name}. Esta acción no se puede deshacer.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
@@ -883,6 +1105,85 @@ function ClientRoutinesPage() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        <Dialog
+          open={showNewExerciseDialog}
+          onOpenChange={(open) => {
+            setShowNewExerciseDialog(open);
+            if (!open) {
+              newExerciseFormReset();
+            }
+          }}
+        >
+          <DialogContent className="bg-popover/95 backdrop-blur-xl border-primary/40 shadow-elevated sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="font-display text-2xl flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-primary-glow" />
+                Crear ejercicio
+              </DialogTitle>
+              <DialogDescription>
+                Añade un ejercicio nuevo. Después pulsa el botón de refrescar para verlo en la
+                lista.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-2">
+              <div>
+                <Label
+                  className="text-[11px] uppercase tracking-widest text-muted-foreground"
+                  htmlFor="muscleGroup"
+                >
+                  Grupo Muscular
+                </Label>
+                <Select
+                  value={newExerciseForm.muscleGroupId ? String(newExerciseForm.muscleGroupId) : ""}
+                  onValueChange={(value) => {
+                    handleExercises(Number(value), true);
+                  }}
+                >
+                  <SelectTrigger id="muscleGroup" className="bg-input/60">
+                    <SelectValue placeholder="Selecciona el grupo Muscular" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {muscleGroups?.map((m) => (
+                      <SelectItem key={m.id} value={String(m.id)} className="focus:text-white">
+                        {m.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-[11px] uppercase tracking-widest text-muted-foreground">
+                  Nombre del ejercicio
+                </Label>
+                <Input
+                  value={newExerciseForm.name}
+                  name="name"
+                  onChange={(e) => handleInputChange(e, true)}
+                  placeholder="Press inclinado con mancuernas"
+                  maxLength={80}
+                  autoFocus
+                  className="mt-1.5 bg-background/60 border-border focus-visible:ring-primary/40"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                className="border-border"
+                onClick={() => setShowNewExerciseDialog(false)}
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={handleSaveNewExercise}
+                className="bg-gradient-primary hover:opacity-90 shadow-glow"
+              >
+                <Save className="h-4 w-4 mr-1" /> Guardar
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </AppShell>
   );

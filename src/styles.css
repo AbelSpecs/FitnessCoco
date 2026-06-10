@@ -123,7 +123,7 @@
   --sidebar-ring: oklch(0.72 0.19 50);
 
   /* Gradients & shadows */
-  --gradient-primary: linear-gradient(135deg, oklch(0.68 0.21 40), oklch(0.82 0.17 65));
+  --gradient-primary: linear-gradient(135deg, rgb(253, 91, 11), rgb(255, 170, 48));
   --gradient-hero: linear-gradient(
     135deg,
     oklch(0.12 0.005 60) 0%,
