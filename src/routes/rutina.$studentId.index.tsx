@@ -1,4 +1,11 @@
-import { createFileRoute, Link, redirect, useParams, notFound } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  Link,
+  redirect,
+  useParams,
+  notFound,
+  Outlet,
+} from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -8,13 +15,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useAuthStore } from "@/store/authStore";
 import { CompleteDate, DailyExerciseSets, DayRoutine, Exercise } from "@/types/exercises";
 import { determineDate, determineDates } from "@/utils/determineDate";
-import {
-  getDailyStudentExercisesByStudentId,
-  getDailyStudentExercisesByStudentIdAndDate,
-} from "@/services/routine.service";
+import { getDailyStudentExercisesByStudentIdAndDate } from "@/services/routine.service";
 import { GetDailyStudentExerciseDto } from "@/dtos/exerciseDto";
-import DatePicker from "@/components/DatePicker";
-import { DateRange } from "react-day-picker";
 import WeekSlider from "@/components/ui/weekSlider";
 import { addDays, startOfWeek, format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -27,6 +29,60 @@ export const Route = createFileRoute("/rutina/$studentId/")({
     ],
   }),
   component: RutinaPage,
+  loader: async ({ params }) => {
+    try {
+      const mondayOfThisWeek = startOfWeek(new Date(), { weekStartsOn: 1 });
+      const dateStringParam = format(mondayOfThisWeek, "yyyy-MM-dd");
+
+      const exercisesData: GetDailyStudentExerciseDto[] =
+        await getDailyStudentExercisesByStudentIdAndDate(Number(params.studentId), dateStringParam);
+
+      const mappedExercises: Exercise[] = exercisesData.map((e) => {
+        const completeDate: CompleteDate = determineDate(e.scheduledDate);
+        return {
+          dailyExerciseId: e.id,
+          coachId: e.coachId,
+          exerciseId: e.exerciseId,
+          studentId: e.studentId,
+          exerciseName: e.exerciseName,
+          muscleGroupName: e.muscleGroupName,
+          coachNotes: e.coachNotes,
+          scheduledDate: e.scheduledDate.split("T")[0],
+          day: completeDate.day,
+          short: completeDate.short,
+          dailyExerciseSets: e.dailyExerciseSets as DailyExerciseSets[],
+        };
+      });
+
+      const weekRoutineDays: DayRoutine[] = Array.from({ length: 7 }, (_, i) => {
+        const currentDayDate = addDays(mondayOfThisWeek!, i);
+        const dateString = format(currentDayDate, "yyyy-MM-dd");
+        const dayName = format(currentDayDate, "EEEE", { locale: es });
+        const dayShort = format(currentDayDate, "eeeeee", { locale: es });
+
+        const dayExercises = mappedExercises.filter(
+          (ex) => ex.scheduledDate.split("T")[0] === dateString,
+        );
+
+        const day: DayRoutine = {
+          id: i,
+          scheduledDate: dateString,
+          name: dayName.charAt(0).toUpperCase() + dayName.slice(1),
+          short: dayShort.charAt(0).toUpperCase(),
+          estimated: "",
+          rest: dayExercises.length > 0 ? false : true,
+          muscleGroupName: dayExercises.length > 0 ? dayExercises[0].muscleGroupName : "Descanso",
+          exercises: dayExercises,
+        };
+
+        return day;
+      });
+      return { weekRoutineDays: weekRoutineDays };
+    } catch (error) {
+      console.error(error);
+      return { initialExercises: [] };
+    }
+  },
   beforeLoad: ({ location }) => {
     const auth = localStorage.getItem("pyrosfit_user");
     const role = auth && JSON.parse(auth).role !== "student";
@@ -49,155 +105,11 @@ export const Route = createFileRoute("/rutina/$studentId/")({
 function RutinaPage() {
   const today = new Date().getDay();
   const todayIndex = today === 0 ? 6 : today - 1;
-  // const { user } = useAuthStore();
   const { studentId } = useParams({ from: "/rutina/$studentId/" });
+  const { weekRoutineDays } = Route.useLoaderData();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(
     startOfWeek(new Date(), { weekStartsOn: 1 }),
   );
-  const [weekRoutineList, setWeekRoutineList] = useState<DayRoutine[]>([
-    {
-      id: 0,
-      scheduledDate: "2026-06-08",
-      name: "Lunes",
-      short: "L",
-      estimated: "",
-      rest: false,
-      muscleGroupName: "",
-      exercises: [],
-    },
-    {
-      id: 1,
-      scheduledDate: "2026-06-09",
-      name: "Martes",
-      short: "M",
-      estimated: "",
-      rest: false,
-      muscleGroupName: "",
-      exercises: [],
-    },
-    {
-      id: 2,
-      scheduledDate: "2026-06-10",
-      name: "Miércoles",
-      short: "X",
-      estimated: "",
-      rest: false,
-      muscleGroupName: "",
-      exercises: [],
-    },
-    {
-      id: 3,
-      scheduledDate: "2026-06-11",
-      name: "Jueves",
-      short: "J",
-      estimated: "",
-      rest: false,
-      muscleGroupName: "",
-      exercises: [],
-    },
-    {
-      id: 4,
-      scheduledDate: "2026-06-12",
-      name: "Viernes",
-      short: "V",
-      estimated: "",
-      rest: false,
-      muscleGroupName: "",
-      exercises: [],
-    },
-    {
-      id: 5,
-      scheduledDate: "2026-06-13",
-      name: "Sábado",
-      short: "S",
-      estimated: "",
-      rest: false,
-      muscleGroupName: "",
-      exercises: [],
-    },
-    {
-      id: 6,
-      scheduledDate: "2026-06-14",
-      name: "Domingo",
-      short: "D",
-      estimated: "",
-      rest: false,
-      muscleGroupName: "",
-      exercises: [],
-    },
-  ]);
-
-  const days: DayRoutine[] = useMemo(
-    () =>
-      Array.from({ length: 7 }, (_, i) => {
-        const currentDayDate = addDays(selectedDate!, i);
-        const dayName = format(currentDayDate, "EEEE", { locale: es });
-        const dayShort = format(currentDayDate, "eeeeee", { locale: es });
-
-        return {
-          id: i,
-          scheduledDate: currentDayDate!.toISOString(),
-          name: dayName.charAt(0).toUpperCase() + dayName.slice(1),
-          short: dayShort.charAt(0).toUpperCase(),
-          estimated: "",
-          rest: false,
-          muscleGroupName: "",
-          exercises: [],
-        };
-      }),
-    [selectedDate],
-  );
-
-  useEffect(() => {
-    const fetchRoutinesData = async () => {
-      try {
-        const exercisesData: GetDailyStudentExerciseDto[] =
-          await getDailyStudentExercisesByStudentIdAndDate(
-            Number(studentId),
-            selectedDate!.toISOString(),
-          );
-
-        const mappedExercises: Exercise[] = exercisesData.map((e) => {
-          const completeDate: CompleteDate = determineDate(e.scheduledDate);
-
-          const newExercise: Exercise = {
-            dailyExerciseId: e.id,
-            coachId: e.coachId,
-            exerciseId: e.exerciseId,
-            studentId: e.studentId,
-            exerciseName: e.exerciseName,
-            muscleGroupName: e.muscleGroupName,
-            coachNotes: e.coachNotes,
-            scheduledDate: e.scheduledDate,
-            day: completeDate.day,
-            short: completeDate.short,
-            dailyExerciseSets: e.dailyExerciseSets as DailyExerciseSets[],
-          };
-
-          return newExercise;
-        });
-
-        const weekRoutine: DayRoutine[] = days.map((day) => {
-          const dayExercises = mappedExercises.filter(
-            (ex) => ex.scheduledDate.split("T")[0] === day.scheduledDate.split("T")[0],
-          );
-
-          return {
-            ...day,
-            muscleGroupName: "",
-            rest: dayExercises.length > 0 ? false : true,
-            exercises: dayExercises,
-          };
-        });
-
-        setWeekRoutineList(weekRoutine);
-      } catch (error) {
-        console.error("Error fetching routine data:", error);
-      }
-    };
-
-    fetchRoutinesData();
-  }, [studentId, selectedDate]);
 
   const handleWeekDate = (date: Date | undefined) => {
     if (!date) return;
@@ -224,13 +136,13 @@ function RutinaPage() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
-        {weekRoutineList.map((day, i) => {
+        {weekRoutineDays!.map((day, i) => {
           const isToday = i === todayIndex;
           return (
             <Link
               key={day.id}
-              to="/rutina/$dayId"
-              params={{ dayId: day.id.toString()! }}
+              to="/rutina/$studentId/$dayId"
+              params={{ studentId: studentId, dayId: day.scheduledDate.split("T")[0]! }}
               className="group"
             >
               <Card
