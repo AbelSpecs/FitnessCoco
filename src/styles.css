@@ -123,14 +123,18 @@
   --sidebar-ring: oklch(0.72 0.19 50);
 
   /* Gradients & shadows */
-  --gradient-primary: linear-gradient(135deg, oklch(0.68 0.21 40), oklch(0.82 0.17 65));
+  --gradient-primary: linear-gradient(135deg, rgb(253, 91, 11), oklch(80.3% 0.15987 70.184));
   --gradient-hero: linear-gradient(
     135deg,
     oklch(0.12 0.005 60) 0%,
     oklch(0.2 0.04 50) 50%,
     oklch(0.34 0.14 50) 100%
   );
-  --gradient-card: linear-gradient(160deg, oklch(0.2 0.01 60) 0%, oklch(0.14 0.008 60) 100%);
+  --gradient-card: linear-gradient(
+    160deg,
+    oklch(20.068% 0.01004 52.81 / 0) 0%,
+    oklch(13.904% 0.0091 52.571 / 0) 100%
+  );
   --gradient-mesh:
     radial-gradient(at 20% 10%, oklch(0.72 0.19 50 / 0.25), transparent 50%),
     radial-gradient(at 80% 90%, oklch(0.82 0.17 65 / 0.18), transparent 50%);

@@ -1,14 +1,25 @@
-import { createFileRoute, Link, redirect, useParams, notFound } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  Link,
+  redirect,
+  useParams,
+  notFound,
+  Outlet,
+} from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { weekPlan } from "@/lib/mock-data";
-import { ChevronRight, Clock, Dumbbell } from "lucide-react";
-import { useEffect, useState } from "react";
-import { getExercises, getRoutine } from "@/services/routine.service";
+import { Calendar, ChevronRight, Clock, Dumbbell } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import { useAuthStore } from "@/store/authStore";
-import { BadExercise, BadRoutine, CompleteDate, DayRoutine, Exercise } from "@/types/exercises";
-import { determineDates } from "@/utils/determineDate";
+import { CompleteDate, DailyExerciseSets, DayRoutine, Exercise } from "@/types/exercises";
+import { determineDate, determineDates } from "@/utils/determineDate";
+import { getDailyStudentExercisesByStudentIdAndDate } from "@/services/routine.service";
+import { GetDailyStudentExerciseDto } from "@/dtos/exerciseDto";
+import WeekSlider from "@/components/ui/weekSlider";
+import { addDays, startOfWeek, format } from "date-fns";
+import { es } from "date-fns/locale";
 
 export const Route = createFileRoute("/rutina/$studentId/")({
   head: () => ({
@@ -18,6 +29,60 @@ export const Route = createFileRoute("/rutina/$studentId/")({
     ],
   }),
   component: RutinaPage,
+  loader: async ({ params }) => {
+    try {
+      const mondayOfThisWeek = startOfWeek(new Date(), { weekStartsOn: 1 });
+      const dateStringParam = format(mondayOfThisWeek, "yyyy-MM-dd");
+
+      const exercisesData: GetDailyStudentExerciseDto[] =
+        await getDailyStudentExercisesByStudentIdAndDate(Number(params.studentId), dateStringParam);
+
+      const mappedExercises: Exercise[] = exercisesData.map((e) => {
+        const completeDate: CompleteDate = determineDate(e.scheduledDate);
+        return {
+          dailyExerciseId: e.id,
+          coachId: e.coachId,
+          exerciseId: e.exerciseId,
+          studentId: e.studentId,
+          exerciseName: e.exerciseName,
+          muscleGroupName: e.muscleGroupName,
+          coachNotes: e.coachNotes,
+          scheduledDate: e.scheduledDate.split("T")[0],
+          day: completeDate.day,
+          short: completeDate.short,
+          dailyExerciseSets: e.dailyExerciseSets as DailyExerciseSets[],
+        };
+      });
+
+      const weekRoutineDays: DayRoutine[] = Array.from({ length: 7 }, (_, i) => {
+        const currentDayDate = addDays(mondayOfThisWeek!, i);
+        const dateString = format(currentDayDate, "yyyy-MM-dd");
+        const dayName = format(currentDayDate, "EEEE", { locale: es });
+        const dayShort = format(currentDayDate, "eeeeee", { locale: es });
+
+        const dayExercises = mappedExercises.filter(
+          (ex) => ex.scheduledDate.split("T")[0] === dateString,
+        );
+
+        const day: DayRoutine = {
+          id: i,
+          scheduledDate: dateString,
+          name: dayName.charAt(0).toUpperCase() + dayName.slice(1),
+          short: dayShort.charAt(0).toUpperCase(),
+          estimated: "",
+          rest: dayExercises.length > 0 ? false : true,
+          muscleGroupName: dayExercises.length > 0 ? dayExercises[0].muscleGroupName : "Descanso",
+          exercises: dayExercises,
+        };
+
+        return day;
+      });
+      return { weekRoutineDays: weekRoutineDays };
+    } catch (error) {
+      console.error(error);
+      return { initialExercises: [] };
+    }
+  },
   beforeLoad: ({ location }) => {
     const auth = localStorage.getItem("pyrosfit_user");
     const role = auth && JSON.parse(auth).role !== "student";
@@ -40,84 +105,26 @@ export const Route = createFileRoute("/rutina/$studentId/")({
 function RutinaPage() {
   const today = new Date().getDay();
   const todayIndex = today === 0 ? 6 : today - 1;
-  // const { user } = useAuthStore();
   const { studentId } = useParams({ from: "/rutina/$studentId/" });
-  const [weekRoutineList, setWeekRoutineList] = useState<DayRoutine[]>([]);
+  const { weekRoutineDays } = Route.useLoaderData();
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(
+    startOfWeek(new Date(), { weekStartsOn: 1 }),
+  );
 
-  useEffect(() => {
-    const fetchRoutinesData = async () => {
-      try {
-        const exercisesData: BadExercise[] = await getExercises(Number(studentId));
+  const handleWeekDate = (date: Date | undefined) => {
+    if (!date) return;
 
-        const exerciseIds = [
-          ...new Set(exercisesData.map((item: BadExercise) => item.exerciseId)),
-        ] as number[];
-
-        const dates = [...new Set(exercisesData.map((item) => item.scheduledDate))];
-
-        const completeDates: CompleteDate[] = determineDates(dates);
-
-        const mappedExercises = exercisesData.map((e, id: number) => {
-          const newExercise: Exercise = {
-            id,
-            coachId: e.coachId,
-            exerciseId: e.exerciseId,
-            name: `Ejercicio de la chancla ${id}`,
-            description: `Prueba ${id}`,
-            muscle: `Prueba ${id}`,
-            sets: e.sets,
-            reps: e.reps,
-            restSec: Number(e.restTime),
-          };
-
-          return newExercise;
-        });
-
-        for (let i = 0; i <= exerciseIds.length - 1; i++) {
-          const routineData = await getRoutine(exerciseIds[i]);
-
-          const foundDate = exercisesData.find(
-            (e) => e.exerciseId === exerciseIds[i],
-          )?.scheduledDate;
-          const completeRoutineData: DayRoutine = {
-            id: exerciseIds[i].toString(),
-            day: completeDates.find((date) => date.original === foundDate)!.day,
-            short: completeDates.find((date) => date.original === foundDate)!.short,
-            focus: routineData.name,
-            durationMin: 20,
-            exercises: mappedExercises.filter((e) => e.exerciseId === exerciseIds[i]),
-          };
-
-          setWeekRoutineList((prevDay) => {
-            const listWithoutDuplicate = prevDay.filter(
-              (item) => item.id !== completeRoutineData.id,
-            );
-
-            return [...listWithoutDuplicate, completeRoutineData];
-          });
-        }
-
-        // const weekPlan: DayRoutine[] = [
-        //   {
-        //     id: string;
-        //       day: string;
-        //       short: string;
-        //       focus: string;
-        //       durationMin: number;
-        //       exercises: Exercise[];
-        //       rest?: boolean;
-        //   }
-        // ]
-      } catch (error) {
-        console.error("Error fetching routine data:", error);
-      }
-    };
-
-    fetchRoutinesData();
-  }, [studentId]);
-
+    setSelectedDate(date);
+  };
   return (
     <AppShell>
+      <WeekSlider
+        value={selectedDate}
+        onChange={handleWeekDate}
+        weeksAfter={4}
+        weeksBefore={4}
+        className="mb-4"
+      />
       <div className="mb-6 sm:mb-8">
         <p className="text-[10px] sm:text-xs uppercase tracking-[0.3em] text-primary-glow mb-2">
           Tu programa
@@ -129,15 +136,20 @@ function RutinaPage() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
-        {weekRoutineList.map((day, i) => {
+        {weekRoutineDays!.map((day, i) => {
           const isToday = i === todayIndex;
           return (
-            <Link key={day.id} to="/rutina/$dayId" params={{ dayId: day.id! }} className="group">
+            <Link
+              key={day.id}
+              to="/rutina/$studentId/$dayId"
+              params={{ studentId: studentId, dayId: day.scheduledDate.split("T")[0]! }}
+              className="group"
+            >
               <Card
                 className={`relative overflow-hidden p-6 h-full transition-all duration-300 hover:-translate-y-1 ${
                   isToday
                     ? "bg-gradient-primary border-primary-glow shadow-glow"
-                    : day.rest
+                    : day.short
                       ? "bg-card/40 border-border"
                       : "bg-gradient-card border-border hover:border-primary/50 hover:shadow-card"
                 }`}
@@ -145,14 +157,14 @@ function RutinaPage() {
                 <div className="flex items-start justify-between mb-6">
                   <div>
                     <p className="text-xs uppercase tracking-widest opacity-70">
-                      {isToday ? "Hoy" : day.day}
+                      {isToday ? "Hoy" : day.name}
                     </p>
                     <p className="font-display text-5xl leading-none mt-1">{day.short}</p>
                   </div>
                   <ChevronRight className="h-5 w-5 opacity-40 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
                 </div>
 
-                <h3 className="font-display text-2xl mb-3">{day.focus}</h3>
+                <h3 className="font-display text-2xl mb-3">{day.muscleGroupName}</h3>
 
                 {day.rest ? (
                   <Badge variant="secondary" className="bg-muted/50">
@@ -162,7 +174,7 @@ function RutinaPage() {
                   <div className="flex items-center gap-3 text-xs opacity-80">
                     <span className="flex items-center gap-1">
                       <Clock className="h-3 w-3" />
-                      {day.durationMin} min
+                      {day.estimated} min
                     </span>
                     <span className="flex items-center gap-1">
                       <Dumbbell className="h-3 w-3" />
