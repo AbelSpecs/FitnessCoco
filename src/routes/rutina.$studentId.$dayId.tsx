@@ -28,7 +28,7 @@ import {
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   LineChart,
   Line,
@@ -40,11 +40,20 @@ import {
 } from "recharts";
 import { useAuthStore } from "@/store/authStore";
 import { CompleteDate, DailyExerciseSets, DayRoutine, Exercise } from "@/types/exercises";
-import { getDailyStudentExercisesByStudentIdAndDate } from "@/services/routine.service";
-import { GetDailyStudentExerciseDto } from "@/dtos/exerciseDto";
+import {
+  getDailyStudentExercisesByStudentIdAndDate,
+  updateDailyExercisesSets,
+  updateDailyStudentExercises,
+} from "@/services/routine.service";
+import {
+  DailyExerciseSetsDto,
+  GetDailyStudentExerciseDto,
+  UpdateDailyStudentExerciseDto,
+} from "@/dtos/exerciseDto";
 import { determineDate } from "@/utils/determineDate";
 import { addDays, format } from "date-fns";
 import { es } from "date-fns/locale";
+import { notify } from "@/components/NotificationCenter";
 
 export const Route = createFileRoute("/rutina/$studentId/$dayId")({
   head: () => ({
@@ -121,21 +130,34 @@ export const Route = createFileRoute("/rutina/$studentId/$dayId")({
 });
 
 function DayDetail() {
-  // const { day } = Route.useLoaderData() as { day: DayPlan };
   const { dayId } = useParams({ from: "/rutina/$studentId/$dayId" });
   const { dayExercises } = Route.useLoaderData();
   const { user } = useAuthStore();
+  const actualDay: DayRoutine = useMemo(() => {
+    if (!dayExercises || dayExercises.length === 0) {
+      return {
+        id: 0,
+        scheduledDate: dayId || "",
+        name: "Descanso",
+        short: "D",
+        estimated: "",
+        rest: true,
+        muscleGroupName: "Descanso",
+        exercises: [],
+      };
+    }
 
-  const actualDay: DayRoutine = {
-    id: 0,
-    scheduledDate: dayId,
-    name: dayExercises![0].day,
-    short: dayExercises![0].short,
-    estimated: "",
-    rest: dayExercises!.length > 0 ? false : true,
-    muscleGroupName: dayExercises!.length > 0 ? dayExercises![0].muscleGroupName : "Descanso",
-    exercises: dayExercises!,
-  };
+    return {
+      id: 0,
+      scheduledDate: dayId || "",
+      name: dayExercises[0].day,
+      short: dayExercises[0].short,
+      estimated: "",
+      rest: false,
+      muscleGroupName: dayExercises[0].muscleGroupName || "Entrenamiento",
+      exercises: dayExercises,
+    };
+  }, [dayExercises, dayId]);
 
   return (
     <AppShell>
@@ -192,13 +214,74 @@ function DayDetail() {
 
 function ExerciseRow({ ex, index }: { ex: Exercise; index: number }) {
   const [done, setDone] = useState(false);
+  const [finalDone, setFinalDone] = useState(false);
   const [weight, setWeight] = useState("");
   const [reps, setReps] = useState("");
-  // const [rpe, setRpe] = useState("");
   const [notes, setNotes] = useState("");
+  const [sets, setSets] = useState<DailyExerciseSets>({
+    id: 0,
+    setNumber: "",
+    targetReps: "",
+    targetWeight: "",
+    restTime: "",
+    actualReps: 0,
+    actualWeight: 0,
+    isAchieved: false,
+  });
   const [showSets, setShowSets] = useState(false);
   const [timerOn, setTimerOn] = useState(false);
   const [timerKey, setTimerKey] = useState(0);
+
+  const handleExerciseUpdate = async (ex: Exercise) => {
+    const exercisetoUpdate: UpdateDailyStudentExerciseDto = {
+      isCompleted: true,
+      studentNotes: notes,
+    };
+    try {
+      const updatedExercise = await updateDailyStudentExercises(
+        ex.dailyExerciseId,
+        exercisetoUpdate,
+      );
+      console.log(updatedExercise);
+      setNotes("");
+    } catch (error) {
+      notify.error("Error al actualizar", "Intenta de nuevo");
+      console.error(error);
+      return;
+    }
+  };
+
+  const handleSetsUpdate = async (set: DailyExerciseSets) => {
+    const setToUpdate: DailyExerciseSetsDto = {
+      id: set.id,
+      setNumber: Number(set.setNumber),
+      targetReps: Number(set.targetReps),
+      targetWeight: Number(set.targetWeight),
+      restTime: set.restTime,
+      actualReps: Number(reps),
+      actualWeight: Number(weight),
+      isAchieved: done,
+    };
+
+    try {
+      const updatedSet = await updateDailyExercisesSets(set.id, setToUpdate);
+      console.log(updatedSet);
+      setReps("");
+      setWeight("");
+      setDone(false);
+      setDone((d) => {
+        if (!d) {
+          setTimerKey((k) => k + 1);
+          setTimerOn(true);
+        }
+        return !d;
+      });
+    } catch (error) {
+      notify.error("Error al actualizar el set", "Intenta de nuevo");
+      console.error(error);
+      return;
+    }
+  };
 
   return (
     <Card className="bg-gradient-card border-border p-4 sm:p-5 lg:p-6">
@@ -302,17 +385,12 @@ function ExerciseRow({ ex, index }: { ex: Exercise; index: number }) {
                       <Button
                         variant={done ? "secondary" : "hero"}
                         onClick={() => {
-                          setDone((d) => {
-                            if (!d) {
-                              setTimerKey((k) => k + 1);
-                              setTimerOn(true);
-                            }
-                            return !d;
-                          });
+                          handleSetsUpdate(set);
                         }}
                         className="h-9 text-xs font-medium uppercase tracking-wider w-full truncate"
+                        disabled={done}
                       >
-                        {done ? "Completada" : "Marcar"}
+                        {done ? "Completada" : "Descansar"}
                       </Button>
                     </div>
                     {timerOn && (
@@ -333,6 +411,16 @@ function ExerciseRow({ ex, index }: { ex: Exercise; index: number }) {
             onChange={(e) => setNotes(e.target.value)}
             className="mt-2 bg-background/50 min-h-[60px]"
           />
+          <Button
+            variant={finalDone ? "secondary" : "hero"}
+            onClick={() => {
+              handleExerciseUpdate(ex);
+            }}
+            className="h-9 text-xs font-medium uppercase tracking-wider truncate"
+            disabled={finalDone}
+          >
+            {finalDone ? "Completado" : "Terminar Ejercicio"}
+          </Button>
         </div>
       </div>
     </Card>

@@ -13,6 +13,11 @@ export interface DailyStudentExerciseDto {
   };
 }
 
+export interface UpdateDailyStudentExerciseDto {
+  isCompleted: boolean;
+  studentNotes: string;
+}
+
 export interface GetDailyStudentExerciseDto {
   id: number;
   coachId: number;

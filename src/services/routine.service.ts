@@ -1,4 +1,9 @@
-import { DailyExerciseSetsDto, DailyStudentExerciseDto, ExerciseDto } from "@/dtos/exerciseDto";
+import {
+  DailyExerciseSetsDto,
+  DailyStudentExerciseDto,
+  ExerciseDto,
+  UpdateDailyStudentExerciseDto,
+} from "@/dtos/exerciseDto";
 import axios from "axios";
 // import api from "./api";
 
@@ -110,7 +115,7 @@ export const postDailyStudentExercises = async (exerciseData: DailyStudentExerci
 
 export const updateDailyStudentExercises = async (
   id: number,
-  exerciseData: DailyStudentExerciseDto,
+  exerciseData: UpdateDailyStudentExerciseDto,
 ) => {
   try {
     const response = await api.put(`/DailyStudentExercises/complete/${id}`, exerciseData);
