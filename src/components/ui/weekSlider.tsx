@@ -44,7 +44,7 @@ export function WeekSlider({
   const selectedWeekStart = useMemo(() => startOfWeek(selected, { weekStartsOn: 1 }), [selected]);
   const weeks = useMemo(() => {
     const baseWeekStart = startOfWeek(today, { weekStartsOn: 1 });
-    console.log(baseWeekStart);
+
     const list: Date[] = [];
     for (let i = -weeksBefore; i <= weeksAfter; i++) {
       list.push(addWeeks(baseWeekStart, i));
@@ -71,7 +71,7 @@ export function WeekSlider({
   const selectWeek = (weekStart: Date) => {
     // Preserve the same weekday offset when changing weeks.
     const offset = (selected.getDay() + 6) % 7; // 0 = Monday
-    console.log(weekStart);
+
     onChange?.(weekStart);
   };
   const monthLabel = format(selected, "LLLL yyyy", { locale: es });

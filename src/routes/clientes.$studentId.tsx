@@ -196,11 +196,8 @@ function ClientRoutinesPage() {
             selectedDateSearch!.toISOString(),
           );
 
-        console.log(dailyExercises);
-
         const completeExercisesMapped: Exercise[] = dailyExercises.map(
           (item: GetDailyStudentExerciseDto) => {
-            console.log(item);
             const completeDay = determineDate(item.scheduledDate).day;
             const shortDay = determineDate(item.scheduledDate).short;
 
@@ -222,7 +219,6 @@ function ClientRoutinesPage() {
           },
         );
 
-        console.log(completeExercisesMapped);
         setRoutines(completeExercisesMapped);
         setIsLoading(false);
       } catch (error) {
@@ -234,7 +230,7 @@ function ClientRoutinesPage() {
     const fetchMuscleGroups = async () => {
       try {
         const muscleGroups = await getMuscleGroups();
-        console.log(muscleGroups);
+
         const muscleGroupsMapped: MuscleGroupSelect[] = muscleGroups.map(
           (m: GetMuscleGroupDto) => ({ id: m.id, name: m.name }),
         );
@@ -312,7 +308,7 @@ function ClientRoutinesPage() {
     setRoutineForm((prev) => ({ ...prev, muscleGroupId: muscleGroupId }));
     try {
       const exercises = await getExerciseByMuscleGroupId(muscleGroupId);
-      console.log(exercises);
+
       setExercises(exercises);
     } catch (error) {
       console.error("Error al obtener los ejercicios", error);
@@ -322,15 +318,11 @@ function ClientRoutinesPage() {
   const handleSearchDatePickerDate = (date: Date | undefined) => {
     if (!date) return;
 
-    console.log(date);
-
     const tzOffset = date.getTimezoneOffset() * 60000;
 
     const localISOTime = new Date(date.getTime() - tzOffset);
 
     const safeISOString = localISOTime.toISOString();
-
-    console.log(safeISOString);
 
     setSelectedDateSearch(new Date(safeISOString));
   };
@@ -480,7 +472,6 @@ function ClientRoutinesPage() {
   };
 
   const handleViewExerciseDetails = async (exercise: Exercise) => {
-    console.log(exercise);
     setGetExerciseSetRoutineForm(exercise.dailyExerciseSets);
     setGetShowForm(exercise.dailyExerciseId);
   };

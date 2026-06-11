@@ -105,7 +105,7 @@ export const postDailyStudentExercises = async (exerciseData: DailyStudentExerci
   try {
     const response = await api.post("/DailyStudentExercises", exerciseData);
     const { data } = response.data;
-    console.log(data);
+
     return data;
   } catch (error) {
     console.error("Error al crear el ejercicio para el cliente", error);
@@ -141,7 +141,6 @@ export const getDailyStudentExercisesByStudentId = async (id: number) => {
 };
 
 export const getDailyStudentExercisesByStudentIdAndDate = async (id: number, date: string) => {
-  console.log(id, date);
   try {
     const response = await api.get(`/DailyStudentExercises/student/${id}/date/${date}`);
     const { data } = response.data;

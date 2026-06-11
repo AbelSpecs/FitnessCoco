@@ -203,7 +203,6 @@ function DayDetail() {
       ) : (
         <div className="space-y-3">
           {actualDay?.exercises.map((ex, i) => {
-            console.log(ex);
             return <ExerciseRow key={ex.dailyExerciseId} ex={ex} index={i + 1} />;
           })}
         </div>
@@ -242,7 +241,7 @@ function ExerciseRow({ ex, index }: { ex: Exercise; index: number }) {
         ex.dailyExerciseId,
         exercisetoUpdate,
       );
-      console.log(updatedExercise);
+
       setNotes("");
     } catch (error) {
       notify.error("Error al actualizar", "Intenta de nuevo");
@@ -265,7 +264,7 @@ function ExerciseRow({ ex, index }: { ex: Exercise; index: number }) {
 
     try {
       const updatedSet = await updateDailyExercisesSets(set.id, setToUpdate);
-      console.log(updatedSet);
+
       setReps("");
       setWeight("");
       setDone(false);
