@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useParams } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect, useParams } from "@tanstack/react-router";
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -125,6 +125,7 @@ export const Route = createFileRoute("/clientes/$studentId")({
       }));
 
       return {
+        studentId: params.studentId,
         client,
         completeExercisesMapped,
         muscleGroupsMapped,
@@ -136,13 +137,25 @@ export const Route = createFileRoute("/clientes/$studentId")({
   },
   pendingComponent: () => <SpinnerOverlay />,
   pendingMs: 0,
+  beforeLoad: ({ location }) => {
+    const auth = localStorage.getItem("pyrosfit_user");
+
+    if (!auth) {
+      throw redirect({
+        to: "/login",
+        search: {
+          redirect: location.href,
+        },
+      });
+    }
+  },
   component: ClientRoutinesPage,
 });
 
 function ClientRoutinesPage() {
-  const { studentId } = useParams({ from: "/clientes/$studentId" });
   const { user } = useAuthStore();
   const {
+    studentId,
     client,
     completeExercisesMapped,
     muscleGroupsMapped: muscleGroups,
