@@ -20,6 +20,7 @@ import { age } from "@/utils/age";
 import { notify } from "@/components/NotificationCenter";
 import { Coach } from "@/types/user";
 import { createCoach } from "@/services/coach.service";
+import { SpinnerOverlay } from "@/components/Spinner";
 
 export const Route = createFileRoute("/register")({
   head: () => ({
@@ -28,14 +29,27 @@ export const Route = createFileRoute("/register")({
       { name: "description", content: "Crea tu cuenta en PYROSFIT" },
     ],
   }),
+  loader: async () => {
+    try {
+      const countries: Country[] = await getCountries();
+
+      return { countries };
+    } catch (error) {
+      console.error("Error al obtener los países:", error);
+      throw error;
+    }
+  },
+  pendingComponent: () => <SpinnerOverlay />,
   component: RegisterPage,
 });
 
 function RegisterPage() {
-  const navigate = useNavigate();
+  const { countries } = Route.useLoaderData();
   const [step, setStep] = useState(1);
-  const [countries, setCountries] = useState<Country[]>([]);
   const [cities, setCities] = useState<City[]>([]);
+  const [success, setSuccess] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   const [registerForm, setRegisterForm] = useState<RegisterCredentials>({
     firstName: "",
     lastName: "",
@@ -49,24 +63,6 @@ function RegisterPage() {
     address: "",
     birthdate: "",
   });
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-  useEffect(() => {
-    const fetchCountries = async () => {
-      try {
-        const countries = await getCountries();
-
-        setCountries(countries);
-      } catch (error) {
-        console.error("Error al obtener los países:", error);
-      }
-    };
-
-    fetchCountries();
-  }, []);
 
   const handleNextStep = () => setStep(2);
   const handlePreviousStep = () => setStep(1);
@@ -85,65 +81,64 @@ function RegisterPage() {
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
 
     if (!registerForm.firstName!.trim()) {
-      setError("El nombre es obligatorio");
+      notify.error("Error", `El nombre es obligatorio`);
       return;
     }
 
     if (!registerForm.lastName!.trim()) {
-      setError("El apellido es obligatorio");
+      notify.error("Error", `El apellido es obligatorio`);
       return;
     }
 
     if (!registerForm.email!.trim()) {
-      setError("El email es obligatorio");
+      notify.error("Error", `El email es obligatorio`);
       return;
     }
 
     if (!emailRegex.test(registerForm.email!)) {
-      setError("Por favor, introduce un correo electrónico válido");
+      notify.error("Error", `Introduce un correo electrónico válido`);
       return;
     }
 
     if (!registerForm.userName!.trim()) {
-      setError("El usuario es obligatorio");
+      notify.error("Error", `El usuario es obligatorio`);
       return;
     }
 
     if (registerForm.password !== registerForm.confirmPassword) {
-      setError("Las contraseñas no coinciden");
+      notify.error("Error", `Las contraseñas no coinciden`);
       return;
     }
     if (registerForm.password!.length < 8) {
-      setError("La contraseña debe tener al menos 8 caracteres");
+      notify.error("Error", `La contraseña debe tener al menos 8 caracteres`);
       return;
     }
 
     if (!registerForm.phoneNumber!.trim()) {
-      setError("El usuario es obligatorio");
+      notify.error("Error", `El usuario es obligatorio`);
       return;
     }
 
     if (!registerForm.countryId) {
-      setError("Selecciona un País");
+      notify.error("Error", `Selecciona un País`);
       return;
     }
 
     if (!registerForm.cityId) {
-      setError("Selecciona una Ciudad");
+      notify.error("Error", `Selecciona una Ciudad`);
       return;
     }
 
     if (!registerForm.address!.trim()) {
-      setError("La dirección es obligatoria");
+      notify.error("Error", `La dirección es obligatoria`);
       return;
     }
 
     const ageNum = age(registerForm.birthdate);
     if (!ageNum || ageNum < 10 || ageNum > 120) {
-      setError("Ingresa una fecha de nacimiento válida");
+      notify.error("Error", `Ingresa una fecha de nacimiento válida`);
       return;
     }
 
@@ -160,27 +155,15 @@ function RegisterPage() {
 
       const coachData = await createCoach(coachToCreate);
 
-      setLoading(false);
       notify.created("Coach registrado!");
-      navigate({ to: "/login" });
+      setSuccess(true);
     } catch (error) {
+      console.error("Error al registrar. Intenta nuevamente.", error);
+      notify.error("Error", `Error al registrar. Intenta nuevamente.`);
+    } finally {
       setLoading(false);
-      setError("Error al registrar. Intenta nuevamente.");
     }
   };
-
-  //   const handleGoogleLogin = async () => {
-  //     setError("");
-  //     const result = await lovable.auth.signInWithOAuth("google", {
-  //       redirect_uri: window.location.origin,
-  //     });
-  //     if (result.error) {
-  //       setError(result.error.message);
-  //       return;
-  //     }
-  //     if (result.redirected) return;
-  //     navigate({ to: "/" });
-  //   };
 
   if (success) {
     return (
@@ -235,12 +218,6 @@ function RegisterPage() {
               Únete a PYROSFIT y comienza tu entrenamiento
             </p> */}
           </div>
-
-          {error && (
-            <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-3 text-sm text-destructive">
-              {error}
-            </div>
-          )}
 
           <form onSubmit={handleRegister} className="space-y-4">
             {/* Paso 1: Datos personales */}

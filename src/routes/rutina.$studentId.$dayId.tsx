@@ -84,20 +84,6 @@ export const Route = createFileRoute("/rutina/$studentId/$dayId")({
         };
       });
 
-      // const weekRoutineDays: DayRoutine[] = Array.from({ length: 7 }, (_, i) => {
-      //   const day: DayRoutine = {
-      //     id: i,
-      //     scheduledDate: dateString,
-      //     name: dayName.charAt(0).toUpperCase() + dayName.slice(1),
-      //     short: dayShort.charAt(0).toUpperCase(),
-      //     estimated: "",
-      //     rest: dayExercises.length > 0 ? false : true,
-      //     muscleGroupName: dayExercises.length > 0 ? dayExercises[0].muscleGroupName : "Descanso",
-      //     exercises: dayExercises,
-      //   };
-
-      //   return day;
-      // });
       return { dayExercises: mappedExercises };
     } catch (error) {
       console.error(error);

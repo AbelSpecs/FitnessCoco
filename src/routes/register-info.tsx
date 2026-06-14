@@ -21,6 +21,7 @@ import { Student } from "@/types/user";
 import { createStudent } from "@/services/user.service";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Goal, goalLabels } from "@/types/goals";
+import { SpinnerOverlay } from "@/components/Spinner";
 
 type RegisterSearch = {
   coachId?: string;
@@ -33,6 +34,17 @@ export const Route = createFileRoute("/register-info")({
       { name: "description", content: "Completa tu información personal en PYROSFIT" },
     ],
   }),
+  loader: async () => {
+    try {
+      const countries: Country[] = await getCountries();
+
+      return { countries };
+    } catch (error) {
+      console.error("Error al obtener los países:", error);
+      throw error;
+    }
+  },
+  pendingComponent: () => <SpinnerOverlay />,
   component: RegisterInfoPage,
   validateSearch: (search: Record<string, unknown>): RegisterSearch => {
     return {
@@ -42,12 +54,14 @@ export const Route = createFileRoute("/register-info")({
 });
 
 function RegisterInfoPage() {
-  const navigate = useNavigate();
+  const { countries } = Route.useLoaderData();
   const { coachId } = Route.useSearch();
   const [step, setStep] = useState(1);
-  const [countries, setCountries] = useState<Country[]>([]);
   const [cities, setCities] = useState<City[]>([]);
   const [goal, setGoal] = useState<Goal | null>(null);
+  const [success, setSuccess] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   const [registerForm, setRegisterForm] = useState<RegisterCredentials>({
     firstName: "",
     lastName: "",
@@ -63,24 +77,6 @@ function RegisterInfoPage() {
     weight: 0,
     fitnessGoal: "muscle",
   });
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-  useEffect(() => {
-    const fetchCountries = async () => {
-      try {
-        const countries = await getCountries();
-
-        setCountries(countries);
-      } catch (error) {
-        console.error("Error al obtener los países:", error);
-      }
-    };
-
-    fetchCountries();
-  }, []);
 
   const handleNextStep = () => setStep((prev) => prev + 1);
   const handlePreviousStep = () => setStep((prev) => prev - 1);
@@ -102,71 +98,70 @@ function RegisterInfoPage() {
   };
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
 
     if (!registerForm.firstName!.trim()) {
-      setError("El nombre es obligatorio");
+      notify.error("Error", `El nombre es obligatorio`);
       return;
     }
 
     if (!registerForm.lastName!.trim()) {
-      setError("El apellido es obligatorio");
+      notify.error("Error", `El apellido es obligatorio`);
       return;
     }
 
     if (!registerForm.email!.trim()) {
-      setError("El email es obligatorio");
+      notify.error("Error", `El email es obligatorio`);
       return;
     }
 
     if (!emailRegex.test(registerForm.email!)) {
-      setError("Por favor, introduce un correo electrónico válido");
+      notify.error("Error", `Introduce un correo electrónico válido`);
       return;
     }
 
     if (!registerForm.userName!.trim()) {
-      setError("El usuario es obligatorio");
+      notify.error("Error", `El usuario es obligatorio`);
       return;
     }
 
     if (registerForm.password !== registerForm.confirmPassword) {
-      setError("Las contraseñas no coinciden");
+      notify.error("Error", `Las contraseñas no coinciden`);
       return;
     }
     if (registerForm.password!.length < 8) {
-      setError("La contraseña debe tener al menos 8 caracteres");
+      notify.error("Error", `La contraseña debe tener al menos 8 caracteres`);
       return;
     }
 
     if (!registerForm.phoneNumber!.trim()) {
-      setError("El usuario es obligatorio");
+      notify.error("Error", `El usuario es obligatorio`);
       return;
     }
 
     if (!registerForm.countryId) {
-      setError("Selecciona un País");
+      notify.error("Error", `Selecciona un País`);
       return;
     }
 
     if (!registerForm.cityId) {
-      setError("Selecciona una Ciudad");
+      notify.error("Error", `Selecciona una Ciudad`);
       return;
     }
 
     if (!registerForm.address!.trim()) {
-      setError("La dirección es obligatoria");
+      notify.error("Error", `La dirección es obligatoria`);
       return;
     }
 
     const ageNum = age(registerForm.birthdate);
     if (!ageNum || ageNum < 10 || ageNum > 120) {
-      setError("Ingresa una fecha de nacimiento válida");
+      notify.error("Error", `Ingresa una fecha de nacimiento válida`);
       return;
     }
 
     const weightValue = registerForm.weight ? Number(registerForm.weight) : NaN;
     if (isNaN(weightValue)) {
-      setError("El peso es obligatorio");
+      notify.error("Error", `El peso es obligatorio`);
       return;
     }
 
@@ -174,14 +169,14 @@ function RegisterInfoPage() {
     const MAX_WEIGHT = 300;
 
     if (weightValue < MIN_WEIGHT || weightValue > MAX_WEIGHT) {
-      setError(`El peso debe estar entre ${MIN_WEIGHT} y ${MAX_WEIGHT} kg`);
+      notify.error("Error", `El peso debe estar entre ${MIN_WEIGHT} y ${MAX_WEIGHT} kg`);
       return;
     }
 
     const selectedGoal = registerForm.fitnessGoal || goal;
 
     if (!selectedGoal || !selectedGoal.toString().trim()) {
-      setError("Debes seleccionar al menos un objetivo para continuar");
+      notify.error("Error", "Debes seleccionar al menos un objetivo para continuar");
       return;
     }
 
@@ -212,12 +207,13 @@ function RegisterInfoPage() {
         status: true,
       });
 
-      setLoading(false);
       notify.created("Usuario registrado!");
-      navigate({ to: "/login" });
+      setSuccess(true);
     } catch (error) {
+      console.error("Error al registrar", error);
+      notify.error("Error al registrar", "Intenta de nuevo");
+    } finally {
       setLoading(false);
-      setError("Error al registrar. Intenta nuevamente.");
     }
   };
 
@@ -271,12 +267,6 @@ function RegisterInfoPage() {
               Cuéntanos sobre ti para personalizar tu entrenamiento
             </p>
           </div>
-
-          {error && (
-            <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-3 text-sm text-destructive">
-              {error}
-            </div>
-          )}
 
           <form onSubmit={handleRegister} className="space-y-4">
             {/* Paso 1: Datos personales */}
