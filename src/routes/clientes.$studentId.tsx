@@ -295,6 +295,8 @@ function ClientRoutinesPage() {
       setExercises(exercises);
     } catch (error) {
       console.error("Error al obtener los ejercicios", error);
+      notify.error("error", "Error al obtener los ejercicios");
+      throw error;
     }
   };
 
@@ -311,6 +313,7 @@ function ClientRoutinesPage() {
       setRoutines(completeExercisesMapped);
     } catch (error) {
       console.error("Error fetching:", error);
+      notify.error("error", "Error al obtener las rutinas intenta nuevamente");
       throw error;
     }
   };

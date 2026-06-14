@@ -38,3 +38,8 @@ export interface UserDto {
   message: null;
   errors: null;
 }
+
+export interface GetUserDto {
+  student?: StudentDto;
+  coach?: CoachDto;
+}

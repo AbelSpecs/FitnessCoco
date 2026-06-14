@@ -42,4 +42,5 @@ export interface User {
   parqValidUntil?: string;
   student?: Student;
   coach?: Coach;
+  isStudent: boolean;
 }
