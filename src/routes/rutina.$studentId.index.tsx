@@ -20,6 +20,7 @@ import { GetDailyStudentExerciseDto } from "@/dtos/exerciseDto";
 import WeekSlider from "@/components/ui/weekSlider";
 import { addDays, startOfWeek, format } from "date-fns";
 import { es } from "date-fns/locale";
+import { notify } from "@/components/NotificationCenter";
 
 export const Route = createFileRoute("/rutina/$studentId/")({
   head: () => ({
@@ -47,6 +48,8 @@ export const Route = createFileRoute("/rutina/$studentId/")({
           exerciseName: e.exerciseName,
           muscleGroupName: e.muscleGroupName,
           coachNotes: e.coachNotes,
+          studentNotes: e.studentNotes,
+          isCompleted: e.isCompleted,
           scheduledDate: e.scheduledDate.split("T")[0],
           day: completeDate.day,
           short: completeDate.short,
@@ -77,7 +80,7 @@ export const Route = createFileRoute("/rutina/$studentId/")({
 
         return day;
       });
-      return { weekRoutineDays: weekRoutineDays };
+      return { weekRoutineDays: weekRoutineDays, studentId: params.studentId };
     } catch (error) {
       console.error(error);
       return { initialExercises: [] };
@@ -105,16 +108,71 @@ export const Route = createFileRoute("/rutina/$studentId/")({
 function RutinaPage() {
   const today = new Date().getDay();
   const todayIndex = today === 0 ? 6 : today - 1;
-  const { studentId } = useParams({ from: "/rutina/$studentId/" });
-  const { weekRoutineDays } = Route.useLoaderData();
+  const { weekRoutineDays: routine, studentId } = Route.useLoaderData();
+  const [weekRoutineDays, setWeekRoutineDays] = useState(routine);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(
     startOfWeek(new Date(), { weekStartsOn: 1 }),
   );
 
-  const handleWeekDate = (date: Date | undefined) => {
+  const handleWeekDate = async (date: Date | undefined) => {
     if (!date) return;
 
-    setSelectedDate(date);
+    try {
+      const dateStringParam = format(date, "yyyy-MM-dd");
+      const exercisesData: GetDailyStudentExerciseDto[] =
+        await getDailyStudentExercisesByStudentIdAndDate(Number(studentId), dateStringParam);
+
+      const mappedExercises: Exercise[] = exercisesData.map((e) => {
+        const completeDate: CompleteDate = determineDate(e.scheduledDate);
+        return {
+          dailyExerciseId: e.id,
+          coachId: e.coachId,
+          exerciseId: e.exerciseId,
+          studentId: e.studentId,
+          exerciseName: e.exerciseName,
+          muscleGroupName: e.muscleGroupName,
+          coachNotes: e.coachNotes,
+          studentNotes: e.studentNotes,
+          isCompleted: e.isCompleted,
+          scheduledDate: e.scheduledDate.split("T")[0],
+          day: completeDate.day,
+          short: completeDate.short,
+          dailyExerciseSets: e.dailyExerciseSets as DailyExerciseSets[],
+        };
+      });
+
+      const weekRoutineDays: DayRoutine[] = Array.from({ length: 7 }, (_, i) => {
+        const currentDayDate = addDays(date!, i);
+        const dateString = format(currentDayDate, "yyyy-MM-dd");
+        const dayName = format(currentDayDate, "EEEE", { locale: es });
+        const dayShort = format(currentDayDate, "eeeeee", { locale: es });
+
+        const dayExercises = mappedExercises.filter(
+          (ex) => ex.scheduledDate.split("T")[0] === dateString,
+        );
+
+        const day: DayRoutine = {
+          id: i,
+          scheduledDate: dateString,
+          name: dayName.charAt(0).toUpperCase() + dayName.slice(1),
+          short: dayShort.charAt(0).toUpperCase(),
+          estimated: "",
+          rest: dayExercises.length > 0 ? false : true,
+          muscleGroupName: dayExercises.length > 0 ? dayExercises[0].muscleGroupName : "Descanso",
+          exercises: dayExercises,
+        };
+
+        return day;
+      });
+
+      setWeekRoutineDays(weekRoutineDays);
+    } catch (error) {
+      console.error(error);
+      notify.error("Error al actualzar", "Intenta de nuevo.");
+      throw error;
+    } finally {
+      setSelectedDate(date);
+    }
   };
   return (
     <AppShell>
@@ -142,7 +200,7 @@ function RutinaPage() {
             <Link
               key={day.id}
               to="/rutina/$studentId/$dayId"
-              params={{ studentId: studentId, dayId: day.scheduledDate.split("T")[0]! }}
+              params={{ studentId: studentId!, dayId: day.scheduledDate.split("T")[0]! }}
               className="group"
             >
               <Card
