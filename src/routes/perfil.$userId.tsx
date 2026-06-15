@@ -17,6 +17,7 @@ import { notify } from "@/components/NotificationCenter";
 import Spinner, { SpinnerInline, SpinnerOverlay } from "@/components/Spinner";
 import { updateStudent } from "@/services/student.service";
 import { getQr } from "@/services/general.service";
+import { userCoachMapper, userStudentMapper } from "@/mappers/user";
 
 export const Route = createFileRoute("/perfil/$userId")({
   head: () => ({
@@ -25,7 +26,33 @@ export const Route = createFileRoute("/perfil/$userId")({
       { name: "description", content: "Gestiona tus datos, objetivos y salud." },
     ],
   }),
-  component: Perfil,
+  loader: async ({ params }) => {
+    try {
+      const user = await getUserDetails(Number(params.userId));
+      const { student = {}, coach = {} } = user;
+
+      if (student) {
+        const userData: User = userStudentMapper(student);
+
+        return { userData };
+      } else {
+        const coachQr = await getQr(coach.id);
+        const { base64 } = coachQr.data;
+
+        const BASE_URL = window.location.origin;
+        const urlToShare = `${BASE_URL}/register-info?coachId=${coach.id}`;
+
+        const userData: User = userCoachMapper(coach);
+
+        return { userData, base64, urlToShare };
+      }
+    } catch (error) {
+      console.error("Error fetching user:", error);
+      throw error;
+    }
+  },
+  pendingComponent: () => <SpinnerOverlay />,
+  pendingMs: 0,
   beforeLoad: ({ location }) => {
     const auth = localStorage.getItem("pyrosfit_user");
 
@@ -38,122 +65,30 @@ export const Route = createFileRoute("/perfil/$userId")({
       });
     }
   },
+  component: Perfil,
 });
 
 function Perfil() {
+  const { userData: userInfo, base64: QrBase64, urlToShare: url } = Route.useLoaderData();
+  const { isStudent } = userInfo;
   const [goal, setGoal] = useState<Goal | null>(null);
   const [edition, setEdition] = useState(true);
-  const [isStudent, setIsStudent] = useState(true);
-  const [QrBase64, setQrBase64] = useState("");
-  const [url, setUrl] = useState("");
-  const [userData, setUserData] = useState<User | null>(null);
-  const [userCompleteData, setUserCompleteData] = useState<User | null>(null);
+  const [userData, setUserData] = useState<User | null>(userInfo);
+  const [userCompleteData, setUserCompleteData] = useState<User | null>(userInfo);
   const [isLoading, setIsLoading] = useState(false);
-  const [isLoadingLabel, setIsLoadingLabel] = useState("");
-  const { userId } = useParams({ from: "/perfil/$userId" });
 
-  useEffect(() => {
-    if (!userId || isNaN(Number(userId))) return;
-
-    const fetchUserData = async () => {
-      try {
-        setIsLoadingLabel("Iniciando");
-        setIsLoading(true);
-        const user = await getUserDetails(Number(userId));
-        const { student = {}, coach = {} } = user;
-
-        setIsStudent(student ? true : false);
-
-        if (student) {
-          setUserData({
-            ...userData,
-            firstName: student.firstName,
-            lastName: student.lastName,
-            age: age(student.birthdate),
-            streak: 12,
-            student: {
-              id: student.id,
-              userId: student.userId,
-              weight: student.weight,
-              height: student.height,
-              fitnessGoal: student.fitnessGoal as Goal,
-              bodyFatPercentage: student.bodyFatPercentage,
-              activityLevel: student.activityLevel,
-              medicalConditions: student.medicalConditions,
-              allergies: student.allergies,
-              fitnessExperience: student.fitnessExperience,
-              generalNotes: student.generalNotes,
-            },
-          });
-
-          setUserCompleteData({
-            ...userCompleteData,
-            firstName: student.firstName,
-            lastName: student.lastName,
-            age: age(student.birthdate),
-            streak: 12,
-            student: {
-              id: student.id,
-              userId: student.userId,
-              weight: student.weight,
-              height: student.height,
-              fitnessGoal: student.fitnessGoal as Goal,
-              bodyFatPercentage: student.bodyFatPercentage,
-              activityLevel: student.activityLevel,
-              medicalConditions: student.medicalConditions,
-              allergies: student.allergies,
-              fitnessExperience: student.fitnessExperience,
-              generalNotes: student.generalNotes,
-            },
-          });
-        } else {
-          const coachQr = await getQr(coach.id);
-          const { base64 } = coachQr.data;
-          setQrBase64(base64);
-
-          const BASE_URL = window.location.origin;
-          const urlToShare = `${BASE_URL}/register-info?coachId=${coach.id}`;
-          setUrl(urlToShare);
-
-          setUserData({
-            ...userData,
-            firstName: coach.firstName,
-            coach: {
-              bio: coach.bio,
-            },
-          });
-          setUserCompleteData({
-            ...userCompleteData,
-            firstName: coach.firstName,
-            coach: {
-              bio: coach.bio,
-            },
-          });
-        }
-      } catch (e) {
-        setIsLoading(false);
-        console.error("Error fetching user data:", e);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchUserData();
-  }, [userId]);
-
-  const handleInputOnChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { value, name } = e.target;
 
-    if (isStudent) setUserData({ ...userData, student: { ...userData?.student, [name]: value } });
-    else setUserData({ ...userData, coach: { ...userData?.coach, [name]: value } });
+    if (isStudent) setUserData({ ...userData!, student: { ...userData?.student, [name]: value } });
+    else setUserData({ ...userData!, coach: { ...userData?.coach, [name]: value } });
   };
 
   const handleRadioOnChange = (e: Goal) => {
-    setUserData({ ...userData, student: { ...userData?.student, fitnessGoal: e } });
+    setUserData({ ...userData!, student: { ...userData?.student, fitnessGoal: e } });
   };
 
   const handleSaveUser = async () => {
-    setIsLoadingLabel("Guardando...");
     setIsLoading(true);
     if (userData) {
       setUserCompleteData(userData);
@@ -161,15 +96,14 @@ function Perfil() {
       try {
         const updatedUser = await updateStudent(userData);
       } catch (error) {
-        setIsLoading(false);
         console.error("Error saving data:", error);
         notify.error("Error guardando la data");
       } finally {
         setIsLoading(false);
+        setEdition(true);
+        notify.success("Cambios guardados");
       }
     }
-    setEdition(true);
-    notify.success("Cambios guardados");
   };
 
   const handleCancel = () => {
@@ -178,7 +112,7 @@ function Perfil() {
   };
 
   const handleShareLink = async () => {
-    await navigator.clipboard.writeText(url);
+    await navigator.clipboard.writeText(url!);
     notify.success("Enlace copiado al portapapeles");
   };
 
@@ -257,9 +191,8 @@ function Perfil() {
                   name="weight"
                   key="f-weight"
                   label="Peso (kg)"
-                  onChange={(e) => handleInputOnChange(e)}
+                  onChange={(e) => handleInputChange(e)}
                   value={`${userData?.student?.weight}`}
-                  // defaultValue={`${userData?.weight || userProfile.weight}`}
                   disabled={edition}
                   type="number"
                 />
@@ -267,9 +200,8 @@ function Perfil() {
                   name="height"
                   key="f-height"
                   label="Altura (cm)"
-                  onChange={(e) => handleInputOnChange(e)}
+                  onChange={(e) => handleInputChange(e)}
                   value={`${userData?.student?.height}`}
-                  // defaultValue={`${userData?.weight || userProfile.weight}`}
                   disabled={edition}
                   type="number"
                 />
@@ -277,9 +209,8 @@ function Perfil() {
                   key="f-fatPercentage"
                   label="% de grasa"
                   name="bodyFatPercentage"
-                  onChange={(e) => handleInputOnChange(e)}
+                  onChange={(e) => handleInputChange(e)}
                   value={`${userData?.student?.bodyFatPercentage}`}
-                  // defaultValue={userData?.name || userProfile.name}
                   disabled={edition}
                   type="number"
                 />
@@ -287,45 +218,40 @@ function Perfil() {
                   name="activityLevel"
                   key="f-activityLevel"
                   label="Nivel de actividad"
-                  onChange={(e) => handleInputOnChange(e)}
+                  onChange={(e) => handleInputChange(e)}
                   value={userData?.student?.activityLevel}
-                  // defaultValue={`${userData?.age}`}
                   disabled={edition}
                 />
                 <Field
                   name="medicalConditions"
                   key="f-medicalConditions"
                   label="Condiciones medicas"
-                  onChange={(e) => handleInputOnChange(e)}
+                  onChange={(e) => handleInputChange(e)}
                   value={userData?.student?.medicalConditions}
-                  // defaultValue={userData?.medicalConditions}
                   disabled={true}
                 />
                 <Field
                   name="allergies"
                   key="f-allergies"
                   label="Alergias"
-                  onChange={(e) => handleInputOnChange(e)}
+                  onChange={(e) => handleInputChange(e)}
                   value={userData?.student?.allergies}
-                  // defaultValue={userData?.allergies}
                   disabled={edition}
                 />
                 <Field
                   name="fitnessExperience"
                   key="f-fitnessExperience"
                   label="Experiencia"
-                  onChange={(e) => handleInputOnChange(e)}
+                  onChange={(e) => handleInputChange(e)}
                   value={userData?.student?.fitnessExperience}
-                  // defaultValue={userData?.fitnessExperience}
                   disabled={true}
                 />
                 <Field
                   name="generalNotes"
                   key="f-generalNotes"
                   label="Notas"
-                  onChange={(e) => handleInputOnChange(e)}
+                  onChange={(e) => handleInputChange(e)}
                   value={userData?.student?.generalNotes}
-                  // defaultValue={userData?.generalNotes}
                   disabled={true}
                 />
               </div>
@@ -452,7 +378,7 @@ function Perfil() {
           </>
         )}
       </div>
-      {isLoading && <SpinnerOverlay label={isLoadingLabel} />}
+      {isLoading && <SpinnerOverlay label={"Guardando..."} />}
     </AppShell>
   );
 }

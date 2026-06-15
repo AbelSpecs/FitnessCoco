@@ -90,7 +90,7 @@ function Dashboard() {
                 </Button>
               )}
               <Button variant="glass" size="lg" asChild className="w-full sm:w-auto">
-                <Link to="/progreso">Ver progreso</Link>
+                <Link to=".">Ver progreso</Link>
               </Button>
             </div>
           </div>
@@ -136,7 +136,10 @@ function Dashboard() {
               <h2 className="font-display text-3xl">{todayPlan.focus}</h2>
             </div>
             <Button variant="ghost" size="sm" asChild>
-              <Link to="/rutina/$dayId" params={{ dayId: todayPlan.id }}>
+              <Link
+                to="/rutina/$studentId/$dayId"
+                params={{ studentId: user!.studentId.toString(), dayId: todayPlan.id }}
+              >
                 Abrir <ChevronRight className="h-4 w-4" />
               </Link>
             </Button>
@@ -183,8 +186,8 @@ function Dashboard() {
               return (
                 <Link
                   key={d.id}
-                  to="/rutina/$dayId"
-                  params={{ dayId: d.id }}
+                  to="/rutina/$studentId/$dayId"
+                  params={{ studentId: user!.studentId.toString(), dayId: d.id }}
                   className="flex items-center gap-3 group"
                 >
                   <div

@@ -91,7 +91,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {/* Sidebar — desktop */}
       <aside
         className={cn(
-          "hidden lg:flex flex-col bg-sidebar border-r border-sidebar-border sticky top-0 h-screen transition-[width] duration-300",
+          "hidden lg:flex flex-col bg-gradient-card border-r border-sidebar-border sticky top-0 h-screen transition-[width] duration-300",
           collapsed ? "w-20" : "w-64",
         )}
       >
@@ -187,7 +187,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             className="absolute inset-0 bg-black/70 backdrop-blur-sm animate-in fade-in"
             onClick={() => setMobileOpen(false)}
           />
-          <aside className="absolute left-0 top-0 bottom-0 w-72 max-w-[85vw] bg-sidebar border-r border-sidebar-border flex flex-col animate-in slide-in-from-left duration-200">
+          <aside className="absolute left-0 top-0 bottom-0 w-72 max-w-[85vw] bg-gradient-card border-r border-sidebar-border flex flex-col animate-in slide-in-from-left duration-200">
             <div className="p-4 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <div className="h-10 w-10 rounded-xl bg-gradient-primary flex items-center justify-center shadow-glow">
@@ -258,7 +258,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {/* Main */}
       <div className="flex-1 flex flex-col min-w-0 pb-20 lg:pb-0">
         {/* Topbar */}
-        <header className="sticky top-0 z-30 backdrop-blur-xl bg-background/70 border-b border-border">
+        <header className="sticky top-0 z-30 backdrop-blur-xl bg-gradient-card border-b border-border">
           <div className="flex items-center justify-between gap-2 px-3 sm:px-4 lg:px-8 h-16">
             <div className="flex items-center gap-2 lg:hidden min-w-0">
               <Button

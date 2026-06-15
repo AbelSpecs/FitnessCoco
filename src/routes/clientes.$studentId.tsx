@@ -1,9 +1,9 @@
-import { createFileRoute, Link, useNavigate, useParams } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { createFileRoute, Link, redirect, useParams } from "@tanstack/react-router";
+import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -34,13 +34,10 @@ import {
   Save,
   Layers,
   Repeat,
-  Timer,
   RefreshCw,
   Sparkles,
 } from "lucide-react";
 import { notify } from "@/components/NotificationCenter";
-import { format } from "date-fns";
-import { es } from "date-fns/locale";
 import { AppShell } from "@/components/AppShell";
 import { getStudentById } from "@/services/student.service";
 import { getUser } from "@/services/user.service";
@@ -48,11 +45,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   deleteExercise,
-  getDailyStudentExercisesByStudentId,
   getDailyStudentExercisesByStudentIdAndDate,
   getExercise,
   getExerciseByMuscleGroupId,
-  getExerciseByMuscleGroupName,
   getMuscleGroups,
   postDailyStudentExercises,
   postExercise,
@@ -64,7 +59,6 @@ import {
   ExerciseDto,
   GetDailyExerciseSetsDto,
   GetDailyStudentExerciseDto,
-  GetExerciseDto,
   GetMuscleGroupDto,
 } from "@/dtos/exerciseDto";
 import {
@@ -78,7 +72,7 @@ import {
 } from "@/types/exercises";
 import { determineDate } from "@/utils/determineDate";
 import DatePicker from "@/components/DatePicker";
-import { SpinnerInline, SpinnerOverlay } from "@/components/Spinner";
+import { SpinnerOverlay } from "@/components/Spinner";
 import {
   Select,
   SelectContent,
@@ -86,6 +80,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { exercisesMapper } from "@/mappers/exercises";
 
 const emptySet = (): DailyExerciseSetsForm => ({
   id: `ex-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
@@ -103,28 +99,81 @@ export const Route = createFileRoute("/clientes/$studentId")({
       { name: "description", content: "Gestiona las rutinas del cliente." },
     ],
   }),
+  loader: async ({ params }) => {
+    try {
+      const studentResponse = await getStudentById(Number(params.studentId));
+      const [userResponse, dailyExercises, muscleGroups] = await Promise.all([
+        getUser(studentResponse.userId),
+        getDailyStudentExercisesByStudentIdAndDate(
+          Number(params.studentId),
+          new Date().toISOString(),
+        ),
+        getMuscleGroups(),
+      ]);
+
+      const client = {
+        name: `${userResponse.firstName} ${userResponse.lastName}`,
+        goal: studentResponse.fitnessGoal || "—",
+        plan: userResponse.planType || "basic",
+      };
+
+      const completeExercisesMapped: Exercise[] = exercisesMapper(dailyExercises);
+
+      const muscleGroupsMapped: MuscleGroupSelect[] = muscleGroups.map((m: GetMuscleGroupDto) => ({
+        id: m.id,
+        name: m.name,
+      }));
+
+      return {
+        studentId: params.studentId,
+        client,
+        completeExercisesMapped,
+        muscleGroupsMapped,
+      };
+    } catch (error) {
+      console.error("Error fetching:", error);
+      throw error;
+    }
+  },
+  pendingComponent: () => <SpinnerOverlay />,
+  pendingMs: 0,
+  beforeLoad: ({ location }) => {
+    const auth = localStorage.getItem("pyrosfit_user");
+
+    if (!auth) {
+      throw redirect({
+        to: "/login",
+        search: {
+          redirect: location.href,
+        },
+      });
+    }
+  },
   component: ClientRoutinesPage,
 });
 
 function ClientRoutinesPage() {
-  const { studentId } = useParams({ from: "/clientes/$studentId" });
   const { user } = useAuthStore();
-  const navigate = useNavigate();
+  const {
+    studentId,
+    client,
+    completeExercisesMapped,
+    muscleGroupsMapped: muscleGroups,
+  } = Route.useLoaderData();
 
   // Get States
-  const [client, setClient] = useState({ name: "Cliente", goal: "—", plan: "basic" });
-  const [routines, setRoutines] = useState<Exercise[]>([]);
-  const [muscleGroups, setMuscleGroups] = useState<MuscleGroupSelect[]>([]);
+  const [routines, setRoutines] = useState<Exercise[]>(completeExercisesMapped);
   const [exercises, setExercises] = useState<ExerciseSelect[]>([]);
   const [pendingDelete, setPendingDelete] = useState<Exercise | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [selectedDateSearch, setSelectedDateSearch] = useState<Date | undefined>(new Date());
   const [getExerciseSetForm, setGetExerciseSetRoutineForm] = useState<DailyExerciseSets[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  // const [isLoading, setIsLoading] = useState(false);
 
   // new exercise
   const [pendingExercises, setPendingExercises] = useState<NewExercise[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [saved, setSaved] = useState(false);
   const [showNewExerciseDialog, setShowNewExerciseDialog] = useState(false);
   const [newExerciseForm, setNewExerciseForm] = useState<NewExercise>({
     name: "",
@@ -135,6 +184,7 @@ function ClientRoutinesPage() {
   const [showForm, setShowForm] = useState(false);
   const [getShowForm, setGetShowForm] = useState<number | string>("");
   // Post state
+  const [savedRoutine, setSavedRoutine] = useState(false);
   const [routineForm, setRoutineForm] = useState<ExerciseForm>({
     exerciseId: 0,
     exerciseName: "",
@@ -166,85 +216,6 @@ function ClientRoutinesPage() {
       muscleGroupId: 0,
     });
   };
-
-  // refactorizar esto con un Promise.all para traer los datos del cliente y las rutinas en paralelo
-  useEffect(() => {
-    setIsLoading(true);
-    const fetchStudentData = async () => {
-      try {
-        const studentResponse = await getStudentById(Number(studentId));
-
-        const userResponse = await getUser(studentResponse.userId);
-
-        const client = {
-          name: `${userResponse.firstName} ${userResponse.lastName}`,
-          goal: studentResponse.fitnessGoal || "—",
-          plan: userResponse.planType || "basic",
-        };
-
-        setClient(client);
-      } catch (error) {
-        console.error("Error fetching student data:", error);
-      }
-    };
-
-    const fetchRoutines = async () => {
-      try {
-        const dailyExercises: GetDailyStudentExerciseDto[] =
-          await getDailyStudentExercisesByStudentIdAndDate(
-            Number(studentId),
-            selectedDateSearch!.toISOString(),
-          );
-
-        const completeExercisesMapped: Exercise[] = dailyExercises.map(
-          (item: GetDailyStudentExerciseDto) => {
-            const completeDay = determineDate(item.scheduledDate).day;
-            const shortDay = determineDate(item.scheduledDate).short;
-
-            const exerciseMapped: Exercise = {
-              dailyExerciseId: item.id,
-              exerciseId: item.exerciseId,
-              coachId: item.coachId,
-              studentId: item.studentId,
-              exerciseName: item.exerciseName,
-              muscleGroupName: item.muscleGroupName,
-              coachNotes: item.coachNotes,
-              scheduledDate: item.scheduledDate,
-              day: completeDay,
-              short: shortDay,
-              dailyExerciseSets: item.dailyExerciseSets.map((set) => set),
-            };
-
-            return exerciseMapped;
-          },
-        );
-
-        setRoutines(completeExercisesMapped);
-        setIsLoading(false);
-      } catch (error) {
-        console.error("Error fetching routines:", error);
-        setIsLoading(false);
-      }
-    };
-
-    const fetchMuscleGroups = async () => {
-      try {
-        const muscleGroups = await getMuscleGroups();
-
-        const muscleGroupsMapped: MuscleGroupSelect[] = muscleGroups.map(
-          (m: GetMuscleGroupDto) => ({ id: m.id, name: m.name }),
-        );
-
-        setMuscleGroups(muscleGroupsMapped);
-      } catch (error) {
-        console.error("Error al traer los grupos musculares", error);
-      }
-    };
-
-    fetchStudentData();
-    fetchRoutines();
-    fetchMuscleGroups();
-  }, [studentId, selectedDateSearch]);
 
   const handleAdd = () => {
     setShowForm((s) => !s);
@@ -279,16 +250,25 @@ function ClientRoutinesPage() {
 
     try {
       const exerciseDeleted = await deleteExercise(Number(pendingDelete.dailyExerciseId));
+      setRoutines((prev) =>
+        prev.filter((r) => r.dailyExerciseId !== pendingDelete.dailyExerciseId),
+      );
+      notify.deleted(
+        "Rutina eliminada",
+        `${pendingDelete.exerciseName} se quitó de ${client.name}`,
+      );
     } catch (error) {
       console.error("Error al eliminar la rutina", error);
+      throw error;
+    } finally {
+      setPendingDelete(null);
     }
-
-    setRoutines((prev) => prev.filter((r) => r.dailyExerciseId !== pendingDelete.dailyExerciseId));
-    notify.deleted("Rutina eliminada", `${pendingDelete.exerciseName} se quitó de ${client.name}`);
-    setPendingDelete(null);
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>, isNew: boolean = false) => {
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement, HTMLTextAreaElement>,
+    isNew: boolean = false,
+  ) => {
     const { name, value } = e.target;
 
     if (isNew) {
@@ -304,35 +284,49 @@ function ClientRoutinesPage() {
       setNewExerciseForm((prev) => ({ ...prev, muscleGroupId: muscleGroupId }));
       return;
     }
+    console.log(muscleGroupId);
 
     setRoutineForm((prev) => ({ ...prev, muscleGroupId: muscleGroupId }));
     try {
+      //@TODO @abel estos ejercicios deberian venir por coach
+      //aunque esto se puede hablar
       const exercises = await getExerciseByMuscleGroupId(muscleGroupId);
 
       setExercises(exercises);
     } catch (error) {
       console.error("Error al obtener los ejercicios", error);
+      notify.error("error", "Error al obtener los ejercicios");
+      throw error;
     }
   };
 
-  const handleSearchDatePickerDate = (date: Date | undefined) => {
+  const handleSearchDatePickerDate = async (date: Date | undefined) => {
     if (!date) return;
 
-    const tzOffset = date.getTimezoneOffset() * 60000;
+    setSelectedDateSearch(new Date(date.toISOString()));
 
-    const localISOTime = new Date(date.getTime() - tzOffset);
+    try {
+      const updatedRoutines: GetDailyStudentExerciseDto[] =
+        await getDailyStudentExercisesByStudentIdAndDate(Number(studentId), date.toISOString());
 
-    const safeISOString = localISOTime.toISOString();
-
-    setSelectedDateSearch(new Date(safeISOString));
+      const completeExercisesMapped: Exercise[] = exercisesMapper(updatedRoutines);
+      setRoutines(completeExercisesMapped);
+    } catch (error) {
+      console.error("Error fetching:", error);
+      notify.error("error", "Error al obtener las rutinas intenta nuevamente");
+      throw error;
+    }
   };
 
   const handleSaveNewExercise = async () => {
+    setSaved(true);
     const name = newExerciseForm.name.trim();
     if (!name) {
       notify.error("Falta el nombre", "Escribe el nombre del ejercicio");
       return;
     }
+    //@TODO @abel esto debe a;adirsele una comparacion con el coachID
+    //esperar que @keiver haga el endpoint
     if (exercises.some((e) => e.name.toLowerCase() === name.toLowerCase())) {
       notify.error("Ya existe", "Ese ejercicio ya está en la lista");
       return;
@@ -367,10 +361,11 @@ function ClientRoutinesPage() {
     } catch (error) {
       console.error("Error al crear el ejercicio", error);
       notify.error("Error al crear", "Ocurrió un error al crear el ejercicio. Intenta de nuevo.");
-      return;
+      throw error;
+    } finally {
+      setSaved(false);
+      setShowNewExerciseDialog(false);
     }
-
-    setShowNewExerciseDialog(false);
   };
 
   const handleRefreshExercises = async () => {
@@ -380,14 +375,16 @@ function ClientRoutinesPage() {
     try {
       const exercises = await getExerciseByMuscleGroupId(routineForm.muscleGroupId);
       setExercises(exercises);
-      setRefreshing(false);
     } catch (error) {
-      setRefreshing(false);
       console.error("Error al refrescar", error);
+      throw error;
+    } finally {
+      setRefreshing(false);
     }
   };
 
   const handleSaveRoutine = async () => {
+    setSavedRoutine(true);
     if (!routineForm.muscleGroupId) {
       notify.error("Falta el grupo muscular", "Selecciona grupo muscular");
       return;
@@ -464,11 +461,12 @@ function ClientRoutinesPage() {
     } catch (error) {
       console.error("Error al guardar la rutina", error);
       notify.error("Error al guardar", "Ocurrió un error al guardar la rutina. Intenta de nuevo.");
-      return;
+      throw error;
+    } finally {
+      setSavedRoutine(false);
+      resetForm();
+      setShowForm(false);
     }
-
-    resetForm();
-    setShowForm(false);
   };
 
   const handleViewExerciseDetails = async (exercise: Exercise) => {
@@ -548,23 +546,15 @@ function ClientRoutinesPage() {
                   >
                     Grupo Muscular
                   </Label>
-                  <Select
+                  <SearchableSelect
                     value={routineForm.muscleGroupId ? String(routineForm.muscleGroupId) : ""}
+                    placeholder="Selecciona el grupo Muscular"
+                    options={muscleGroups.map((e) => ({ value: e.id.toString(), label: e.name }))}
                     onValueChange={(value) => {
                       handleExercises(Number(value));
                     }}
-                  >
-                    <SelectTrigger id="muscleGroup" className="bg-input/60">
-                      <SelectValue placeholder="Selecciona el grupo Muscular" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {muscleGroups?.map((m) => (
-                        <SelectItem key={m.id} value={String(m.id)} className="focus:text-white">
-                          {m.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    className="mt-1.5 bg-background/60 border-border focus:ring-primary/40 hover:text-white"
+                  />
                 </div>
                 <div className="flex items-center justify-end">
                   <div className="w-[100%]">
@@ -574,23 +564,15 @@ function ClientRoutinesPage() {
                     >
                       Ejercicio
                     </Label>
-                    <Select
+                    <SearchableSelect
                       value={routineForm.muscleGroupId ? String(routineForm.exerciseId) : ""}
+                      placeholder="Selecciona ejercicio"
+                      options={exercises.map((e) => ({ value: e.id.toString(), label: e.name }))}
                       onValueChange={(value) => {
                         setRoutineForm((prev) => ({ ...prev, exerciseId: Number(value) }));
                       }}
-                    >
-                      <SelectTrigger id="exercise" className="bg-input/60">
-                        <SelectValue placeholder="Selecciona el Ejercicio" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {exercises?.map((e: ExerciseSelect) => (
-                          <SelectItem key={e.id} value={String(e.id)} className="focus:text-white">
-                            {e.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      className="mt-1.5 bg-background/60 border-border focus:ring-primary/40 hover:text-white"
+                    />
                     <div className="text-center mb-5">
                       <button
                         type="button"
@@ -631,7 +613,7 @@ function ClientRoutinesPage() {
                   <Label className="text-[11px] uppercase tracking-widest text-muted-foreground">
                     Notas del Entrenador
                   </Label>
-                  <Input
+                  <Textarea
                     value={routineForm.coachNotes}
                     name="coachNotes"
                     onChange={(e) => handleInputChange(e)}
@@ -644,7 +626,7 @@ function ClientRoutinesPage() {
                   <Label className="text-[11px] uppercase tracking-widest text-muted-foreground">
                     Notas del Cliente
                   </Label>
-                  <Input
+                  <Textarea
                     value={routineForm.studentNotes}
                     name="studentNotes"
                     onChange={(e) => handleInputChange(e)}
@@ -781,6 +763,7 @@ function ClientRoutinesPage() {
                 <Button
                   onClick={handleSaveRoutine}
                   className="bg-gradient-primary hover:opacity-90 shadow-glow"
+                  disabled={savedRoutine}
                 >
                   <Save className="h-4 w-4 mr-1" /> Guardar rutina
                 </Button>
@@ -833,7 +816,7 @@ function ClientRoutinesPage() {
               >
                 <Plus className="h-4 w-4 mr-1" /> Crear la primera
               </Button>
-              {isLoading && <SpinnerOverlay />}
+              {/* {isLoading && <SpinnerOverlay />} */}
             </Card>
           ) : (
             <div className="space-y-3">
@@ -918,7 +901,7 @@ function ClientRoutinesPage() {
                             <Label className="text-[10px] uppercase tracking-widest text-muted-foreground flex items-center gap-1">
                               Notas del Cliente
                             </Label>
-                            <Input
+                            <Textarea
                               value={routineForm.studentNotes}
                               placeholder="notas del cliente"
                               className="mt-1.5 bg-background/60 border-border focus-visible:ring-primary/40"
@@ -1169,6 +1152,7 @@ function ClientRoutinesPage() {
               <Button
                 onClick={handleSaveNewExercise}
                 className="bg-gradient-primary hover:opacity-90 shadow-glow"
+                disabled={saved}
               >
                 <Save className="h-4 w-4 mr-1" /> Guardar
               </Button>

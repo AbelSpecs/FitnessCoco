@@ -11,6 +11,7 @@ import { Student, StudentInfo } from "@/types/user";
 import { StudentDto, UserDto } from "@/dtos/userDto";
 import { getStudents } from "@/services/student.service";
 import { getCoachStudents } from "@/services/coach.service";
+import { SpinnerOverlay } from "@/components/Spinner";
 
 export const Route = createFileRoute("/clientes/")({
   head: () => ({
@@ -19,6 +20,38 @@ export const Route = createFileRoute("/clientes/")({
       { name: "description", content: "Lista de clientes del entrenador." },
     ],
   }),
+  loader: async () => {
+    let user = null;
+
+    if (typeof window !== "undefined") {
+      user = JSON.parse(localStorage.getItem("pyrosfit_user")!);
+    }
+    try {
+      const studentsData = await getCoachStudents(Number(user?.coachId));
+
+      const { students } = studentsData;
+
+      const studentListMapped: StudentInfo[] = students.map((item: StudentInfo) => {
+        const clientList: StudentInfo = {
+          studentId: item.studentId,
+          name: item.name!,
+          fitnessGoal: item.fitnessGoal!,
+          plan: "basic",
+          streak: 2,
+        };
+
+        return clientList;
+      });
+
+      return {
+        user,
+        studentListMapped,
+      };
+    } catch (error) {
+      console.error("Error fetching:", error);
+      throw error;
+    }
+  },
   beforeLoad: ({ location }) => {
     const auth = localStorage.getItem("pyrosfit_user");
 
@@ -31,42 +64,21 @@ export const Route = createFileRoute("/clientes/")({
       });
     }
   },
+  pendingComponent: () => <SpinnerOverlay />,
+  pendingMs: 0,
   component: ClientesPage,
 });
 
 function ClientesPage() {
+  const { user, studentListMapped: students } = Route.useLoaderData();
   const [query, setQuery] = useState("");
-  const [students, setStudents] = useState<StudentInfo[]>([]);
-  const { user } = useAuthStore();
-
-  useEffect(() => {
-    const getCoachClients = async () => {
-      const studentsData = await getCoachStudents(Number(user?.coachId));
-      const { students } = studentsData;
-
-      const studentListMapped = students.map((item: StudentInfo) => {
-        const clientList: StudentInfo = {
-          studentId: item.studentId,
-          name: item.name!,
-          fitnessGoal: item.fitnessGoal!,
-          plan: "basic",
-          streak: 2,
-        };
-
-        return clientList;
-      });
-
-      setStudents(studentListMapped);
-    };
-
-    getCoachClients();
-  }, [user?.coachId]);
 
   const visibleClients = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return students;
+    const newQuery = query.trim().toLowerCase();
+    if (!newQuery) return students;
     return students.filter(
-      (c) => c.name.toLowerCase().includes(q) || c.fitnessGoal.toLowerCase().includes(q),
+      (c) =>
+        c.name.toLowerCase().includes(newQuery) || c.fitnessGoal.toLowerCase().includes(newQuery),
     );
   }, [query, students]);
   return (
