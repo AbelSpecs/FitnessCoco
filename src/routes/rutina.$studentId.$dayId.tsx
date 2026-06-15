@@ -77,6 +77,8 @@ export const Route = createFileRoute("/rutina/$studentId/$dayId")({
           exerciseName: e.exerciseName,
           muscleGroupName: e.muscleGroupName,
           coachNotes: e.coachNotes,
+          studentNotes: e.studentNotes,
+          isCompleted: e.isCompleted,
           scheduledDate: e.scheduledDate.split("T")[0],
           day: completeDate.day,
           short: completeDate.short,
@@ -198,24 +200,9 @@ function DayDetail() {
 }
 
 function ExerciseRow({ ex, index }: { ex: Exercise; index: number }) {
-  const [done, setDone] = useState(false);
-  const [finalDone, setFinalDone] = useState(false);
-  const [weight, setWeight] = useState("");
-  const [reps, setReps] = useState("");
-  const [notes, setNotes] = useState("");
-  const [sets, setSets] = useState<DailyExerciseSets>({
-    id: 0,
-    setNumber: "",
-    targetReps: "",
-    targetWeight: "",
-    restTime: "",
-    actualReps: 0,
-    actualWeight: 0,
-    isAchieved: false,
-  });
+  const [finalDone, setFinalDone] = useState(ex.isCompleted);
+  const [notes, setNotes] = useState(ex.studentNotes);
   const [showSets, setShowSets] = useState(false);
-  const [timerOn, setTimerOn] = useState(false);
-  const [timerKey, setTimerKey] = useState(0);
 
   const handleExerciseUpdate = async (ex: Exercise) => {
     const exercisetoUpdate: UpdateDailyStudentExerciseDto = {
@@ -227,44 +214,12 @@ function ExerciseRow({ ex, index }: { ex: Exercise; index: number }) {
         ex.dailyExerciseId,
         exercisetoUpdate,
       );
-
-      setNotes("");
     } catch (error) {
       notify.error("Error al actualizar", "Intenta de nuevo");
       console.error(error);
       return;
-    }
-  };
-
-  const handleSetsUpdate = async (set: DailyExerciseSets) => {
-    const setToUpdate: DailyExerciseSetsDto = {
-      id: set.id,
-      setNumber: Number(set.setNumber),
-      targetReps: Number(set.targetReps),
-      targetWeight: Number(set.targetWeight),
-      restTime: set.restTime,
-      actualReps: Number(reps),
-      actualWeight: Number(weight),
-      isAchieved: done,
-    };
-
-    try {
-      const updatedSet = await updateDailyExercisesSets(set.id, setToUpdate);
-
-      setReps("");
-      setWeight("");
-      setDone(false);
-      setDone((d) => {
-        if (!d) {
-          setTimerKey((k) => k + 1);
-          setTimerOn(true);
-        }
-        return !d;
-      });
-    } catch (error) {
-      notify.error("Error al actualizar el set", "Intenta de nuevo");
-      console.error(error);
-      return;
+    } finally {
+      setFinalDone(true);
     }
   };
 
@@ -273,12 +228,12 @@ function ExerciseRow({ ex, index }: { ex: Exercise; index: number }) {
       <div className="flex items-start gap-3 sm:gap-4">
         <div
           className={`h-10 w-10 sm:h-12 sm:w-12 rounded-xl flex items-center justify-center font-display text-lg sm:text-xl shrink-0 ${
-            done
+            finalDone
               ? "bg-success text-success-foreground"
               : "bg-gradient-primary text-primary-foreground"
           }`}
         >
-          {done ? <CheckCircle2 className="h-5 w-5" /> : index}
+          {finalDone ? <CheckCircle2 className="h-5 w-5" /> : index}
         </div>
 
         <div className="flex-1 min-w-0">
@@ -311,90 +266,16 @@ function ExerciseRow({ ex, index }: { ex: Exercise; index: number }) {
           {showSets && (
             <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
               {ex.dailyExerciseSets.map((set, index) => {
-                return (
-                  <div
-                    key={set.id || index}
-                    className="bg-background/20 border border-border/40 rounded-xl p-3 sm:p-4 flex flex-col gap-3.5"
-                  >
-                    {/* LADO IZQUIERDO (AHORA ARRIBA): Datos objetivos alineados */}
-                    <div className="grid grid-cols-3 gap-2 w-full text-center">
-                      {/* Bloque de Nro Serie */}
-                      <div className="bg-background/40 rounded-lg py-2 px-1">
-                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground flex items-center justify-center gap-1 mb-0.5">
-                          <Layers className="h-3 w-3" /> Set
-                        </p>
-                        <p className="text-sm sm:text-base font-bold text-primary-glow">
-                          #{set.setNumber}
-                        </p>
-                      </div>
-
-                      {/* Bloque de Repeticiones Objetivo */}
-                      <div className="bg-background/40 rounded-lg py-2 px-1">
-                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground flex items-center justify-center gap-1 mb-0.5">
-                          <Repeat className="h-3 w-3" /> Reps
-                        </p>
-                        <p className="text-sm sm:text-base font-semibold text-foreground">
-                          {set.targetReps}
-                        </p>
-                      </div>
-
-                      {/* Bloque de Descanso */}
-                      <div className="bg-background/40 rounded-lg py-2 px-1">
-                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground flex items-center justify-center gap-1 mb-0.5">
-                          <Timer className="h-3 w-3" /> Descanso
-                        </p>
-                        <p className="text-sm sm:text-base font-medium text-muted-foreground">
-                          {set.restTime}s
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* LADO DERECHO (AHORA ABAJO): Inputs de registro a todo lo ancho */}
-                    <div className="grid grid-cols-3 gap-2 w-full">
-                      <Input
-                        placeholder="Peso (kg)"
-                        value={weight}
-                        onChange={(e) => setWeight(e.target.value)}
-                        type="number"
-                        inputMode="decimal"
-                        className="bg-background/50 h-9 text-sm focus-visible:ring-primary-glow w-full"
-                      />
-                      <Input
-                        placeholder="Reps"
-                        value={reps}
-                        onChange={(e) => setReps(e.target.value)}
-                        type="number"
-                        inputMode="numeric"
-                        className="bg-background/50 h-9 text-sm focus-visible:ring-primary-glow w-full"
-                      />
-                      <Button
-                        variant={done ? "secondary" : "hero"}
-                        onClick={() => {
-                          handleSetsUpdate(set);
-                        }}
-                        className="h-9 text-xs font-medium uppercase tracking-wider w-full truncate"
-                        disabled={done}
-                      >
-                        {done ? "Completada" : "Descansar"}
-                      </Button>
-                    </div>
-                    {timerOn && (
-                      <RestTimer
-                        key={timerKey}
-                        seconds={Number(set.restTime)}
-                        onClose={() => setTimerOn(false)}
-                      />
-                    )}
-                  </div>
-                );
+                return <DetailsSetsRow exId={ex.dailyExerciseId} set={set} index={index} />;
               })}
             </div>
           )}
           <Textarea
             placeholder="Comentarios: sensación, asistencia, dolor, etc."
-            value={notes}
+            value={ex.studentNotes || notes}
             onChange={(e) => setNotes(e.target.value)}
             className="mt-2 bg-background/50 min-h-[60px]"
+            disabled={finalDone}
           />
           <Button
             variant={finalDone ? "secondary" : "hero"}
@@ -409,6 +290,127 @@ function ExerciseRow({ ex, index }: { ex: Exercise; index: number }) {
         </div>
       </div>
     </Card>
+  );
+}
+
+function DetailsSetsRow({
+  exId,
+  set,
+  index,
+}: {
+  exId: number;
+  set: DailyExerciseSets;
+  index: number;
+}) {
+  const [weight, setWeight] = useState(set.actualWeight?.toString() || "");
+  const [reps, setReps] = useState(set.actualReps?.toString() || "");
+  const [done, setDone] = useState(set.isAchieved);
+  const [timerOn, setTimerOn] = useState(false);
+  const [timerKey, setTimerKey] = useState(0);
+
+  const handleSetsUpdate = async (set: DailyExerciseSets, exId: number) => {
+    const setToUpdate: DailyExerciseSetsDto = {
+      id: set.id,
+      dailyStudentExerciseId: exId,
+      setNumber: Number(set.setNumber),
+      targetReps: Number(set.targetReps),
+      targetWeight: Number(set.targetWeight),
+      restTime: set.restTime,
+      actualReps: Number(reps),
+      actualWeight: Number(weight),
+      isAchieved: true,
+    };
+
+    try {
+      const updatedSet = await updateDailyExercisesSets(set.id, setToUpdate);
+    } catch (error) {
+      notify.error("Error al actualizar el set", "Intenta de nuevo");
+      console.error(error);
+      return;
+    } finally {
+      setReps("");
+      setWeight("");
+      setDone((d) => {
+        if (!d) {
+          setTimerKey((k) => k + 1);
+          setTimerOn(true);
+        }
+        return !d;
+      });
+    }
+  };
+
+  return (
+    <div
+      key={set.id || index}
+      className="bg-background/20 border border-border/40 rounded-xl p-3 sm:p-4 flex flex-col gap-3.5"
+    >
+      {/* LADO IZQUIERDO (AHORA ARRIBA): Datos objetivos alineados */}
+      <div className="grid grid-cols-3 gap-2 w-full text-center">
+        {/* Bloque de Nro Serie */}
+        <div className="bg-background/40 rounded-lg py-2 px-1">
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground flex items-center justify-center gap-1 mb-0.5">
+            <Layers className="h-3 w-3" /> Set
+          </p>
+          <p className="text-sm sm:text-base font-bold text-primary-glow">#{set.setNumber}</p>
+        </div>
+
+        {/* Bloque de Repeticiones Objetivo */}
+        <div className="bg-background/40 rounded-lg py-2 px-1">
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground flex items-center justify-center gap-1 mb-0.5">
+            <Repeat className="h-3 w-3" /> Reps
+          </p>
+          <p className="text-sm sm:text-base font-semibold text-foreground">{set.targetReps}</p>
+        </div>
+
+        {/* Bloque de Descanso */}
+        <div className="bg-background/40 rounded-lg py-2 px-1">
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground flex items-center justify-center gap-1 mb-0.5">
+            <Timer className="h-3 w-3" /> Descanso
+          </p>
+          <p className="text-sm sm:text-base font-medium text-muted-foreground">{set.restTime}s</p>
+        </div>
+      </div>
+
+      {/* LADO DERECHO (AHORA ABAJO): Inputs de registro a todo lo ancho */}
+      <div className="grid grid-cols-3 gap-2 w-full">
+        <Input
+          placeholder="Peso (kg)"
+          value={set.actualWeight || weight}
+          onChange={(e) => setWeight(e.target.value)}
+          type="number"
+          inputMode="decimal"
+          disabled={set.actualWeight ? true : false}
+          className="bg-background/50 h-9 text-sm focus-visible:ring-primary-glow w-full"
+        />
+        <Input
+          placeholder="Reps"
+          value={set.actualReps || reps}
+          onChange={(e) => setReps(e.target.value)}
+          type="number"
+          inputMode="numeric"
+          disabled={set.actualReps ? true : false}
+          className="bg-background/50 h-9 text-sm focus-visible:ring-primary-glow w-full"
+        />
+        <Button
+          variant={done ? "secondary" : "hero"}
+          onClick={() => {
+            handleSetsUpdate(set, exId);
+          }}
+          className="h-9 text-xs font-medium uppercase tracking-wider w-full truncate"
+          disabled={done ? true : false}
+        >
+          {done ? "Completada" : "Descansar"}
+        </Button>
+      </div>
+      {timerOn && (
+        <RestTimer
+          key={timerKey}
+          seconds={Number(set.restTime)}
+          onClose={() => setTimerOn(false)}
+        />
+      )}
+    </div>
   );
 }
 

@@ -28,6 +28,8 @@ export interface GetDailyStudentExerciseDto {
   exerciseName: string;
   muscleGroupName: string;
   coachNotes: string;
+  studentNotes: string;
+  isCompleted: boolean;
 }
 
 // ExerciseDto

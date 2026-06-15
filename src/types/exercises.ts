@@ -20,6 +20,8 @@ export interface Exercise {
   description?: string;
   muscleGroupName: string;
   coachNotes: string;
+  studentNotes: string;
+  isCompleted: boolean;
   scheduledDate: string;
   day: string;
   short: string;

@@ -71,8 +71,9 @@ export function WeekSlider({
   const selectWeek = (weekStart: Date) => {
     // Preserve the same weekday offset when changing weeks.
     const offset = (selected.getDay() + 6) % 7; // 0 = Monday
+    const targetDate = addDays(weekStart, offset);
 
-    onChange?.(weekStart);
+    onChange?.(targetDate);
   };
   const monthLabel = format(selected, "LLLL yyyy", { locale: es });
   const weekOfMonth = getWeekOfMonth(selected);
@@ -134,12 +135,13 @@ export function WeekSlider({
               ref={isSelected ? selectedBadgeRef : undefined}
               type="button"
               onClick={() => selectWeek(weekStart)}
+              // disabled
               className={cn(
                 "snap-center shrink-0 flex flex-col items-center justify-center rounded-full h-16 w-16 border transition-all",
                 "text-[10px] font-medium",
                 isSelected
                   ? "bg-gradient-primary border-primary text-primary-foreground shadow-glow scale-105"
-                  : "bg-background/40 border-border/60 text-muted-foreground hover:border-primary/60 hover:text-foreground",
+                  : "bg-background/40 border-border/60 text-muted-foreground hover:border-primary/60 hover:text-foreground", //hover:border-primary/60 hover:text-foreground
                 !isSelected && isCurrent && "border-primary/60 text-primary-glow",
               )}
               aria-pressed={isSelected}
