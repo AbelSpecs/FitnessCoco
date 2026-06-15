@@ -90,7 +90,7 @@ function Dashboard() {
                 </Button>
               )}
               <Button variant="glass" size="lg" asChild className="w-full sm:w-auto">
-                <Link to="/progreso">Ver progreso</Link>
+                <Link to=".">Ver progreso</Link>
               </Button>
             </div>
           </div>

@@ -60,7 +60,7 @@ export function ProfileMenu({ initial, size = "md", align = "right" }: ProfileMe
         <div
           role="menu"
           className={cn(
-            "absolute top-full mt-2 z-50 w-56 rounded-xl border border-border bg-popover/95 backdrop-blur-xl shadow-elevated overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150",
+            "absolute lg:top-auto lg:bottom-full lg:mb-2 top-full mt-2 z-50 w-56 rounded-xl border border-border bg-popover/95 backdrop-blur-xl shadow-elevated overflow-hidden animate-in fade-in lg:slide-in-from-bottom-2 slide-in-from-top-2 duration-150",
             align === "right" ? "right-0" : "left-0",
           )}
         >
