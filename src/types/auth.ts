@@ -8,11 +8,13 @@ export interface RegisterCredentials {
   userName: string;
   password: string;
   confirmPassword: string;
+  phoneCode: string;
+  partialPhoneNumber: string;
   phoneNumber: string;
   countryId: number;
   cityId: number;
   address: string;
-  birthdate: string;
+  birthdate: Date;
   weight?: number;
   fitnessGoal?: Goal;
 }

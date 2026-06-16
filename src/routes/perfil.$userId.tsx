@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
 import { Stat } from "@/components/ui/stat";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-// import { userProfile } from "@/lib/mock-data";
 import { ChangeEvent, useEffect, useState } from "react";
 import { CheckCircle2, HeartPulse, Pencil } from "lucide-react";
 import { Goal, goalLabels } from "@/types/goals";

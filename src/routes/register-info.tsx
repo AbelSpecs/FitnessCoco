@@ -13,8 +13,8 @@ import {
 import { Dumbbell } from "lucide-react";
 import { age } from "@/utils/age";
 import { associateCoach, register } from "@/services/auth.service";
-import { CoachStudent, RegisterCredentials } from "@/types/auth";
-import { City, Country } from "@/types/general";
+import { RegisterCredentials } from "@/types/auth";
+import { City, PhoneCode } from "@/types/general";
 import { getCities, getCountries } from "@/services/general.service";
 import { notify } from "@/components/NotificationCenter";
 import { Student } from "@/types/user";
@@ -22,6 +22,9 @@ import { createStudent } from "@/services/user.service";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Goal, goalLabels } from "@/types/goals";
 import { SpinnerOverlay } from "@/components/Spinner";
+import DatePicker from "@/components/DatePicker";
+import { SearchableSelect } from "@/components/ui/searchable-select";
+import { CountryDto } from "@/dtos/countryDto";
 
 type RegisterSearch = {
   coachId?: string;
@@ -36,9 +39,12 @@ export const Route = createFileRoute("/register-info")({
   }),
   loader: async () => {
     try {
-      const countries: Country[] = await getCountries();
+      const countries: CountryDto[] = await getCountries();
+      const phoneCodes: PhoneCode[] = countries.map((c) => {
+        return { id: c.id, code: c.phoneCode };
+      });
 
-      return { countries };
+      return { countries, phoneCodes: phoneCodes };
     } catch (error) {
       console.error("Error al obtener los países:", error);
       throw error;
@@ -54,7 +60,7 @@ export const Route = createFileRoute("/register-info")({
 });
 
 function RegisterInfoPage() {
-  const { countries } = Route.useLoaderData();
+  const { countries, phoneCodes } = Route.useLoaderData();
   const { coachId } = Route.useSearch();
   const [step, setStep] = useState(1);
   const [cities, setCities] = useState<City[]>([]);
@@ -69,11 +75,13 @@ function RegisterInfoPage() {
     userName: "",
     password: "",
     confirmPassword: "",
+    phoneCode: "",
+    partialPhoneNumber: "",
     phoneNumber: "",
     countryId: 0,
     cityId: 0,
     address: "",
-    birthdate: "",
+    birthdate: new Date(),
     weight: 0,
     fitnessGoal: "muscle",
   });
@@ -376,89 +384,64 @@ function RegisterInfoPage() {
                 </p>
                 <div className="space-y-2">
                   <Label htmlFor="birthdate">Fecha de Nacimiento</Label>
-                  <Input
-                    id="birthdate"
-                    type="date"
-                    placeholder="Fecha de Nacimiento"
+                  <DatePicker
                     value={registerForm.birthdate}
-                    onChange={(e) =>
-                      setRegisterForm({ ...registerForm, birthdate: e.target.value })
-                    }
-                    required
-                    className="bg-input/60 dark:[color-scheme:dark] pointer-events-auto cursor-pointer"
+                    onChange={(e) => setRegisterForm({ ...registerForm, birthdate: e! })}
+                    placeholder="Fecha de Nacimiento"
+                    startMonth={new Date(1950, 0)}
+                    endMonth={new Date()}
+                    disabled={{ after: new Date() }}
+                    className="mt-1.5 bg-background/60 border-border focus-visible:ring-primary/40"
                   />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="country">Pais</Label>
-                  {/* <Input
-                    id="country"
-                    type="text"
-                    placeholder="Pais"
-                    value={registerForm.country}
-                    onChange={(e) => setRegisterForm({ ...registerForm, country: e.target.value })}
-                    required
-                    className="bg-input/60"
-                    /> */}
-                  <Select
-                    value={String(registerForm.countryId)}
+                  <SearchableSelect
+                    value={registerForm.countryId ? String(registerForm.countryId) : ""}
+                    placeholder="Selecciona tu país"
+                    options={countries.map((c) => ({ value: c.id.toString(), label: c.name }))}
                     onValueChange={(value) => {
                       handleCities(Number(value));
                     }}
-                  >
-                    <SelectTrigger id="country" className="bg-input/60">
-                      <SelectValue placeholder="Selecciona tu país" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {countries?.map((c) => (
-                        <SelectItem key={c.id} value={String(c.id)} className="focus:text-white">
-                          {c.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    className="mt-1.5 bg-background/60 border-border focus:ring-primary/40 hover:text-white"
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="city">Ciudad</Label>
-                  {/* <Input
-                    id="city"
-                    type="text"
-                    placeholder="Ciudad"
-                    value={registerForm.city}
-                    onChange={(e) => setRegisterForm({ ...registerForm, city: e.target.value })}
-                    required
-                    className="bg-input/60"
-                    /> */}
-                  <Select
-                    value={String(registerForm.cityId)}
+                  <SearchableSelect
+                    value={registerForm.cityId ? String(registerForm.cityId) : ""}
+                    placeholder="Selecciona la ciudad"
+                    options={cities.map((c) => ({ value: c.id.toString(), label: c.name }))}
                     onValueChange={(value) => {
                       setRegisterForm({ ...registerForm, cityId: Number(value) });
                     }}
-                  >
-                    <SelectTrigger id="city" className="bg-input/60">
-                      <SelectValue placeholder="Selecciona la ciudad" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {cities?.map((c) => (
-                        <SelectItem key={c.id} value={String(c.id)} className="focus:text-white">
-                          {c.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    className="mt-1.5 bg-background/60 border-border focus:ring-primary/40 hover:text-white"
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="phoneNumber">Teléfono</Label>
-                  <Input
-                    id="phoneNumber"
-                    type="text"
-                    placeholder="0424-2586514"
-                    value={registerForm.phoneNumber}
-                    onChange={(e) =>
-                      setRegisterForm({ ...registerForm, phoneNumber: e.target.value })
-                    }
-                    required
-                    className="bg-input/60"
-                  />
+                  <div className="flex ">
+                    <SearchableSelect
+                      value={registerForm.phoneCode ? String(registerForm.phoneCode) : ""}
+                      placeholder="Selecciona el Código"
+                      options={phoneCodes.map((p) => ({ value: p.id.toString(), label: p.code }))}
+                      onValueChange={(value) => {
+                        setRegisterForm({ ...registerForm, phoneCode: value });
+                      }}
+                      className="w-25 mt-1.5 bg-background/60 border-border focus:ring-primary/40 hover:text-white"
+                    />
+                    <Input
+                      id="phoneNumber"
+                      type="text"
+                      placeholder="0424-2586514"
+                      value={registerForm.phoneNumber}
+                      onChange={(e) =>
+                        setRegisterForm({ ...registerForm, phoneNumber: e.target.value })
+                      }
+                      required
+                      className="mt-1.5 bg-input/60"
+                    />
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="address">Dirección</Label>

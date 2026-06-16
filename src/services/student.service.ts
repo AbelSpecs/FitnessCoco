@@ -39,10 +39,14 @@ export const updateStudent = async (userData: User) => {
       parqCompleted,
       parqValidUntil,
       coach,
+      isStudent,
       ...dataToSend
     } = userData;
 
+    console.log(dataToSend);
+
     const newDataToSend = { id: userData.student?.id, ...dataToSend };
+    console.log(newDataToSend);
 
     const response = await api.put(`/Students/${userData.student?.id}`, newDataToSend);
 

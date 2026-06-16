@@ -23,6 +23,7 @@ export const userStudentMapper = (apiUser: StudentDto) => {
       allergies: userToMap.allergies,
       fitnessExperience: userToMap.fitnessExperience,
       generalNotes: userToMap.generalNotes,
+      gymId: userToMap.gymId ? userToMap.gymId : 1,
     },
     isStudent: true,
   };

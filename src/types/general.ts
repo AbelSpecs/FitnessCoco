@@ -7,5 +7,9 @@ export interface City {
 export interface Country {
   id: number;
   name: string;
-  phoneCode: string;
+}
+
+export interface PhoneCode {
+  id: number;
+  code: string;
 }

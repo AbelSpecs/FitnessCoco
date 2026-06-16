@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { RestTimer } from "@/components/ui/restTimer";
+import { Label } from "@/components/ui/label";
 import type { DayPlan } from "@/lib/mock-data";
 import {
   Dialog,
@@ -64,6 +65,7 @@ export const Route = createFileRoute("/rutina/$studentId/$dayId")({
   }),
   loader: async ({ params }) => {
     try {
+      console.log(params.studentId, params.dayId);
       const exercisesData: GetDailyStudentExerciseDto[] =
         await getDailyStudentExercisesByStudentIdAndDate(Number(params.studentId), params.dayId);
 
@@ -85,6 +87,7 @@ export const Route = createFileRoute("/rutina/$studentId/$dayId")({
           dailyExerciseSets: e.dailyExerciseSets as DailyExerciseSets[],
         };
       });
+      console.log(mappedExercises);
 
       return { dayExercises: mappedExercises };
     } catch (error) {
@@ -166,13 +169,13 @@ function DayDetail() {
           </h1>
           {!actualDay?.rest && (
             <div className="flex flex-wrap items-center gap-3 sm:gap-4 mt-4 sm:mt-5 text-xs sm:text-sm">
-              <span className="flex items-center gap-2">
+              {/* <span className="flex items-center gap-2">
                 <Clock className="h-4 w-4 text-primary-glow" /> {actualDay?.estimated} min
               </span>
               <span className="flex items-center gap-2">
                 <Flame className="h-4 w-4 text-primary-glow" /> ~{Number(actualDay?.estimated) * 8}{" "}
                 kcal
-              </span>
+              </span> */}
               <Badge variant="secondary">{actualDay?.exercises.length} ejercicios</Badge>
             </div>
           )}
@@ -348,7 +351,7 @@ function DetailsSetsRow({
       className="bg-background/20 border border-border/40 rounded-xl p-3 sm:p-4 flex flex-col gap-3.5"
     >
       {/* LADO IZQUIERDO (AHORA ARRIBA): Datos objetivos alineados */}
-      <div className="grid grid-cols-3 gap-2 w-full text-center">
+      <div className="grid grid-cols-4 gap-2 w-full text-center">
         {/* Bloque de Nro Serie */}
         <div className="bg-background/40 rounded-lg py-2 px-1">
           <p className="text-[10px] uppercase tracking-wider text-muted-foreground flex items-center justify-center gap-1 mb-0.5">
@@ -360,9 +363,16 @@ function DetailsSetsRow({
         {/* Bloque de Repeticiones Objetivo */}
         <div className="bg-background/40 rounded-lg py-2 px-1">
           <p className="text-[10px] uppercase tracking-wider text-muted-foreground flex items-center justify-center gap-1 mb-0.5">
-            <Repeat className="h-3 w-3" /> Reps
+            <Repeat className="h-3 w-3" /> Repeticiones
           </p>
           <p className="text-sm sm:text-base font-semibold text-foreground">{set.targetReps}</p>
+        </div>
+
+        <div className="bg-background/40 rounded-lg py-2 px-1">
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground flex items-center justify-center gap-1 mb-0.5">
+            <Layers className="h-3 w-3" /> Peso (kg)
+          </p>
+          <p className="text-sm sm:text-base font-semibold text-foreground">{set.targetWeight}</p>
         </div>
 
         {/* Bloque de Descanso */}
@@ -376,24 +386,34 @@ function DetailsSetsRow({
 
       {/* LADO DERECHO (AHORA ABAJO): Inputs de registro a todo lo ancho */}
       <div className="grid grid-cols-3 gap-2 w-full">
-        <Input
-          placeholder="Peso (kg)"
-          value={set.actualWeight || weight}
-          onChange={(e) => setWeight(e.target.value)}
-          type="number"
-          inputMode="decimal"
-          disabled={set.actualWeight ? true : false}
-          className="bg-background/50 h-9 text-sm focus-visible:ring-primary-glow w-full"
-        />
-        <Input
-          placeholder="Reps"
-          value={set.actualReps || reps}
-          onChange={(e) => setReps(e.target.value)}
-          type="number"
-          inputMode="numeric"
-          disabled={set.actualReps ? true : false}
-          className="bg-background/50 h-9 text-sm focus-visible:ring-primary-glow w-full"
-        />
+        <div>
+          <Label className="text-[10px] uppercase tracking-widest text-muted-foreground flex items-center gap-1">
+            <Layers className="h-3 w-3" /> Peso Logrado
+          </Label>
+          <Input
+            placeholder="Peso (kg)"
+            value={set.actualWeight || weight}
+            onChange={(e) => setWeight(e.target.value)}
+            type="number"
+            inputMode="decimal"
+            disabled={set.actualWeight ? true : false}
+            className="bg-background/50 h-9 text-sm focus-visible:ring-primary-glow w-full"
+          />
+        </div>
+        <div>
+          <Label className="text-[10px] uppercase tracking-widest text-muted-foreground flex items-center gap-1">
+            <Repeat className="h-3 w-3" /> Repeticiones Logradas
+          </Label>
+          <Input
+            placeholder="Reps"
+            value={set.actualReps || reps}
+            onChange={(e) => setReps(e.target.value)}
+            type="number"
+            inputMode="numeric"
+            disabled={set.actualReps ? true : false}
+            className="bg-background/50 h-9 text-sm focus-visible:ring-primary-glow w-full"
+          />
+        </div>
         <Button
           variant={done ? "secondary" : "hero"}
           onClick={() => {
