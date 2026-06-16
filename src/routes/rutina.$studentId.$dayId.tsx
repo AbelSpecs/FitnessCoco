@@ -266,7 +266,9 @@ function ExerciseRow({ ex, index }: { ex: Exercise; index: number }) {
           {showSets && (
             <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
               {ex.dailyExerciseSets.map((set, index) => {
-                return <DetailsSetsRow exId={ex.dailyExerciseId} set={set} index={index} />;
+                return (
+                  <DetailsSetsRow key={set.id} exId={ex.dailyExerciseId} set={set} index={index} />
+                );
               })}
             </div>
           )}

@@ -152,6 +152,24 @@ export const getDailyStudentExercisesByStudentIdAndDate = async (id: number, dat
   }
 };
 
+export const getDailyStudentExercisesByStudentIdAndDates = async (
+  id: number,
+  dateS: string,
+  dateE: string,
+) => {
+  try {
+    const response = await api.get(
+      `/DailyStudentExercises/student/${id}/date/start/${dateS}/end/${dateE}`,
+    );
+    const { data } = response.data;
+
+    return data;
+  } catch (error) {
+    console.error("Error al obtener los ejercicios del cliente", error);
+    return null;
+  }
+};
+
 // DailyExercisesSets
 export const postDailyExercisesSets = async (exerciseSetData: DailyExerciseSetsDto) => {
   try {
