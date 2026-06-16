@@ -12,6 +12,7 @@ import { StudentDto, UserDto } from "@/dtos/userDto";
 import { getStudents } from "@/services/student.service";
 import { getCoachStudents } from "@/services/coach.service";
 import { SpinnerOverlay } from "@/components/Spinner";
+import { Goal, goalLabels } from "@/types/goals";
 
 export const Route = createFileRoute("/clientes/")({
   head: () => ({
@@ -83,7 +84,7 @@ function ClientesPage() {
   }, [query, students]);
   return (
     <AppShell>
-      <div className="min-h-screen bg-background text-foreground relative overflow-hidden">
+      <div className="min-h-screen bg-gradient-card text-foreground relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-mesh opacity-60 pointer-events-none" />
         <div className="relative max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
           <Link
@@ -137,22 +138,28 @@ function ClientesPage() {
                           <h3 className="font-display text-xl sm:text-2xl leading-tight truncate">
                             {client.name}
                           </h3>
-                          <Badge
+                          {/* <Badge
                             variant="secondary"
                             className="uppercase text-[10px] tracking-widest"
                           >
                             {client.plan}
-                          </Badge>
+                          </Badge> */}
                         </div>
-                        <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 truncate">
+                        <Badge
+                          variant="secondary"
+                          className="uppercase text-[10px] tracking-widest"
+                        >
+                          {goalLabels[client.fitnessGoal as Goal]}
+                        </Badge>
+                        {/* <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 truncate">
                           {client.fitnessGoal}
-                        </p>
-                        <div className="flex items-center gap-3 text-[11px] sm:text-xs text-muted-foreground mt-1">
+                        </p> */}
+                        {/* <div className="flex items-center gap-3 text-[11px] sm:text-xs text-muted-foreground mt-1">
                           <span className="flex items-center gap-1">
                             <Dumbbell className="h-3 w-3 text-primary-glow" />
                             Racha {client.streak} días
                           </span>
-                        </div>
+                        </div> */}
                       </div>
                       <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-primary-glow group-hover:translate-x-1 transition-all shrink-0" />
                     </div>

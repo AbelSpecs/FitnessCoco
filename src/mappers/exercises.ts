@@ -17,6 +17,8 @@ export const exercisesMapper = (apiRoutines: GetDailyStudentExerciseDto[]) => {
       exerciseName: item.exerciseName,
       muscleGroupName: item.muscleGroupName,
       coachNotes: item.coachNotes,
+      studentNotes: item.studentNotes,
+      isCompleted: item.isCompleted,
       scheduledDate: item.scheduledDate,
       day: completeDay,
       short: shortDay,

@@ -1,5 +1,5 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,16 +11,18 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Dumbbell } from "lucide-react";
-import { associateCoach, register } from "@/services/auth.service";
-import { get } from "http";
+import { register } from "@/services/auth.service";
 import { getCities, getCountries } from "@/services/general.service";
-import { City, Country } from "@/types/general";
+import { City, PhoneCode } from "@/types/general";
 import { RegisterCredentials } from "@/types/auth";
 import { age } from "@/utils/age";
 import { notify } from "@/components/NotificationCenter";
 import { Coach } from "@/types/user";
 import { createCoach } from "@/services/coach.service";
 import { SpinnerOverlay } from "@/components/Spinner";
+import { CountryDto } from "@/dtos/countryDto";
+import { SearchableSelect } from "@/components/ui/searchable-select";
+import DatePicker from "@/components/DatePicker";
 
 export const Route = createFileRoute("/register")({
   head: () => ({
@@ -31,9 +33,12 @@ export const Route = createFileRoute("/register")({
   }),
   loader: async () => {
     try {
-      const countries: Country[] = await getCountries();
+      const countries: CountryDto[] = await getCountries();
+      const phoneCodes: PhoneCode[] = countries.map((c) => {
+        return { id: c.id, code: c.phoneCode };
+      });
 
-      return { countries };
+      return { countries, phoneCodes: phoneCodes };
     } catch (error) {
       console.error("Error al obtener los países:", error);
       throw error;
@@ -44,7 +49,7 @@ export const Route = createFileRoute("/register")({
 });
 
 function RegisterPage() {
-  const { countries } = Route.useLoaderData();
+  const { countries, phoneCodes } = Route.useLoaderData();
   const [step, setStep] = useState(1);
   const [cities, setCities] = useState<City[]>([]);
   const [success, setSuccess] = useState(false);
@@ -57,11 +62,13 @@ function RegisterPage() {
     userName: "",
     password: "",
     confirmPassword: "",
+    phoneCode: "",
+    partialPhoneNumber: "",
     phoneNumber: "",
     countryId: 0,
     cityId: 0,
     address: "",
-    birthdate: "",
+    birthdate: new Date(),
   });
 
   const handleNextStep = () => setStep(2);
@@ -116,8 +123,13 @@ function RegisterPage() {
       return;
     }
 
-    if (!registerForm.phoneNumber!.trim()) {
-      notify.error("Error", `El usuario es obligatorio`);
+    if (!registerForm.phoneCode!.trim()) {
+      notify.error("Error", `El código de teléfono es obligatorio`);
+      return;
+    }
+
+    if (!registerForm.partialPhoneNumber!.trim()) {
+      notify.error("Error", `El teléfono es obligatorio`);
       return;
     }
 
@@ -145,6 +157,8 @@ function RegisterPage() {
     setLoading(true);
 
     try {
+      registerForm.phoneNumber = registerForm.phoneCode + registerForm.partialPhoneNumber;
+      const { phoneCode, partialPhoneNumber } = registerForm;
       const data = await register(registerForm);
 
       const coachToCreate: Coach = {
@@ -327,89 +341,64 @@ function RegisterPage() {
                 </p>
                 <div className="space-y-2">
                   <Label htmlFor="birthdate">Fecha de Nacimiento</Label>
-                  <Input
-                    id="birthdate"
-                    type="date"
-                    placeholder="Fecha de Nacimiento"
+                  <DatePicker
                     value={registerForm.birthdate}
-                    onChange={(e) =>
-                      setRegisterForm({ ...registerForm, birthdate: e.target.value })
-                    }
-                    required
-                    className="bg-input/60 dark:[color-scheme:dark] pointer-events-auto cursor-pointer"
+                    onChange={(e) => setRegisterForm({ ...registerForm, birthdate: e! })}
+                    placeholder="Fecha de Nacimiento"
+                    startMonth={new Date(1950, 0)}
+                    endMonth={new Date()}
+                    disabled={{ after: new Date() }}
+                    className="mt-1.5 bg-background/60 border-border focus-visible:ring-primary/40"
                   />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="country">Pais</Label>
-                  {/* <Input
-                    id="country"
-                    type="text"
-                    placeholder="Pais"
-                    value={registerForm.country}
-                    onChange={(e) => setRegisterForm({ ...registerForm, country: e.target.value })}
-                    required
-                    className="bg-input/60"
-                    /> */}
-                  <Select
-                    value={String(registerForm.countryId)}
+                  <SearchableSelect
+                    value={registerForm.countryId ? String(registerForm.countryId) : ""}
+                    placeholder="Selecciona tu país"
+                    options={countries.map((c) => ({ value: c.id.toString(), label: c.name }))}
                     onValueChange={(value) => {
                       handleCities(Number(value));
                     }}
-                  >
-                    <SelectTrigger id="country" className="bg-input/60">
-                      <SelectValue placeholder="Selecciona tu país" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {countries?.map((c) => (
-                        <SelectItem key={c.id} value={String(c.id)} className="focus:text-white">
-                          {c.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    className="mt-1.5 bg-background/60 border-border focus:ring-primary/40 hover:text-white"
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="city">Ciudad</Label>
-                  {/* <Input
-                    id="city"
-                    type="text"
-                    placeholder="Ciudad"
-                    value={registerForm.city}
-                    onChange={(e) => setRegisterForm({ ...registerForm, city: e.target.value })}
-                    required
-                    className="bg-input/60"
-                    /> */}
-                  <Select
-                    value={String(registerForm.cityId)}
+                  <SearchableSelect
+                    value={registerForm.cityId ? String(registerForm.cityId) : ""}
+                    placeholder="Selecciona la ciudad"
+                    options={cities.map((c) => ({ value: c.id.toString(), label: c.name }))}
                     onValueChange={(value) => {
                       setRegisterForm({ ...registerForm, cityId: Number(value) });
                     }}
-                  >
-                    <SelectTrigger id="city" className="bg-input/60">
-                      <SelectValue placeholder="Selecciona la ciudad" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {cities?.map((c) => (
-                        <SelectItem key={c.id} value={String(c.id)} className="focus:text-white">
-                          {c.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    className="mt-1.5 bg-background/60 border-border focus:ring-primary/40 hover:text-white"
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="phoneNumber">Teléfono</Label>
-                  <Input
-                    id="phoneNumber"
-                    type="text"
-                    placeholder="0424-2586514"
-                    value={registerForm.phoneNumber}
-                    onChange={(e) =>
-                      setRegisterForm({ ...registerForm, phoneNumber: e.target.value })
-                    }
-                    required
-                    className="bg-input/60"
-                  />
+                  <div className="flex ">
+                    <SearchableSelect
+                      value={registerForm.phoneCode ? String(registerForm.phoneCode) : ""}
+                      placeholder="Selecciona el Código"
+                      options={phoneCodes.map((p) => ({ value: p.id.toString(), label: p.code }))}
+                      onValueChange={(value) => {
+                        setRegisterForm({ ...registerForm, phoneCode: value });
+                      }}
+                      className="w-25 mt-1.5 bg-background/60 border-border focus:ring-primary/40 hover:text-white"
+                    />
+                    <Input
+                      id="phoneNumber"
+                      type="text"
+                      placeholder="424-258-6514"
+                      value={registerForm.partialPhoneNumber}
+                      onChange={(e) =>
+                        setRegisterForm({ ...registerForm, partialPhoneNumber: e.target.value })
+                      }
+                      required
+                      className="mt-1.5 bg-input/60"
+                    />
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="address">Dirección</Label>
@@ -447,43 +436,6 @@ function RegisterPage() {
               </>
             )}
           </form>
-
-          {/* <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t border-border" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-card px-3 text-muted-foreground">o continuar con</span>
-            </div>
-          </div>
-
-          <Button
-            type="button"
-            variant="outline"
-            size="lg"
-            className="w-full"
-            // onClick={handleGoogleLogin}
-          >
-            <svg className="h-5 w-5 mr-2" viewBox="0 0 24 24">
-              <path
-                fill="#4285F4"
-                d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"
-              />
-              <path
-                fill="#34A853"
-                d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-              />
-              <path
-                fill="#FBBC05"
-                d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-              />
-              <path
-                fill="#EA4335"
-                d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-              />
-            </svg>
-            Google
-          </Button> */}
 
           <p className="text-center text-sm text-muted-foreground">
             ¿Ya tienes cuenta?{" "}

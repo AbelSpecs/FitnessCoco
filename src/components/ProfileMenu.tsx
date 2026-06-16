@@ -14,7 +14,7 @@ export function ProfileMenu({ initial, size = "md", align = "right" }: ProfileMe
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
-  const { logout } = useAuthStore();
+  const { logout, user } = useAuthStore();
 
   useEffect(() => {
     if (!open) return;
@@ -68,7 +68,7 @@ export function ProfileMenu({ initial, size = "md", align = "right" }: ProfileMe
             <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
               Sesión activa
             </p>
-            <p className="text-sm font-medium truncate">FITYEI</p>
+            <p className="text-sm font-medium truncate">{user?.firstName}</p>
           </div>
           <div className="p-1">
             <button

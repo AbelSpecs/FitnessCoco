@@ -50,6 +50,8 @@ export type DatePickerProps<M extends Mode = "single"> = {
   align?: "start" | "center" | "end";
   /** Hide the leading icon */
   hideIcon?: boolean;
+  startMonth?: Date;
+  endMonth?: Date;
   /** Custom render of the displayed label */
   renderLabel?: (value: ValueByMode[M]) => React.ReactNode;
 };
@@ -96,6 +98,8 @@ export function DatePicker<M extends Mode = "single">({
   calendarClassName,
   align = "start",
   hideIcon = false,
+  startMonth,
+  endMonth,
   renderLabel,
 }: DatePickerProps<M>) {
   const isControlled = value !== undefined;
@@ -164,6 +168,9 @@ export function DatePicker<M extends Mode = "single">({
             numberOfMonths={numberOfMonths}
             initialFocus
             className={cn("p-3 pointer-events-auto", calendarClassName)}
+            captionLayout={startMonth && "dropdown"}
+            startMonth={startMonth}
+            endMonth={endMonth}
           />
         )}
         {mode === "range" && (
@@ -176,6 +183,9 @@ export function DatePicker<M extends Mode = "single">({
             numberOfMonths={numberOfMonths}
             initialFocus
             className={cn("p-3 pointer-events-auto", calendarClassName)}
+            captionLayout={startMonth && "dropdown"}
+            startMonth={startMonth}
+            endMonth={endMonth}
           />
         )}
         {mode === "multiple" && (
@@ -188,6 +198,9 @@ export function DatePicker<M extends Mode = "single">({
             numberOfMonths={numberOfMonths}
             initialFocus
             className={cn("p-3 pointer-events-auto", calendarClassName)}
+            captionLayout={startMonth && "dropdown"}
+            startMonth={startMonth}
+            endMonth={endMonth}
           />
         )}
       </PopoverContent>

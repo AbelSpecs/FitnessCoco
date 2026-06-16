@@ -36,6 +36,7 @@ import {
   Repeat,
   RefreshCw,
   Sparkles,
+  CheckCircle2,
 } from "lucide-react";
 import { notify } from "@/components/NotificationCenter";
 import { AppShell } from "@/components/AppShell";
@@ -82,6 +83,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { exercisesMapper } from "@/mappers/exercises";
+import { Goal, goalLabels } from "@/types/goals";
 
 const emptySet = (): DailyExerciseSetsForm => ({
   id: `ex-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
@@ -118,6 +120,7 @@ export const Route = createFileRoute("/clientes/$studentId")({
       };
 
       const completeExercisesMapped: Exercise[] = exercisesMapper(dailyExercises);
+      console.log(completeExercisesMapped);
 
       const muscleGroupsMapped: MuscleGroupSelect[] = muscleGroups.map((m: GetMuscleGroupDto) => ({
         id: m.id,
@@ -483,7 +486,7 @@ function ClientRoutinesPage() {
 
   return (
     <AppShell>
-      <div className="min-h-screen bg-background text-foreground relative overflow-hidden">
+      <div className="min-h-screen bg-gradient-card text-foreground relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-mesh opacity-60 pointer-events-none" />
         <div className="relative max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
           <Link
@@ -505,10 +508,12 @@ function ClientRoutinesPage() {
                   {client.name}
                 </h1>
                 <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                  <Badge variant="secondary" className="uppercase text-[10px] tracking-widest">
+                  {/* <Badge variant="secondary" className="uppercase text-[10px] tracking-widest">
                     {client.plan}
+                  </Badge> */}
+                  <Badge variant="secondary" className="uppercase text-[10px] tracking-widest">
+                    {goalLabels[client.goal as Goal]}
                   </Badge>
-                  <span className="text-xs sm:text-sm text-muted-foreground">{client.goal}</span>
                 </div>
               </div>
             </div>
@@ -627,20 +632,6 @@ function ClientRoutinesPage() {
                     placeholder="Notas"
                     maxLength={500}
                     className="mt-1.5 bg-background/60 border-border focus-visible:ring-primary/40"
-                  />
-                </div>
-                <div>
-                  <Label className="text-[11px] uppercase tracking-widest text-muted-foreground">
-                    Notas del Cliente
-                  </Label>
-                  <Textarea
-                    value={routineForm.studentNotes}
-                    name="studentNotes"
-                    onChange={(e) => handleInputChange(e)}
-                    placeholder="Notas del cliente"
-                    maxLength={500}
-                    className="mt-1.5 bg-background/60 border-border focus-visible:ring-primary/40"
-                    disabled
                   />
                 </div>
               </div>
@@ -840,7 +831,11 @@ function ClientRoutinesPage() {
                   >
                     <div className="flex items-center gap-4 flex-wrap sm:flex-nowrap mb-5">
                       <div className="h-12 w-12 rounded-xl bg-primary/10 border border-primary/30 flex items-center justify-center shrink-0">
-                        <Dumbbell className="h-5 w-5 text-primary-glow" />
+                        {routine.isCompleted ? (
+                          <CheckCircle2 className="h-5 w-5" />
+                        ) : (
+                          <Dumbbell className="h-5 w-5 text-primary-glow" />
+                        )}
                       </div>
                       <div className="flex-1 min-w-0">
                         <h3 className="font-display text-lg sm:text-xl leading-tight truncate">
@@ -909,7 +904,7 @@ function ClientRoutinesPage() {
                               Notas del Cliente
                             </Label>
                             <Textarea
-                              value={routineForm.studentNotes}
+                              value={routine.studentNotes}
                               placeholder="notas del cliente"
                               className="mt-1.5 bg-background/60 border-border focus-visible:ring-primary/40"
                               disabled
@@ -995,7 +990,7 @@ function ClientRoutinesPage() {
                               </div>
                               <div>
                                 <Label className="text-[10px] uppercase tracking-widest text-muted-foreground flex items-center gap-1">
-                                  Repeticiones Conseguidas
+                                  Repeticiones Logradas por el Cliente
                                 </Label>
                                 <Input
                                   type="number"
@@ -1016,7 +1011,7 @@ function ClientRoutinesPage() {
                             <div className="grid grid-cols-2 gap-2 sm:gap-3 mt-3">
                               <div>
                                 <Label className="text-[10px] uppercase tracking-widest text-muted-foreground flex items-center gap-1">
-                                  <Layers className="h-3 w-3" /> Peso Conseguido (kg)
+                                  <Layers className="h-3 w-3" /> Peso Logrado por el Cliente (kg)
                                 </Label>
                                 <Input
                                   type="number"
