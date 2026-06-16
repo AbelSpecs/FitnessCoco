@@ -387,17 +387,22 @@ function ClientRoutinesPage() {
     setSavedRoutine(true);
     if (!routineForm.muscleGroupId) {
       notify.error("Falta el grupo muscular", "Selecciona grupo muscular");
+      setSavedRoutine(false);
       return;
     }
 
     if (!routineForm.exerciseId) {
       notify.error("Falta el ejercicio", "Selecciona ejercicio");
+      setSavedRoutine(false);
       return;
     }
 
-    const incomplete = routineForm.dailyExerciseSets.some((e) => !e.targetReps || !e.targetWeight);
+    const incomplete = routineForm.dailyExerciseSets.some(
+      (e) => !e.targetReps || !e.targetWeight || !e.restTime,
+    );
     if (incomplete) {
       notify.error("Sets incompletos", "Completa los campos para cada serie");
+      setSavedRoutine(false);
       return;
     }
 
@@ -442,6 +447,8 @@ function ClientRoutinesPage() {
         exerciseName: exerciseExtraData.name,
         muscleGroupName: exerciseExtraData.muscleGroup,
         coachNotes: exercisesResponse.coachNotes,
+        studentNotes: exercisesResponse.studentNotes,
+        isCompleted: exercisesResponse.isCompleted,
         scheduledDate: exercisesResponse.scheduledDate,
         day: completeDay,
         short: shortDay,
@@ -458,13 +465,13 @@ function ClientRoutinesPage() {
           routineForm.dailyExerciseSets.length === 1 ? "ejercicio" : "ejercicios"
         } para ${client.name}`,
       );
+      resetForm();
     } catch (error) {
       console.error("Error al guardar la rutina", error);
       notify.error("Error al guardar", "Ocurrió un error al guardar la rutina. Intenta de nuevo.");
       throw error;
     } finally {
       setSavedRoutine(false);
-      resetForm();
       setShowForm(false);
     }
   };

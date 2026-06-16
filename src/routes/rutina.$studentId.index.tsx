@@ -1,21 +1,12 @@
-import {
-  createFileRoute,
-  Link,
-  redirect,
-  useParams,
-  notFound,
-  Outlet,
-} from "@tanstack/react-router";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { weekPlan } from "@/lib/mock-data";
-import { Calendar, ChevronRight, Clock, Dumbbell } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
-import { useAuthStore } from "@/store/authStore";
+import { ChevronRight, Clock, Dumbbell } from "lucide-react";
+import { useState } from "react";
 import { CompleteDate, DailyExerciseSets, DayRoutine, Exercise } from "@/types/exercises";
-import { determineDate, determineDates } from "@/utils/determineDate";
-import { getDailyStudentExercisesByStudentIdAndDate } from "@/services/routine.service";
+import { determineDate } from "@/utils/determineDate";
+import { getDailyStudentExercisesByStudentIdAndDates } from "@/services/routine.service";
 import { GetDailyStudentExerciseDto } from "@/dtos/exerciseDto";
 import WeekSlider from "@/components/ui/weekSlider";
 import { addDays, startOfWeek, format } from "date-fns";
@@ -33,10 +24,16 @@ export const Route = createFileRoute("/rutina/$studentId/")({
   loader: async ({ params }) => {
     try {
       const mondayOfThisWeek = startOfWeek(new Date(), { weekStartsOn: 1 });
-      const dateStringParam = format(mondayOfThisWeek, "yyyy-MM-dd");
+      const sundayOfThisWeek = addDays(mondayOfThisWeek, 6);
+      const dateStringStart = format(mondayOfThisWeek, "yyyy-MM-dd");
+      const dateStringEnd = format(sundayOfThisWeek, "yyyy-MM-dd");
 
       const exercisesData: GetDailyStudentExerciseDto[] =
-        await getDailyStudentExercisesByStudentIdAndDate(Number(params.studentId), dateStringParam);
+        await getDailyStudentExercisesByStudentIdAndDates(
+          Number(params.studentId),
+          dateStringStart,
+          dateStringEnd,
+        );
 
       const mappedExercises: Exercise[] = exercisesData.map((e) => {
         const completeDate: CompleteDate = determineDate(e.scheduledDate);
@@ -118,9 +115,15 @@ function RutinaPage() {
     if (!date) return;
 
     try {
-      const dateStringParam = format(date, "yyyy-MM-dd");
+      const dateStringStart = format(date, "yyyy-MM-dd");
+      const sundayOfThisWeek = addDays(date, 6);
+      const dateStringEnd = format(sundayOfThisWeek, "yyyy-MM-dd");
       const exercisesData: GetDailyStudentExerciseDto[] =
-        await getDailyStudentExercisesByStudentIdAndDate(Number(studentId), dateStringParam);
+        await getDailyStudentExercisesByStudentIdAndDates(
+          Number(studentId),
+          dateStringStart,
+          dateStringEnd,
+        );
 
       const mappedExercises: Exercise[] = exercisesData.map((e) => {
         const completeDate: CompleteDate = determineDate(e.scheduledDate);
