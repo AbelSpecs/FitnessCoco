@@ -2,8 +2,10 @@ import {
   DailyExerciseSetsDto,
   DailyStudentExerciseDto,
   ExerciseDto,
+  UpdateCompleteDailyStudentExerciseDto,
   UpdateDailyStudentExerciseDto,
 } from "@/dtos/exerciseDto";
+
 import axios from "axios";
 // import api from "./api";
 
@@ -25,7 +27,7 @@ export const postExercise = async (routineData: ExerciseDto) => {
     return data;
   } catch (error) {
     console.error("Error al crear el ejercicio", error);
-    return null;
+    throw error;
   }
 };
 
@@ -37,7 +39,7 @@ export const getExercise = async (id: number) => {
     return data;
   } catch (error) {
     console.error("Error al obtener el ejercicio", error);
-    return null;
+    throw error;
   }
 };
 
@@ -49,7 +51,7 @@ export const getExerciseByMuscleGroupId = async (id: number) => {
     return data;
   } catch (error) {
     console.error("Error al obtener el Ejercicio", error);
-    return null;
+    throw error;
   }
 };
 
@@ -61,7 +63,7 @@ export const getExerciseByMuscleGroupName = async (name: string) => {
     return data;
   } catch (error) {
     console.error("Error al obtener el Ejercicio", error);
-    return null;
+    throw error;
   }
 };
 
@@ -73,7 +75,7 @@ export const getExerciseByCoachId = async (id: number) => {
     return data;
   } catch (error) {
     console.error("Error al obtener el Ejercicio", error);
-    return null;
+    throw error;
   }
 };
 
@@ -85,7 +87,7 @@ export const updateExercise = async (id: number, routineData: ExerciseDto) => {
     return data;
   } catch (error) {
     console.error("Error al actualizar el ejercicio", error);
-    return null;
+    throw error;
   }
 };
 
@@ -96,7 +98,7 @@ export const deleteExercise = async (id: number) => {
     return data;
   } catch (error) {
     console.error("Error al eliminar el ejercicio", error);
-    return null;
+    throw error;
   }
 };
 
@@ -109,13 +111,13 @@ export const postDailyStudentExercises = async (exerciseData: DailyStudentExerci
     return data;
   } catch (error) {
     console.error("Error al crear el ejercicio para el cliente", error);
-    return null;
+    throw error;
   }
 };
 
-export const updateDailyStudentExercises = async (
+export const updateCompleteDailyStudentExercises = async (
   id: number,
-  exerciseData: UpdateDailyStudentExerciseDto,
+  exerciseData: UpdateCompleteDailyStudentExerciseDto,
 ) => {
   try {
     const response = await api.put(`/DailyStudentExercises/complete/${id}`, exerciseData);
@@ -124,7 +126,22 @@ export const updateDailyStudentExercises = async (
     return data;
   } catch (error) {
     console.error("Error al actualizar el ejercicio para el cliente", error);
-    return null;
+    throw error;
+  }
+};
+
+export const updateDailyStudentsExercises = async (
+  id: number,
+  exerciseData: UpdateDailyStudentExerciseDto,
+) => {
+  try {
+    const response = await api.put(`/DailyStudentExercises/${id}`, exerciseData);
+    const { data } = response.data;
+
+    return data;
+  } catch (error) {
+    console.error("Error al actualizar el ejercicio para el cliente", error);
+    throw error;
   }
 };
 
@@ -136,7 +153,7 @@ export const getDailyStudentExercisesByStudentId = async (id: number) => {
     return data;
   } catch (error) {
     console.error("Error al obtener los ejercicios del cliente", error);
-    return null;
+    throw error;
   }
 };
 
@@ -148,7 +165,7 @@ export const getDailyStudentExercisesByStudentIdAndDate = async (id: number, dat
     return data;
   } catch (error) {
     console.error("Error al obtener los ejercicios del cliente", error);
-    return null;
+    throw error;
   }
 };
 
@@ -166,20 +183,31 @@ export const getDailyStudentExercisesByStudentIdAndDates = async (
     return data;
   } catch (error) {
     console.error("Error al obtener los ejercicios del cliente", error);
-    return null;
+    throw error;
+  }
+};
+
+export const deleteDailyStudentExercises = async (id: number) => {
+  try {
+    const response = await api.delete(`/DailyStudentExercises/${id}`);
+    const { data } = response.data;
+    return data;
+  } catch (error) {
+    console.error("Error al eliminar el ejercicio", error);
+    throw error;
   }
 };
 
 // DailyExercisesSets
 export const postDailyExercisesSets = async (exerciseSetData: DailyExerciseSetsDto) => {
   try {
-    const response = await api.post("/DailyExerciseSets", exerciseSetData);
+    const response = await api.post("/DailyExerciseSets", { set: exerciseSetData });
     const { data } = response.data;
 
     return data;
   } catch (error) {
     console.error("Error al crear el set", error);
-    return null;
+    throw error;
   }
 };
 
@@ -191,7 +219,7 @@ export const getDailyExercisesSets = async () => {
     return data;
   } catch (error) {
     console.error("Error al obtener los sets", error);
-    return null;
+    throw error;
   }
 };
 
@@ -203,7 +231,7 @@ export const getDailyExercisesSetsById = async (id: number) => {
     return data;
   } catch (error) {
     console.error("Error al obtener los sets", error);
-    return null;
+    throw error;
   }
 };
 
@@ -218,7 +246,7 @@ export const updateDailyExercisesSets = async (
     return data;
   } catch (error) {
     console.error("Error al obtener los sets", error);
-    return null;
+    throw error;
   }
 };
 
@@ -229,7 +257,7 @@ export const deleteDailyExercisesSets = async (id: number) => {
     return data;
   } catch (error) {
     console.error("Error al eliminar el set", error);
-    return null;
+    throw error;
   }
 };
 
@@ -242,6 +270,6 @@ export const getMuscleGroups = async () => {
     return data;
   } catch (error) {
     console.error("Error al obtener los grupos musculares", error);
-    return null;
+    throw error;
   }
 };

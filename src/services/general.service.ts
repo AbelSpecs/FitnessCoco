@@ -18,7 +18,7 @@ export const getCountries = async () => {
     return data;
   } catch (error) {
     console.error("Error al obtener los paises", error);
-    return null;
+    throw error;
   }
 };
 
@@ -30,12 +30,17 @@ export const getCities = async (countryId: number) => {
     return data;
   } catch (error) {
     console.error("Error al obtener las ciudades", error);
-    return null;
+    throw error;
   }
 };
 
 export const getQr = async (id: number) => {
-  const response = await api.get(`/Qrs/GenerateQr/${id}`);
+  try {
+    const response = await api.get(`/Qrs/GenerateQr/${id}`);
 
-  return response.data;
+    return response.data;
+  } catch (error) {
+    console.error("Error al obtener el qr", error);
+    throw error;
+  }
 };

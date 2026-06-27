@@ -45,6 +45,17 @@ function LoginPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!loginForm.userName.trim()) {
+      notify.error("Error", `El usuario es obligatorio`);
+      return;
+    }
+
+    if (!loginForm.password.trim()) {
+      notify.error("Error", `La constraseña es obligatoria`);
+      return;
+    }
+
     setLoading(true);
 
     const loginData: LoginCredentials = {
@@ -55,10 +66,13 @@ function LoginPage() {
     try {
       const data = await login(loginData);
       const { id, token } = data;
-      const userData = await getUser(id);
+      const [userData, studentData, coachData] = await Promise.all([
+        getUser(id),
+        getStudent(id),
+        getCoach(id),
+      ]);
+
       const { firstName } = userData;
-      const studentData = await getStudent(id);
-      const coachData = await getCoach(id);
 
       const user: UserAuth = {
         id,
@@ -74,8 +88,8 @@ function LoginPage() {
       notify.success("Logueado con exito!");
       navigate({ to: "/perfil/$userId", params: { userId: id } });
     } catch (error) {
+      console.error("error al iniciar sesion");
       notify.error("error", "Error al iniciar Sesión");
-      throw error;
     } finally {
       setLoading(false);
     }

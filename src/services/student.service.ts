@@ -16,13 +16,12 @@ const api = axios.create({
 export const createStudent = async (studentData: Student) => {
   try {
     const response = await api.post("/Students", studentData);
-
     const { data } = response.data;
 
     return data;
   } catch (error) {
     console.error("Error al crear el perfil del cliente", error);
-    return null;
+    throw error;
   }
 };
 
@@ -43,16 +42,14 @@ export const updateStudent = async (userData: User) => {
       ...dataToSend
     } = userData;
 
-    console.log(dataToSend);
-
     const newDataToSend = { id: userData.student?.id, ...dataToSend };
-    console.log(newDataToSend);
 
     const response = await api.put(`/Students/${userData.student?.id}`, newDataToSend);
 
     return response;
   } catch (error) {
     console.error("Error al guardar:", error);
+    throw error;
   }
 };
 
@@ -66,7 +63,7 @@ export const getStudent = async (id: number) => {
     return data;
   } catch (error) {
     console.error("Error al obtener el perfil del usuario", error);
-    return null;
+    throw error;
   }
 };
 
@@ -80,6 +77,7 @@ export const getStudentById = async (id: number) => {
     return data;
   } catch (error) {
     console.error("Error al obtener el perfil del usuario", error);
+    throw error;
   }
 };
 
@@ -93,6 +91,6 @@ export const getStudents = async () => {
     return data;
   } catch (error) {
     console.error("Error al obtener el perfil del usuario", error);
-    return null;
+    throw error;
   }
 };

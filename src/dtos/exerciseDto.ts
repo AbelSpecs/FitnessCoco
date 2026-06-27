@@ -14,6 +14,17 @@ export interface DailyStudentExerciseDto {
 }
 
 export interface UpdateDailyStudentExerciseDto {
+  coachId: number;
+  studentId: number;
+  exerciseId: number;
+  scheduledDate: string;
+  dailyExerciseSets: DailyExerciseSetsDto[];
+  exerciseName?: string;
+  muscleGroupName?: string;
+  coachNotes?: string;
+}
+
+export interface UpdateCompleteDailyStudentExerciseDto {
   isCompleted: boolean;
   studentNotes: string;
 }
@@ -55,6 +66,7 @@ export interface GetExerciseDto {
 }
 
 // DailyExercisesSetsDto
+
 export interface DailyExerciseSetsDto {
   // set: {
   id?: number;

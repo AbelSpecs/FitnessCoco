@@ -45,13 +45,16 @@ import { getUser } from "@/services/user.service";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
+  deleteDailyStudentExercises,
   deleteExercise,
   getDailyStudentExercisesByStudentIdAndDate,
   getExercise,
   getExerciseByMuscleGroupId,
   getMuscleGroups,
+  postDailyExercisesSets,
   postDailyStudentExercises,
   postExercise,
+  updateDailyStudentsExercises,
 } from "@/services/routine.service";
 import { useAuthStore } from "@/store/authStore";
 import {
@@ -61,6 +64,7 @@ import {
   GetDailyExerciseSetsDto,
   GetDailyStudentExerciseDto,
   GetMuscleGroupDto,
+  UpdateDailyStudentExerciseDto,
 } from "@/dtos/exerciseDto";
 import {
   DailyExerciseSets,
@@ -84,6 +88,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { exercisesMapper } from "@/mappers/exercises";
 import { Goal, goalLabels } from "@/types/goals";
+import { addDays, format, isAfter, isEqual } from "date-fns";
 
 const emptySet = (): DailyExerciseSetsForm => ({
   id: `ex-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
@@ -119,13 +124,15 @@ export const Route = createFileRoute("/clientes/$studentId")({
         plan: userResponse.planType || "basic",
       };
 
-      const completeExercisesMapped: Exercise[] = exercisesMapper(dailyExercises);
-      console.log(completeExercisesMapped);
-
       const muscleGroupsMapped: MuscleGroupSelect[] = muscleGroups.map((m: GetMuscleGroupDto) => ({
         id: m.id,
         name: m.name,
       }));
+
+      const completeExercisesMapped: Exercise[] = exercisesMapper(
+        dailyExercises,
+        muscleGroupsMapped,
+      );
 
       return {
         studentId: params.studentId,
@@ -175,20 +182,21 @@ function ClientRoutinesPage() {
 
   // new exercise
   const [pendingExercises, setPendingExercises] = useState<NewExercise[]>([]);
-  const [refreshing, setRefreshing] = useState(false);
-  const [saved, setSaved] = useState(false);
-  const [showNewExerciseDialog, setShowNewExerciseDialog] = useState(false);
+  const [refreshing, setRefreshing] = useState<boolean>(false);
+  const [saved, setSaved] = useState<boolean>(false);
+  const [showNewExerciseDialog, setShowNewExerciseDialog] = useState<boolean>(false);
   const [newExerciseForm, setNewExerciseForm] = useState<NewExercise>({
     name: "",
     muscleGroupId: 0,
   });
 
   // show form states
-  const [showForm, setShowForm] = useState(false);
+  const [showForm, setShowForm] = useState<boolean>(false);
   const [getShowForm, setGetShowForm] = useState<number | string>("");
   // Post state
-  const [savedRoutine, setSavedRoutine] = useState(false);
+  const [savedRoutine, setSavedRoutine] = useState<boolean>(false);
   const [routineForm, setRoutineForm] = useState<ExerciseForm>({
+    dailyStudentExerciseId: 0,
     exerciseId: 0,
     exerciseName: "",
     muscleGroupId: 0,
@@ -198,9 +206,13 @@ function ClientRoutinesPage() {
     scheduledDate: new Date().toISOString(),
     dailyExerciseSets: [emptySet()],
   });
+  // update state
+  const [isUpdating, setIsUpdating] = useState<boolean>(false);
+  const [setsLength, setSetsLength] = useState<number>(0);
 
   const resetForm = () => {
     setRoutineForm({
+      dailyStudentExerciseId: 0,
       exerciseId: 0,
       exerciseName: "",
       muscleGroupId: 0,
@@ -224,11 +236,11 @@ function ClientRoutinesPage() {
     setShowForm((s) => !s);
   };
 
-  const updateSet = (id: string, patch: Partial<DailyExerciseSets>) => {
+  const updateSet = (id: string, patch: Partial<DailyExerciseSets | DailyExerciseSetsForm>) => {
     setRoutineForm((prev) => ({
       ...prev,
       dailyExerciseSets: prev.dailyExerciseSets.map((item) =>
-        item.id === id ? { ...item, ...patch } : item,
+        String(item.id) === String(id) ? { ...item, ...patch } : item,
       ),
     }));
   };
@@ -252,7 +264,9 @@ function ClientRoutinesPage() {
     if (!pendingDelete) return;
 
     try {
-      const exerciseDeleted = await deleteExercise(Number(pendingDelete.dailyExerciseId));
+      const exerciseDeleted = await deleteDailyStudentExercises(
+        Number(pendingDelete.dailyExerciseId),
+      );
       setRoutines((prev) =>
         prev.filter((r) => r.dailyExerciseId !== pendingDelete.dailyExerciseId),
       );
@@ -262,7 +276,7 @@ function ClientRoutinesPage() {
       );
     } catch (error) {
       console.error("Error al eliminar la rutina", error);
-      throw error;
+      notify.error("error", "Error al eliminar la rutina");
     } finally {
       setPendingDelete(null);
     }
@@ -287,7 +301,6 @@ function ClientRoutinesPage() {
       setNewExerciseForm((prev) => ({ ...prev, muscleGroupId: muscleGroupId }));
       return;
     }
-    console.log(muscleGroupId);
 
     setRoutineForm((prev) => ({ ...prev, muscleGroupId: muscleGroupId }));
     try {
@@ -299,7 +312,6 @@ function ClientRoutinesPage() {
     } catch (error) {
       console.error("Error al obtener los ejercicios", error);
       notify.error("error", "Error al obtener los ejercicios");
-      throw error;
     }
   };
 
@@ -317,7 +329,6 @@ function ClientRoutinesPage() {
     } catch (error) {
       console.error("Error fetching:", error);
       notify.error("error", "Error al obtener las rutinas intenta nuevamente");
-      throw error;
     }
   };
 
@@ -364,7 +375,6 @@ function ClientRoutinesPage() {
     } catch (error) {
       console.error("Error al crear el ejercicio", error);
       notify.error("Error al crear", "Ocurrió un error al crear el ejercicio. Intenta de nuevo.");
-      throw error;
     } finally {
       setSaved(false);
       setShowNewExerciseDialog(false);
@@ -380,9 +390,93 @@ function ClientRoutinesPage() {
       setExercises(exercises);
     } catch (error) {
       console.error("Error al refrescar", error);
-      throw error;
+      notify.error("error", "Error al refrescar, Intente de nuevo");
     } finally {
       setRefreshing(false);
+    }
+  };
+
+  const handleEnableEdit = (routine: Exercise) => {
+    setRoutineForm({
+      dailyStudentExerciseId: routine.dailyExerciseId,
+      exerciseId: routine.exerciseId,
+      exerciseName: routine.exerciseName,
+      muscleGroupId: routine.muscleGroupId!,
+      muscleGroupName: routine.muscleGroupName,
+      description: routine.description,
+      coachNotes: routine.coachNotes,
+      scheduledDate: routine.scheduledDate,
+      dailyExerciseSets: routine.dailyExerciseSets,
+    });
+
+    setIsUpdating(true);
+    setGetShowForm("");
+    setShowForm(true);
+  };
+
+  const handleUpdateRoutine = async () => {
+    const setsWithNoId: DailyExerciseSetsForm[] = routineForm.dailyExerciseSets.filter((d) =>
+      Number.isNaN(d.id),
+    );
+
+    try {
+      const dailyExerciseToUpdate: UpdateDailyStudentExerciseDto = {
+        coachId: user!.coachId!,
+        studentId: Number(studentId),
+        exerciseId: routineForm.exerciseId,
+        scheduledDate: routineForm.scheduledDate,
+        dailyExerciseSets: routineForm.dailyExerciseSets
+          .filter((s) => Number(s.id))
+          .map((s) => ({
+            id: Number(s.id),
+            dailyStudentExerciseId: routineForm.dailyStudentExerciseId,
+            setNumber: Number(s.setNumber),
+            targetReps: Number(s.targetReps),
+            targetWeight: Number(s.targetWeight),
+            restTime: s.restTime,
+            actualReps: s.actualReps,
+            actualWeight: s.actualWeight,
+            isAchieved: s.isAchieved,
+          })),
+        exerciseName: routineForm.exerciseName,
+        muscleGroupName: routineForm.muscleGroupName,
+        coachNotes: routineForm.coachNotes,
+      };
+      console.log(dailyExerciseToUpdate);
+
+      const updatedDailyExercises = await updateDailyStudentsExercises(
+        Number(routineForm.dailyStudentExerciseId),
+        dailyExerciseToUpdate,
+      );
+
+      console.log(updatedDailyExercises);
+
+      if (setsWithNoId.length > 0) {
+        const setsFormatted: DailyExerciseSetsDto[] = setsWithNoId?.map((s) => ({
+          dailyStudentExerciseId: routineForm.dailyStudentExerciseId,
+          setNumber: Number(s.setNumber),
+          targetReps: Number(s.targetReps),
+          targetWeight: Number(s.targetWeight),
+          restTime: s.restTime,
+          actualReps: s.actualReps,
+          actualWeight: s.actualWeight,
+          isAchieved: s.isAchieved,
+        }));
+
+        const setsResponses = setsFormatted.map((s) => postDailyExercisesSets(s));
+
+        const responses = await Promise.all(setsResponses);
+      }
+
+      console.log(updatedDailyExercises);
+      notify.created("Ejercicio actualizado", `se ha actualizado con exito`);
+      resetForm();
+    } catch (error) {
+      console.error("Error al actualizar la rutina", error);
+      notify.error(
+        "Error al actualizar",
+        "Ocurrió un error al actualizar la rutina. Intenta de nuevo.",
+      );
     }
   };
 
@@ -472,7 +566,6 @@ function ClientRoutinesPage() {
     } catch (error) {
       console.error("Error al guardar la rutina", error);
       notify.error("Error al guardar", "Ocurrió un error al guardar la rutina. Intenta de nuevo.");
-      throw error;
     } finally {
       setSavedRoutine(false);
       setShowForm(false);
@@ -531,11 +624,11 @@ function ClientRoutinesPage() {
               <div className="flex items-start justify-between mb-4 gap-3">
                 <div>
                   <p className="text-[10px] uppercase tracking-[0.3em] text-primary-glow mb-1">
-                    Nueva rutina
+                    {isUpdating ? "Modificar rutina" : "Nueva rutina"}
                   </p>
                   <h2 className="font-display text-xl sm:text-2xl flex items-center gap-2">
                     <Dumbbell className="h-5 w-5 text-primary-glow" />
-                    Crear rutina
+                    {isUpdating ? "Actualizar rutina" : "Crear rutina"}
                   </h2>
                 </div>
                 <Button
@@ -577,7 +670,7 @@ function ClientRoutinesPage() {
                       Ejercicio
                     </Label>
                     <SearchableSelect
-                      value={routineForm.muscleGroupId ? String(routineForm.exerciseId) : ""}
+                      value={routineForm.exerciseId ? String(routineForm.exerciseId) : ""}
                       placeholder="Selecciona ejercicio"
                       options={exercises.map((e) => ({ value: e.id.toString(), label: e.name }))}
                       onValueChange={(value) => {
@@ -691,9 +784,11 @@ function ClientRoutinesPage() {
                         <Input
                           value={set.targetReps}
                           name="targetReps"
-                          onChange={(e) =>
-                            updateSet(set.id.toString(), { targetReps: e.target.value })
-                          }
+                          onChange={(e) => {
+                            console.log("me dispare");
+                            console.log(e.target.value);
+                            updateSet(set.id.toString(), { targetReps: e.target.value });
+                          }}
                           placeholder="12"
                           type="number"
                           min={1}
@@ -759,11 +854,12 @@ function ClientRoutinesPage() {
                   Cancelar
                 </Button>
                 <Button
-                  onClick={handleSaveRoutine}
+                  onClick={isUpdating ? handleUpdateRoutine : handleSaveRoutine}
                   className="bg-gradient-primary hover:opacity-90 shadow-glow"
                   disabled={savedRoutine}
                 >
-                  <Save className="h-4 w-4 mr-1" /> Guardar rutina
+                  <Save className="h-4 w-4 mr-1" />{" "}
+                  {isUpdating ? "Actualizar rutina" : "Guardar rutina"}
                 </Button>
               </div>
             </Card>
@@ -810,7 +906,7 @@ function ClientRoutinesPage() {
               <Button
                 onClick={handleAdd}
                 variant="outline"
-                className="border-primary/40 hover:bg-primary/10"
+                className="border-primary/40 hover:bg-primary/10 hover:text-white"
               >
                 <Plus className="h-4 w-4 mr-1" /> Crear la primera
               </Button>
@@ -818,12 +914,17 @@ function ClientRoutinesPage() {
             </Card>
           ) : (
             <div className="space-y-3">
-              {routines.map((routine) => {
+              {routines.map((routine, index) => {
                 const today = new Date();
+                today.setUTCHours(0, 0, 0, 0);
+                const correctedToday = addDays(today, 1);
+                const todayFormatted = format(correctedToday, "yyyy-MM-dd");
                 const routineDay = new Date(routine.scheduledDate);
-                today.setHours(0, 0, 0, 0);
-                routineDay.setHours(0, 0, 0, 0);
-                const isFutureRoutine = routineDay.getTime() > today.getTime();
+                const correctedRoutineDay = addDays(routineDay, 1);
+                const routineDayFormatted = format(correctedRoutineDay, "yyyy-MM-dd");
+
+                const isFutureRoutine = todayFormatted <= routineDayFormatted;
+
                 return (
                   <Card
                     key={routine.exerciseId}
@@ -904,7 +1005,7 @@ function ClientRoutinesPage() {
                               Notas del Cliente
                             </Label>
                             <Textarea
-                              value={routine.studentNotes}
+                              value={routine.studentNotes || ""}
                               placeholder="notas del cliente"
                               className="mt-1.5 bg-background/60 border-border focus-visible:ring-primary/40"
                               disabled
@@ -943,7 +1044,7 @@ function ClientRoutinesPage() {
                                   Repeticiones
                                 </Label>
                                 <Input
-                                  value={exerciseSet.targetReps}
+                                  value={exerciseSet.targetReps || ""}
                                   onChange={(e) =>
                                     updateSet(exerciseSet.id.toString(), {
                                       targetReps: e.target.value,
@@ -961,7 +1062,7 @@ function ClientRoutinesPage() {
                                   <Layers className="h-3 w-3" /> Peso (kg)
                                 </Label>
                                 <Input
-                                  value={exerciseSet.targetWeight}
+                                  value={exerciseSet.targetWeight || ""}
                                   onChange={(e) =>
                                     updateSet(exerciseSet.targetWeight.toString(), {
                                       targetWeight: e.target.value,
@@ -977,7 +1078,7 @@ function ClientRoutinesPage() {
                                   <Repeat className="h-3 w-3" /> Descanso (s)
                                 </Label>
                                 <Input
-                                  value={exerciseSet.restTime}
+                                  value={exerciseSet.restTime || ""}
                                   onChange={(e) =>
                                     updateSet(exerciseSet.id.toString(), {
                                       restTime: e.target.value,
@@ -996,7 +1097,7 @@ function ClientRoutinesPage() {
                                   type="number"
                                   min={0}
                                   max={50}
-                                  value={exerciseSet.actualReps}
+                                  value={exerciseSet.actualReps || ""}
                                   onChange={(e) =>
                                     updateSet(exerciseSet.id.toString(), {
                                       actualReps: Number(e.target.value),
@@ -1017,7 +1118,7 @@ function ClientRoutinesPage() {
                                   type="number"
                                   min={1}
                                   max={700}
-                                  value={exerciseSet.actualWeight}
+                                  value={exerciseSet.actualWeight || ""}
                                   onChange={(e) =>
                                     updateSet(exerciseSet.id.toString(), {
                                       actualWeight: Number(e.target.value),
@@ -1033,15 +1134,29 @@ function ClientRoutinesPage() {
                         ))}
                         <div className="flex items-center gap-3 justify-end flex-wrap">
                           {isFutureRoutine && (
-                            <Button variant="outline" className="border-border hover:text-white ">
-                              Actualizar
-                            </Button>
+                            <>
+                              <Button
+                                variant="outline"
+                                className="border-border hover:text-white "
+                                onClick={() => handleEnableEdit(routine)}
+                              >
+                                Editar
+                              </Button>
+                              {/* <Button
+                                variant="outline"
+                                className="border-border hover:text-white "
+                                onClick={() => handleUpdateRoutine(routine)}
+                              >
+                                Actualizar
+                              </Button> */}
+                            </>
                           )}
                           <Button
                             variant="outline"
                             className="border-border hover:text-white"
                             onClick={() => {
                               setGetShowForm("");
+                              resetForm();
                             }}
                           >
                             Cancelar

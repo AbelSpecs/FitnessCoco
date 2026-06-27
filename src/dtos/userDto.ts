@@ -31,6 +31,12 @@ export interface CoachDto {
   certifications?: string;
 }
 
+export interface CoachStudentsDto {
+  studentId: number;
+  name: string;
+  fitnessGoal: string;
+}
+
 export interface UserDto {
   student: StudentDto;
   coach: CoachDto;

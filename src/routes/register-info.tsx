@@ -136,6 +136,7 @@ function RegisterInfoPage() {
       notify.error("Error", `Las contraseñas no coinciden`);
       return;
     }
+
     if (registerForm.password!.length < 8) {
       notify.error("Error", `La contraseña debe tener al menos 8 caracteres`);
       return;

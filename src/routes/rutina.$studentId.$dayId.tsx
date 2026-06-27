@@ -44,12 +44,12 @@ import { CompleteDate, DailyExerciseSets, DayRoutine, Exercise } from "@/types/e
 import {
   getDailyStudentExercisesByStudentIdAndDate,
   updateDailyExercisesSets,
-  updateDailyStudentExercises,
+  updateCompleteDailyStudentExercises,
 } from "@/services/routine.service";
 import {
   DailyExerciseSetsDto,
   GetDailyStudentExerciseDto,
-  UpdateDailyStudentExerciseDto,
+  UpdateCompleteDailyStudentExerciseDto,
 } from "@/dtos/exerciseDto";
 import { determineDate } from "@/utils/determineDate";
 import { addDays, format } from "date-fns";
@@ -65,7 +65,6 @@ export const Route = createFileRoute("/rutina/$studentId/$dayId")({
   }),
   loader: async ({ params }) => {
     try {
-      console.log(params.studentId, params.dayId);
       const exercisesData: GetDailyStudentExerciseDto[] =
         await getDailyStudentExercisesByStudentIdAndDate(Number(params.studentId), params.dayId);
 
@@ -87,7 +86,6 @@ export const Route = createFileRoute("/rutina/$studentId/$dayId")({
           dailyExerciseSets: e.dailyExerciseSets as DailyExerciseSets[],
         };
       });
-      console.log(mappedExercises);
 
       return { dayExercises: mappedExercises };
     } catch (error) {
@@ -208,12 +206,12 @@ function ExerciseRow({ ex, index }: { ex: Exercise; index: number }) {
   const [showSets, setShowSets] = useState(false);
 
   const handleExerciseUpdate = async (ex: Exercise) => {
-    const exercisetoUpdate: UpdateDailyStudentExerciseDto = {
+    const exercisetoUpdate: UpdateCompleteDailyStudentExerciseDto = {
       isCompleted: true,
       studentNotes: notes,
     };
     try {
-      const updatedExercise = await updateDailyStudentExercises(
+      const updatedExercise = await updateCompleteDailyStudentExercises(
         ex.dailyExerciseId,
         exercisetoUpdate,
       );

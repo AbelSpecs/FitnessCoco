@@ -80,7 +80,7 @@ export const Route = createFileRoute("/rutina/$studentId/")({
       return { weekRoutineDays: weekRoutineDays, studentId: params.studentId };
     } catch (error) {
       console.error(error);
-      return { initialExercises: [] };
+      throw error;
     }
   },
   beforeLoad: ({ location }) => {
@@ -172,7 +172,6 @@ function RutinaPage() {
     } catch (error) {
       console.error(error);
       notify.error("Error al actualzar", "Intenta de nuevo.");
-      throw error;
     } finally {
       setSelectedDate(date);
     }

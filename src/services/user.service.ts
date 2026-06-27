@@ -21,7 +21,7 @@ export const createStudent = async (studentData: Student) => {
     return data;
   } catch (error) {
     console.error("Error al crear el perfil del cliente", error);
-    return null;
+    throw error;
   }
 };
 
@@ -33,7 +33,7 @@ export const getUserDetails = async (id: number) => {
     return data;
   } catch (error) {
     console.error("Error al obtener el perfil del usuario", error);
-    return null;
+    throw error;
   }
 };
 
@@ -41,9 +41,10 @@ export const getUser = async (id: number) => {
   try {
     const response = await api.get(`/Users/${id}`);
     const { data } = response.data;
+
     return data;
   } catch (error) {
     console.error("Error al obtener el perfil del usuario", error);
-    return null;
+    throw error;
   }
 };

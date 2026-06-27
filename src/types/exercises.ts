@@ -18,6 +18,7 @@ export interface Exercise {
   studentId: number;
   exerciseName: string;
   description?: string;
+  muscleGroupId?: number;
   muscleGroupName: string;
   coachNotes: string;
   studentNotes: string;
@@ -40,6 +41,7 @@ export interface DailyExerciseSetsForm {
 }
 
 export interface ExerciseForm {
+  dailyStudentExerciseId: number;
   exerciseId: number;
   exerciseName: string;
   muscleGroupId: number;

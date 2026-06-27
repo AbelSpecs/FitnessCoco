@@ -16,6 +16,11 @@ import {
 } from "recharts";
 import { goalLabels } from "@/types/goals";
 import { useAuthStore } from "@/store/authStore";
+import { getCoachStudents } from "@/services/coach.service";
+import { CoachStudentsDto, StudentDto } from "@/dtos/userDto";
+import { countActiveClients, countPorcentageStudents } from "@/helpers/studentsHelper";
+import { useMemo } from "react";
+import { getStudents } from "@/services/student.service";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -27,6 +32,25 @@ export const Route = createFileRoute("/")({
       },
     ],
   }),
+  loader: async () => {
+    const auth = JSON.parse(localStorage.getItem("pyrosfit_user")!);
+    console.log(auth);
+    const { role, coachId, studentId } = auth;
+
+    try {
+      const completeStudentsList: StudentDto[] = await getStudents();
+
+      const studentListData: CoachStudentsDto[] = await getCoachStudents(coachId);
+
+      return {
+        completeStudentsList,
+        studentListData,
+      };
+    } catch (error) {
+      console.error("Error fetching data:", error);
+      throw error;
+    }
+  },
   component: Dashboard,
   beforeLoad: ({ location }) => {
     const auth = localStorage.getItem("pyrosfit_user");
@@ -47,6 +71,13 @@ function Dashboard() {
   const todayIndex = today === 0 ? 6 : today - 1;
   const todayPlan = weekPlan[todayIndex];
   const { user } = useAuthStore();
+  const { completeStudentsList, studentListData } = Route.useLoaderData();
+
+  const studentsNumber = useMemo(() => countActiveClients(studentListData), [studentListData]);
+  const porcentageStudents = useMemo(
+    () => countPorcentageStudents(completeStudentsList, studentListData),
+    [completeStudentsList, studentListData],
+  );
 
   return (
     <AppShell>
@@ -110,16 +141,16 @@ function Dashboard() {
               hint={goalLabels[user!.fitnessGoal!]}
             /> */}
             <StatTile
-              icon={Trophy}
-              label="Mejor cliente esta semana"
-              value="4"
-              hint="récords personales"
+              icon={Target}
+              label="Número de Clientes"
+              value={studentsNumber.toString()}
+              hint="clientes inscritos"
             />
             <StatTile
-              icon={TrendingUp}
-              label="Volumen de clientes"
-              value="+18%"
-              hint="vs mes pasado"
+              icon={Trophy}
+              label="Porcentaje de Clientes"
+              value={porcentageStudents.toString() + " %"}
+              hint="de la totalidad"
             />
           </div>
         </div>
