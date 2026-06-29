@@ -11,6 +11,7 @@ import {
 } from "date-fns";
 import { es } from "date-fns/locale";
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight } from "lucide-react";
+import { getSixDaysLater } from "@/helpers/generics";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -28,9 +29,9 @@ const DAY_LABELS = ["L", "M", "X", "J", "V", "S", "D"];
  */
 function getWeekOfMonth(date: Date) {
   const firstDay = startOfMonth(date);
-  const firstWeekStart = startOfWeek(firstDay, { weekStartsOn: 1 });
-  const currentWeekStart = startOfWeek(date, { weekStartsOn: 1 });
-  return differenceInCalendarWeeks(currentWeekStart, firstWeekStart, { weekStartsOn: 1 }) + 1;
+  const firstWeekStart = startOfWeek(firstDay, { weekStartsOn: 0 });
+  const currentWeekStart = startOfWeek(date, { weekStartsOn: 0 });
+  return differenceInCalendarWeeks(currentWeekStart, firstWeekStart, { weekStartsOn: 0 }) + 1;
 }
 export function WeekSlider({
   value,
@@ -41,9 +42,9 @@ export function WeekSlider({
 }: WeekSliderProps) {
   const today = useMemo(() => new Date(), []);
   const selected = value ?? today;
-  const selectedWeekStart = useMemo(() => startOfWeek(selected, { weekStartsOn: 1 }), [selected]);
+  const selectedWeekStart = useMemo(() => startOfWeek(selected, { weekStartsOn: 0 }), [selected]);
   const weeks = useMemo(() => {
-    const baseWeekStart = startOfWeek(today, { weekStartsOn: 1 });
+    const baseWeekStart = startOfWeek(today, { weekStartsOn: 0 });
 
     const list: Date[] = [];
     for (let i = -weeksBefore; i <= weeksAfter; i++) {
@@ -89,7 +90,7 @@ export function WeekSlider({
               {monthLabel}
             </p>
             <p className="text-xs text-muted-foreground truncate">
-              Semana {weekOfMonth} del mes · Semana {getWeek(selected, { weekStartsOn: 1 })} del año
+              Semana {weekOfMonth} del mes · Semana {getWeek(selected, { weekStartsOn: 0 })} del año
             </p>
           </div>
         </div>
@@ -122,8 +123,8 @@ export function WeekSlider({
       >
         {weeks.map((weekStart) => {
           const isSelected = isSameDay(weekStart, selectedWeekStart);
-          const isCurrent = isSameDay(weekStart, startOfWeek(today, { weekStartsOn: 1 }));
-          const weekEnd = addDays(weekStart, 6);
+          const isCurrent = isSameDay(weekStart, startOfWeek(today, { weekStartsOn: 0 }));
+          const weekEnd = getSixDaysLater(weekStart);
           const sameMonth = weekStart.getMonth() === weekEnd.getMonth();
           const monthShort = sameMonth
             ? format(weekStart, "LLL", { locale: es })

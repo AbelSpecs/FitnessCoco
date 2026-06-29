@@ -442,14 +442,11 @@ function ClientRoutinesPage() {
         muscleGroupName: routineForm.muscleGroupName,
         coachNotes: routineForm.coachNotes,
       };
-      console.log(dailyExerciseToUpdate);
 
       const updatedDailyExercises = await updateDailyStudentsExercises(
         Number(routineForm.dailyStudentExerciseId),
         dailyExerciseToUpdate,
       );
-
-      console.log(updatedDailyExercises);
 
       if (setsWithNoId.length > 0) {
         const setsFormatted: DailyExerciseSetsDto[] = setsWithNoId?.map((s) => ({
@@ -468,7 +465,6 @@ function ClientRoutinesPage() {
         const responses = await Promise.all(setsResponses);
       }
 
-      console.log(updatedDailyExercises);
       notify.created("Ejercicio actualizado", `se ha actualizado con exito`);
       resetForm();
     } catch (error) {
@@ -785,8 +781,6 @@ function ClientRoutinesPage() {
                           value={set.targetReps}
                           name="targetReps"
                           onChange={(e) => {
-                            console.log("me dispare");
-                            console.log(e.target.value);
                             updateSet(set.id.toString(), { targetReps: e.target.value });
                           }}
                           placeholder="12"
@@ -1135,13 +1129,13 @@ function ClientRoutinesPage() {
                         <div className="flex items-center gap-3 justify-end flex-wrap">
                           {isFutureRoutine && (
                             <>
-                              <Button
+                              {/* <Button
                                 variant="outline"
                                 className="border-border hover:text-white "
                                 onClick={() => handleEnableEdit(routine)}
                               >
                                 Editar
-                              </Button>
+                              </Button> */}
                               {/* <Button
                                 variant="outline"
                                 className="border-border hover:text-white "
