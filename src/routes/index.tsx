@@ -16,6 +16,25 @@ import {
 } from "recharts";
 import { goalLabels } from "@/types/goals";
 import { useAuthStore } from "@/store/authStore";
+import { getCoachStudents } from "@/services/coach.service";
+import { CoachStudentsDto, StudentDto } from "@/dtos/userDto";
+import {
+  countActiveClients,
+  countPorcentageStudents,
+  calculateWeeklyStreak,
+  calculateWeeklyVolume,
+  calculateRoutineDurationInMin,
+} from "@/helpers/studentsHelper";
+import { useMemo } from "react";
+import { getStudents } from "@/services/student.service";
+import {
+  getDailyStudentExercisesByStudentIdAndDate,
+  getDailyStudentExercisesByStudentIdAndDates,
+} from "@/services/routine.service";
+import { format, addDays } from "date-fns";
+import { es } from "date-fns/locale";
+import { GetDailyStudentExerciseDto } from "@/dtos/exerciseDto";
+import { getSixDaysLaterFormatted } from "@/helpers/generics";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -27,6 +46,46 @@ export const Route = createFileRoute("/")({
       },
     ],
   }),
+  loader: async () => {
+    const auth = JSON.parse(localStorage.getItem("pyrosfit_user")!);
+    const { role, coachId, studentId } = auth;
+
+    try {
+      if (role === "coach") {
+        const [completeStudentsList, studentListData] = await Promise.all([
+          getStudents(),
+          getCoachStudents(coachId),
+        ]);
+
+        return {
+          role,
+          completeStudentsList,
+          studentListData,
+          dailyExercises: undefined,
+          weeklyExercises: undefined,
+        };
+      }
+
+      const todayStr = format(new Date(), "yyyy-MM-dd");
+      const sixDaysLaterStr = getSixDaysLaterFormatted(new Date());
+
+      const [dailyExercises, weeklyExercises] = await Promise.all([
+        getDailyStudentExercisesByStudentIdAndDate(studentId, todayStr),
+        getDailyStudentExercisesByStudentIdAndDates(studentId, todayStr, sixDaysLaterStr),
+      ]);
+
+      return {
+        role,
+        completeStudentsList: undefined,
+        studentListData: undefined,
+        dailyExercises,
+        weeklyExercises,
+      };
+    } catch (error) {
+      console.error("Error fetching data:", error);
+      throw error;
+    }
+  },
   component: Dashboard,
   beforeLoad: ({ location }) => {
     const auth = localStorage.getItem("pyrosfit_user");
@@ -43,10 +102,70 @@ export const Route = createFileRoute("/")({
 });
 
 function Dashboard() {
-  const today = new Date().getDay(); // 0 = Dom
+  const today = new Date().getDay();
   const todayIndex = today === 0 ? 6 : today - 1;
   const todayPlan = weekPlan[todayIndex];
   const { user } = useAuthStore();
+  const { completeStudentsList, studentListData, role, dailyExercises, weeklyExercises } =
+    Route.useLoaderData();
+
+  const studentsNumber = useMemo(
+    () => (studentListData ? countActiveClients(studentListData) : 0),
+    [studentListData],
+  );
+  const porcentageStudents = useMemo(
+    () =>
+      completeStudentsList && studentListData
+        ? countPorcentageStudents(completeStudentsList, studentListData)
+        : 0,
+    [completeStudentsList, studentListData],
+  );
+  const dailyExercisesNum = useMemo(() => dailyExercises?.length || 0, [dailyExercises]);
+  const dailyDuration = useMemo(
+    () => (dailyExercises ? calculateRoutineDurationInMin(dailyExercises as any) : 0),
+    [dailyExercises],
+  );
+  const dailyFocus = useMemo(() => {
+    if (!dailyExercises || dailyExercises.length === 0) return todayPlan.focus;
+    const groups = Array.from(
+      new Set((dailyExercises as any).map((ex: any) => ex.muscleGroupName).filter(Boolean)),
+    );
+    return groups.length > 0 ? groups.join(", ") : todayPlan.focus;
+  }, [dailyExercises, todayPlan.focus]);
+
+  const weeklyStreak = useMemo(
+    () => (weeklyExercises ? calculateWeeklyStreak(weeklyExercises) : 0),
+    [weeklyExercises],
+  );
+  const weeklyVolume = useMemo(
+    () => (weeklyExercises ? calculateWeeklyVolume(weeklyExercises) : 0),
+    [weeklyExercises],
+  );
+
+  const weekRoutineDays = useMemo(() => {
+    if (!weeklyExercises) return [];
+    const todayDate = new Date();
+
+    return Array.from({ length: 7 }, (_, i) => {
+      const currentDayDate = addDays(todayDate, i);
+      const dateString = format(currentDayDate, "yyyy-MM-dd");
+      const dayName = format(currentDayDate, "EEEE", { locale: es });
+      const dayShort = format(currentDayDate, "eeeeee", { locale: es });
+
+      const dayExercises = weeklyExercises.filter(
+        (ex: GetDailyStudentExerciseDto) => ex.scheduledDate.split("T")[0] === dateString,
+      );
+
+      return {
+        id: dateString,
+        day: dayName.charAt(0).toUpperCase() + dayName.slice(1),
+        short: dayShort.charAt(0).toUpperCase(),
+        rest: dayExercises.length === 0,
+        focus: dayExercises.length > 0 ? dayExercises[0].muscleGroupName : "Descanso",
+        isToday: i === 0,
+      };
+    });
+  }, [weeklyExercises]);
 
   return (
     <AppShell>
@@ -73,8 +192,8 @@ function Dashboard() {
             </h1>
             {user?.role === "student" && (
               <p className="text-sm sm:text-base text-muted-foreground max-w-md mb-5 sm:mb-6">
-                Hoy te toca <strong className="text-foreground">{todayPlan.focus}</strong> ·{" "}
-                {todayPlan.durationMin} min · {todayPlan.exercises.length} ejercicios.
+                Hoy te toca <strong className="text-foreground">{dailyFocus}</strong> ·{" "}
+                {dailyDuration} min · {dailyExercisesNum} ejercicios.
               </p>
             )}
             <div className="flex flex-col sm:flex-row gap-3">
@@ -89,129 +208,181 @@ function Dashboard() {
                   </Link>
                 </Button>
               )}
-              <Button variant="glass" size="lg" asChild className="w-full sm:w-auto">
+              {/* <Button variant="glass" size="lg" asChild className="w-full sm:w-auto">
                 <Link to=".">Ver progreso</Link>
-              </Button>
+              </Button> */}
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
-            {/* <StatTile
-              icon={Flame}
-              label="Racha"
-              value={`${user.streak}`}
-              hint="días seguidos"
-              accent
-            />
-            <StatTile
-              icon={Target}
-              label="Objetivo"
-              value={goalLabels[user!.fitnessGoal!].split(" ")[1]}
-              hint={goalLabels[user!.fitnessGoal!]}
-            /> */}
-            <StatTile
-              icon={Trophy}
-              label="Mejor cliente esta semana"
-              value="4"
-              hint="récords personales"
-            />
-            <StatTile
-              icon={TrendingUp}
-              label="Volumen de clientes"
-              value="+18%"
-              hint="vs mes pasado"
-            />
+            {user?.role === "coach" ? (
+              <>
+                <StatTile
+                  icon={Target}
+                  label="Número de Clientes"
+                  value={studentsNumber.toString()}
+                  hint="clientes inscritos"
+                />
+                <StatTile
+                  icon={Trophy}
+                  label="Porcentaje de Clientes"
+                  value={porcentageStudents.toString() + " %"}
+                  hint="de la totalidad"
+                />
+              </>
+            ) : (
+              <>
+                <StatTile
+                  icon={Flame}
+                  label="Racha Semanal"
+                  value={weeklyStreak.toString()}
+                  hint="días completados"
+                  // accent
+                />
+                <StatTile
+                  icon={Dumbbell}
+                  label="Volumen Mensual"
+                  value={`${weeklyVolume} kg`}
+                  hint="peso levantado"
+                />
+              </>
+            )}
           </div>
         </div>
       </section>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         {/* Today's workout */}
-        <Card className="lg:col-span-2 bg-gradient-card border-border p-6">
-          <div className="flex items-center justify-between mb-5">
-            <div>
-              <p className="text-xs uppercase tracking-widest text-muted-foreground">
-                Sesión de hoy
-              </p>
-              <h2 className="font-display text-3xl">{todayPlan.focus}</h2>
-            </div>
-            <Button variant="ghost" size="sm" asChild>
-              <Link
-                to="/rutina/$studentId/$dayId"
-                params={{ studentId: user!.studentId.toString(), dayId: todayPlan.id }}
-              >
-                Abrir <ChevronRight className="h-4 w-4" />
-              </Link>
-            </Button>
-          </div>
-
-          {todayPlan.rest ? (
-            <div className="text-center py-10">
-              <div className="text-6xl mb-3">🌿</div>
-              <p className="font-display text-2xl">Día de descanso</p>
-              <p className="text-sm text-muted-foreground mt-1">
-                Recuperación activa: caminata 30 min o movilidad.
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {todayPlan.exercises.slice(0, 4).map((ex, i) => (
-                <div
-                  key={ex.id}
-                  className="flex items-center gap-4 p-3 rounded-xl bg-background/40 border border-border hover:border-primary/50 transition-colors"
+        {user?.role === "student" && (
+          <Card className="lg:col-span-2 bg-gradient-card border-border p-6">
+            <div className="flex items-center justify-between mb-5">
+              <div>
+                <p className="text-xs uppercase tracking-widest text-muted-foreground">
+                  Sesión de hoy
+                </p>
+                <h2 className="font-display text-3xl">Entrenamiento</h2>
+              </div>
+              <Button variant="ghost" size="sm" asChild>
+                <Link
+                  to="/rutina/$studentId/$dayId"
+                  params={{
+                    studentId: user!.studentId.toString(),
+                    dayId: format(new Date(), "yyyy-MM-dd"),
+                  }}
                 >
-                  <div className="h-10 w-10 rounded-lg bg-gradient-primary flex items-center justify-center font-display text-lg">
-                    {i + 1}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium truncate">{ex.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {ex.muscle} · {ex.sets} × {ex.reps}
-                    </p>
-                  </div>
-                  <Dumbbell className="h-4 w-4 text-muted-foreground" />
-                </div>
-              ))}
+                  Abrir <ChevronRight className="h-4 w-4" />
+                </Link>
+              </Button>
             </div>
-          )}
-        </Card>
+
+            {!dailyExercises || dailyExercises.length === 0 ? (
+              <div className="text-center py-10">
+                <div className="text-6xl mb-3">🌿</div>
+                <p className="font-display text-2xl">Día de descanso</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Hoy no tienes ejercicios asignados.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {dailyExercises.slice(0, 4).map((ex: GetDailyStudentExerciseDto, i: number) => (
+                  <div
+                    key={ex.id}
+                    className="flex items-center gap-4 p-3 rounded-xl bg-background/40 border border-border hover:border-primary/50 transition-colors"
+                  >
+                    <div className="h-10 w-10 rounded-lg bg-gradient-primary flex items-center justify-center font-display text-lg">
+                      {i + 1}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium truncate">{ex.exerciseName}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {ex.muscleGroupName} · {ex.dailyExerciseSets?.length || 0} series
+                      </p>
+                    </div>
+                    <Dumbbell className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+        )}
 
         {/* Weekly progress */}
         <Card className="bg-gradient-card border-border p-6">
-          <p className="text-xs uppercase tracking-widest text-muted-foreground">Esta semana</p>
-          <h2 className="font-display text-3xl mb-4">Plan</h2>
-          <div className="space-y-3">
-            {weekPlan.map((d, i) => {
-              const isToday = i === todayIndex;
-              return (
-                <Link
-                  key={d.id}
-                  to="/rutina/$studentId/$dayId"
-                  params={{ studentId: user!.studentId.toString(), dayId: d.id }}
-                  className="flex items-center gap-3 group"
-                >
-                  <div
-                    className={`h-9 w-9 rounded-lg flex items-center justify-center font-display text-sm transition-all ${
-                      isToday
-                        ? "bg-gradient-primary shadow-glow text-primary-foreground"
-                        : d.rest
-                          ? "bg-muted text-muted-foreground"
-                          : "bg-secondary text-foreground group-hover:bg-primary/30"
-                    }`}
+          {user?.role === "student" ? (
+            <>
+              <p className="text-xs uppercase tracking-widest text-muted-foreground">Esta semana</p>
+              <h2 className="font-display text-3xl mb-4">Plan</h2>
+              <div className="space-y-3">
+                {weekRoutineDays.map((d) => {
+                  return (
+                    <Link
+                      key={d.id}
+                      to="/rutina/$studentId/$dayId"
+                      params={{ studentId: user!.studentId.toString(), dayId: d.id }}
+                      className="flex items-center gap-3 group"
+                    >
+                      <div
+                        className={`h-9 w-9 rounded-lg flex items-center justify-center font-display text-sm transition-all ${
+                          d.isToday
+                            ? "bg-gradient-primary shadow-glow text-primary-foreground"
+                            : d.rest
+                              ? "bg-muted text-muted-foreground"
+                              : "bg-secondary text-foreground group-hover:bg-primary/30"
+                        }`}
+                      >
+                        {d.short}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{d.day}</p>
+                        <p className="text-xs text-muted-foreground truncate">{d.focus}</p>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <p className="text-xs uppercase tracking-widest text-muted-foreground">
+                    Revisión de Clientes
+                  </p>
+                  <h2 className="font-display text-3xl">Tus Clientes</h2>
+                </div>
+                <Button variant="ghost" size="sm" asChild>
+                  <Link to="/clientes">
+                    Ver todos <ChevronRight className="h-4 w-4" />
+                  </Link>
+                </Button>
+              </div>
+              <div className="space-y-3">
+                {studentListData?.slice(0, 5).map((student: CoachStudentsDto) => (
+                  <Link
+                    key={student.studentId}
+                    to="/clientes/$studentId"
+                    params={{ studentId: student.studentId.toString() }}
+                    className="flex items-center gap-3 p-2 -mx-2 rounded-lg hover:bg-primary/5 transition-colors group"
                   >
-                    {d.short}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{d.day}</p>
-                    <p className="text-xs text-muted-foreground truncate">{d.focus}</p>
-                  </div>
-                  {!d.rest && (
-                    <span className="text-[10px] text-muted-foreground">{d.durationMin}′</span>
-                  )}
-                </Link>
-              );
-            })}
-          </div>
+                    <div className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center font-display text-sm group-hover:bg-primary/20 group-hover:text-primary-glow">
+                      {student.name?.charAt(0).toUpperCase() || "U"}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{student.name}</p>
+                      <p className="text-xs text-muted-foreground truncate">Ver rutina</p>
+                    </div>
+                    <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary-glow" />
+                  </Link>
+                ))}
+                {!studentListData?.length && (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    No tienes estudiantes asignados.
+                  </p>
+                )}
+              </div>
+            </>
+          )}
         </Card>
 
         {/* Volume chart */}

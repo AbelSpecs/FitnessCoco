@@ -10,6 +10,7 @@ import { getDailyStudentExercisesByStudentIdAndDates } from "@/services/routine.
 import { GetDailyStudentExerciseDto } from "@/dtos/exerciseDto";
 import WeekSlider from "@/components/ui/weekSlider";
 import { addDays, startOfWeek, format } from "date-fns";
+import { getSixDaysLater } from "@/helpers/generics";
 import { es } from "date-fns/locale";
 import { notify } from "@/components/NotificationCenter";
 
@@ -23,10 +24,10 @@ export const Route = createFileRoute("/rutina/$studentId/")({
   component: RutinaPage,
   loader: async ({ params }) => {
     try {
-      const mondayOfThisWeek = startOfWeek(new Date(), { weekStartsOn: 1 });
-      const sundayOfThisWeek = addDays(mondayOfThisWeek, 6);
-      const dateStringStart = format(mondayOfThisWeek, "yyyy-MM-dd");
-      const dateStringEnd = format(sundayOfThisWeek, "yyyy-MM-dd");
+      const startOfThisWeek = startOfWeek(new Date(), { weekStartsOn: 0 });
+      const endOfThisWeek = getSixDaysLater(startOfThisWeek);
+      const dateStringStart = format(startOfThisWeek, "yyyy-MM-dd");
+      const dateStringEnd = format(endOfThisWeek, "yyyy-MM-dd");
 
       const exercisesData: GetDailyStudentExerciseDto[] =
         await getDailyStudentExercisesByStudentIdAndDates(
@@ -55,7 +56,7 @@ export const Route = createFileRoute("/rutina/$studentId/")({
       });
 
       const weekRoutineDays: DayRoutine[] = Array.from({ length: 7 }, (_, i) => {
-        const currentDayDate = addDays(mondayOfThisWeek!, i);
+        const currentDayDate = addDays(startOfThisWeek!, i);
         const dateString = format(currentDayDate, "yyyy-MM-dd");
         const dayName = format(currentDayDate, "EEEE", { locale: es });
         const dayShort = format(currentDayDate, "eeeeee", { locale: es });
@@ -80,7 +81,7 @@ export const Route = createFileRoute("/rutina/$studentId/")({
       return { weekRoutineDays: weekRoutineDays, studentId: params.studentId };
     } catch (error) {
       console.error(error);
-      return { initialExercises: [] };
+      throw error;
     }
   },
   beforeLoad: ({ location }) => {
@@ -103,12 +104,11 @@ export const Route = createFileRoute("/rutina/$studentId/")({
 });
 
 function RutinaPage() {
-  const today = new Date().getDay();
-  const todayIndex = today === 0 ? 6 : today - 1;
+  const todayIndex = new Date().getDay();
   const { weekRoutineDays: routine, studentId } = Route.useLoaderData();
   const [weekRoutineDays, setWeekRoutineDays] = useState(routine);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(
-    startOfWeek(new Date(), { weekStartsOn: 1 }),
+    startOfWeek(new Date(), { weekStartsOn: 0 }),
   );
 
   const handleWeekDate = async (date: Date | undefined) => {
@@ -116,8 +116,8 @@ function RutinaPage() {
 
     try {
       const dateStringStart = format(date, "yyyy-MM-dd");
-      const sundayOfThisWeek = addDays(date, 6);
-      const dateStringEnd = format(sundayOfThisWeek, "yyyy-MM-dd");
+      const endOfThisWeek = getSixDaysLater(date);
+      const dateStringEnd = format(endOfThisWeek, "yyyy-MM-dd");
       const exercisesData: GetDailyStudentExerciseDto[] =
         await getDailyStudentExercisesByStudentIdAndDates(
           Number(studentId),
@@ -172,7 +172,6 @@ function RutinaPage() {
     } catch (error) {
       console.error(error);
       notify.error("Error al actualzar", "Intenta de nuevo.");
-      throw error;
     } finally {
       setSelectedDate(date);
     }

@@ -227,7 +227,7 @@ function Perfil() {
                   label="Condiciones medicas"
                   onChange={(e) => handleInputChange(e)}
                   value={userData?.student?.medicalConditions}
-                  disabled={true}
+                  disabled={edition}
                 />
                 <Field
                   name="allergies"

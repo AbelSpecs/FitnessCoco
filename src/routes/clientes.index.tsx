@@ -30,9 +30,7 @@ export const Route = createFileRoute("/clientes/")({
     try {
       const studentsData = await getCoachStudents(Number(user?.coachId));
 
-      const { students } = studentsData;
-
-      const studentListMapped: StudentInfo[] = students.map((item: StudentInfo) => {
+      const studentListMapped: StudentInfo[] = studentsData.map((item: StudentInfo) => {
         const clientList: StudentInfo = {
           studentId: item.studentId,
           name: item.name!,
