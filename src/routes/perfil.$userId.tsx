@@ -141,10 +141,10 @@ function Perfil() {
             )}
             {isStudent && (
               <>
-                <div className="grid grid-cols-3 gap-2 mt-6 text-center">
+                <div className="grid grid-cols-2 gap-2 mt-6 text-center">
                   <Stat label="Edad" value={`${userData?.age}`} />
                   <Stat label="Peso" value={`${userData?.student?.weight} kg`} />
-                  <Stat label="Racha" value={`${userData?.streak}d`} />
+                  {/* <Stat label="Racha" value={`${userData?.streak}d`} /> */}
                 </div>
                 <Button variant="glass" className="mt-6 w-full" onClick={() => setEdition(false)}>
                   <Pencil className="h-4 w-4" /> Editar
