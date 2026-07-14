@@ -211,7 +211,7 @@ export function RegistrationForm({
           <div className="text-center">
             <h1 className="font-display text-5xl tracking-wider">PYROSFIT</h1>
             <p className="text-xs text-muted-foreground uppercase tracking-[0.25em]">
-              training co.
+              by GeekSolutions
             </p>
           </div>
         </div>
@@ -271,7 +271,7 @@ export function RegistrationForm({
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="userName">UserName</Label>
+                  <Label htmlFor="userName">Usuario</Label>
                   <Input
                     id="userName"
                     type="text"

@@ -22,7 +22,7 @@ import {
   countActiveClients,
   countPorcentageStudents,
   calculateWeeklyStreak,
-  calculateWeeklyVolume,
+  calculateMaxWeightLifted,
   calculateRoutineDurationInMin,
 } from "@/helpers/studentsHelper";
 import { useMemo } from "react";
@@ -137,8 +137,8 @@ function Dashboard() {
     () => (weeklyExercises ? calculateWeeklyStreak(weeklyExercises) : 0),
     [weeklyExercises],
   );
-  const weeklyVolume = useMemo(
-    () => (weeklyExercises ? calculateWeeklyVolume(weeklyExercises) : 0),
+  const maxWeightLifted = useMemo(
+    () => (weeklyExercises ? calculateMaxWeightLifted(weeklyExercises) : 0),
     [weeklyExercises],
   );
 
@@ -241,9 +241,9 @@ function Dashboard() {
                 />
                 <StatTile
                   icon={Dumbbell}
-                  label="Volumen Mensual"
-                  value={`${weeklyVolume} kg`}
-                  hint="peso levantado"
+                  label="Maximo levantado"
+                  value={`${maxWeightLifted} kg`}
+                  hint="peso maximo levantado"
                 />
               </>
             )}

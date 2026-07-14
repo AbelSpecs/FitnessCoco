@@ -23,18 +23,38 @@ export const calculateWeeklyStreak = (exercises: GetDailyStudentExerciseDto[] = 
   return completedDays.size;
 };
 
-export const calculateWeeklyVolume = (exercises: GetDailyStudentExerciseDto[] = []) => {
-  let totalVolume = 0;
+// export const calculateWeeklyVolume = (exercises: GetDailyStudentExerciseDto[] = []) => {
+//   let totalVolume = 0;
+//   exercises.forEach((ex) => {
+//     if (ex.isCompleted && ex.dailyExerciseSets) {
+//       ex.dailyExerciseSets.forEach((set) => {
+//         if (set.isAchieved) {
+//           totalVolume += (Number(set.actualWeight) || 0) * (Number(set.actualReps) || 0);
+//         }
+//       });
+//     }
+//   });
+//   return totalVolume;
+// };
+
+export const calculateMaxWeightLifted = (exercises: GetDailyStudentExerciseDto[] = []): number => {
+  let maxWeight = 0;
+
   exercises.forEach((ex) => {
     if (ex.isCompleted && ex.dailyExerciseSets) {
       ex.dailyExerciseSets.forEach((set) => {
         if (set.isAchieved) {
-          totalVolume += (Number(set.actualWeight) || 0) * (Number(set.actualReps) || 0);
+          const currentWeight = Number(set.actualWeight) || 0;
+
+          if (currentWeight > maxWeight) {
+            maxWeight = currentWeight;
+          }
         }
       });
     }
   });
-  return totalVolume;
+
+  return maxWeight;
 };
 
 export const calculateRoutineDurationInMin = (exercises: GetDailyStudentExerciseDto[] = []) => {
