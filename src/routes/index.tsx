@@ -22,7 +22,7 @@ import {
   countActiveClients,
   countPorcentageStudents,
   calculateWeeklyStreak,
-  calculateWeeklyVolume,
+  calculateMaxWeightLifted,
   calculateRoutineDurationInMin,
 } from "@/helpers/studentsHelper";
 import { useMemo } from "react";
@@ -31,10 +31,11 @@ import {
   getDailyStudentExercisesByStudentIdAndDate,
   getDailyStudentExercisesByStudentIdAndDates,
 } from "@/services/routine.service";
-import { format, addDays } from "date-fns";
+import { format, addDays, startOfWeek } from "date-fns";
 import { es } from "date-fns/locale";
 import { GetDailyStudentExerciseDto } from "@/dtos/exerciseDto";
 import { getSixDaysLaterFormatted } from "@/helpers/generics";
+import { useWeeklyRecord } from "@/hooks/use-weeklyRecord";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -67,13 +68,13 @@ export const Route = createFileRoute("/")({
       }
 
       const todayStr = format(new Date(), "yyyy-MM-dd");
+      const startOfThisWeek = startOfWeek(new Date(), { weekStartsOn: 0 });
+      const dateStringStart = format(startOfThisWeek, "yyyy-MM-dd");
       const sixDaysLaterStr = getSixDaysLaterFormatted(new Date());
-
       const [dailyExercises, weeklyExercises] = await Promise.all([
         getDailyStudentExercisesByStudentIdAndDate(studentId, todayStr),
-        getDailyStudentExercisesByStudentIdAndDates(studentId, todayStr, sixDaysLaterStr),
+        getDailyStudentExercisesByStudentIdAndDates(studentId, dateStringStart, sixDaysLaterStr),
       ]);
-
       return {
         role,
         completeStudentsList: undefined,
@@ -108,6 +109,7 @@ function Dashboard() {
   const { user } = useAuthStore();
   const { completeStudentsList, studentListData, role, dailyExercises, weeklyExercises } =
     Route.useLoaderData();
+  const maxWeightLifted = useWeeklyRecord(weeklyExercises);
 
   const studentsNumber = useMemo(
     () => (studentListData ? countActiveClients(studentListData) : 0),
@@ -135,10 +137,6 @@ function Dashboard() {
 
   const weeklyStreak = useMemo(
     () => (weeklyExercises ? calculateWeeklyStreak(weeklyExercises) : 0),
-    [weeklyExercises],
-  );
-  const weeklyVolume = useMemo(
-    () => (weeklyExercises ? calculateWeeklyVolume(weeklyExercises) : 0),
     [weeklyExercises],
   );
 
@@ -241,9 +239,9 @@ function Dashboard() {
                 />
                 <StatTile
                   icon={Dumbbell}
-                  label="Volumen Mensual"
-                  value={`${weeklyVolume} kg`}
-                  hint="peso levantado"
+                  label="Maximo levantado"
+                  value={`${maxWeightLifted} kg`}
+                  hint="peso maximo levantado"
                 />
               </>
             )}

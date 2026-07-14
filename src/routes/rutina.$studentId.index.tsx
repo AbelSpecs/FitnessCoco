@@ -232,10 +232,10 @@ function RutinaPage() {
                   </Badge>
                 ) : (
                   <div className="flex items-center gap-3 text-xs opacity-80">
-                    <span className="flex items-center gap-1">
+                    {/* <span className="flex items-center gap-1">
                       <Clock className="h-3 w-3" />
                       {day.estimated} min
-                    </span>
+                    </span> */}
                     <span className="flex items-center gap-1">
                       <Dumbbell className="h-3 w-3" />
                       {day.exercises!.length} ej.

@@ -103,7 +103,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <div className="min-w-0">
               <p className="font-display text-2xl leading-none tracking-wider">PYROSFIT</p>
               <p className="text-[10px] text-muted-foreground uppercase tracking-[0.2em]">
-                training co.
+                by GeekSolutions
               </p>
             </div>
           )}
@@ -196,7 +196,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <div>
                   <p className="font-display text-2xl leading-none tracking-wider">PYROSFIT</p>
                   <p className="text-[10px] text-muted-foreground uppercase tracking-[0.2em]">
-                    training co.
+                    by GeekSolutions
                   </p>
                 </div>
               </div>
