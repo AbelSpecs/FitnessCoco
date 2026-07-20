@@ -24,12 +24,12 @@ if (!rootElement.innerHTML) {
   try {
     const svgString = renderToString(<Dumbbell color="#FD5B0B" />);
     const encodedSvg = `data:image/svg+xml;base64,${btoa(svgString)}`;
-    
+
     let favicon = document.getElementById("dynamic-favicon") as HTMLLinkElement;
     if (favicon) {
       favicon.remove();
     }
-    
+
     favicon = document.createElement("link");
     favicon.id = "dynamic-favicon";
     favicon.rel = "icon";

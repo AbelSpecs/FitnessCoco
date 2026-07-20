@@ -4,11 +4,12 @@ import { RegisterCredentials } from "@/types/auth";
 import { PhoneCode } from "@/types/general";
 import { getCountries } from "@/services/general.service";
 import { notify } from "@/components/NotificationCenter";
-import { Student } from "@/types/user";
+import { Coach, Student } from "@/types/user";
 import { createStudent } from "@/services/user.service";
 import { SpinnerOverlay } from "@/components/Spinner";
 import { CountryDto } from "@/dtos/countryDto";
 import { RegistrationForm } from "@/components/forms/RegistrationForm";
+import { createCoach } from "@/services/coach.service";
 
 type RegisterSearch = {
   coachId?: string;
@@ -91,8 +92,8 @@ function RegisterInfoPage() {
       successTitle="¡Información guardada!"
       successMessage={(form) => (
         <>
-          Gracias <span className="text-foreground font-medium">{form.firstName}</span>,
-          tus datos se han registrado correctamente.
+          Gracias <span className="text-foreground font-medium">{form.firstName}</span>, tus datos
+          se han registrado correctamente.
         </>
       )}
       onSubmit={handleRegisterStudent}

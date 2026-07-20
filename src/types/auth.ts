@@ -40,6 +40,7 @@ export interface UserAuth {
   id: number;
   studentId: number;
   coachId?: number;
+  myCoachId?: number;
   email?: string;
   firstName?: string;
   role?: Role;

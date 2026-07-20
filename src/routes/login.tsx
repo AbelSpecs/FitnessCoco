@@ -72,12 +72,21 @@ function LoginPage() {
         getCoach(id),
       ]);
 
+      let myCoachId = 0;
+      if (studentData !== null) {
+        const details = await getUserDetails(userData.id);
+        const { coach } = details;
+        const { id } = coach;
+        myCoachId = id;
+      }
+
       const { firstName } = userData;
 
       const user: UserAuth = {
         id,
         firstName,
         studentId: studentData === null ? 0 : studentData.id,
+        myCoachId: studentData === null ? 0 : myCoachId,
         coachId: coachData === null ? 0 : coachData.id,
         role: studentData === null ? "coach" : "student",
       };
@@ -157,9 +166,19 @@ function LoginPage() {
             </Button>
           </form>
           <p className="text-center text-sm text-muted-foreground">
-            ¿No tienes cuenta?{" "}
+            ¿No tienes cuenta y eres entrenador?{" "}
             <Link to="/register" className="text-primary font-medium hover:underline">
               Regístrate
+            </Link>
+          </p>
+          <p className="text-center text-sm text-muted-foreground">
+            ¿No tienes cuenta y no quieres entrenador?{" "}
+            <Link
+              to="/register-info"
+              search={{ coachId: "9" }}
+              className="text-primary font-medium hover:underline"
+            >
+              Regístrate aqui
             </Link>
           </p>
           {isLoading && <SpinnerOverlay label="Iniciando" />}

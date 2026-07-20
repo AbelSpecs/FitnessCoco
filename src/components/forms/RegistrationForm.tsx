@@ -71,7 +71,11 @@ export function RegistrationForm({
   };
 
   const handleCities = async (value: number) => {
-    setRegisterForm({ ...registerForm, countryId: value });
+    setRegisterForm({
+      ...registerForm,
+      countryId: value,
+      phoneCode: phoneCodes.find((p) => p.id === value)!.code,
+    });
     try {
       const fetchedCities = await getCities(value);
       setCities(fetchedCities ? [fetchedCities] : []);
@@ -366,7 +370,7 @@ export function RegistrationForm({
                 <div className="space-y-2">
                   <Label htmlFor="phoneNumber">Teléfono</Label>
                   <div className="flex">
-                    <SearchableSelect
+                    {/* <SearchableSelect
                       value={registerForm.phoneCode ? String(registerForm.phoneCode) : ""}
                       placeholder="Selecciona el Código"
                       options={phoneCodes.map((p) => ({ value: p.id.toString(), label: p.code }))}
@@ -374,6 +378,15 @@ export function RegistrationForm({
                         setRegisterForm({ ...registerForm, phoneCode: value });
                       }}
                       className="w-25 mt-1.5 bg-background/60 border-border focus:ring-primary/40 hover:text-white"
+                    /> */}
+                    <Input
+                      id="phoneCode"
+                      type="text"
+                      placeholder="+58"
+                      value={registerForm.phoneCode}
+                      disabled
+                      required
+                      className="w-25 mt-1.5 bg-input/60 disabled:opacity-100 disabled:text-white-400"
                     />
                     <Input
                       id="phoneNumber"

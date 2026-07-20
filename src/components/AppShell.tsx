@@ -28,20 +28,36 @@ const nav = [
     label: "Dashboard",
     icon: LayoutDashboard,
     roles: ["coach", "student"] as Role[],
+    condition: false,
   },
-  { to: "/rutina/$studentId", label: "Rutina", icon: Calendar, roles: ["student"] as Role[] },
-  // { to: "/progreso", label: "Progreso", icon: TrendingUp },
   {
-    to: "/perfil/$userId",
-    label: "Perfil",
-    icon: User,
-    roles: ["coach", "student"] as Role[],
+    to: "/clientes/$studentId",
+    label: "Crear Rutina",
+    icon: Dumbbell,
+    roles: ["student"] as Role[],
+    condition: true,
   },
+  {
+    to: "/rutina/$studentId",
+    label: "Rutina",
+    icon: Calendar,
+    roles: ["student"] as Role[],
+    condition: false,
+  },
+  // { to: "/progreso", label: "Progreso", icon: TrendingUp },
   {
     to: "/clientes",
     label: "Clientes",
     icon: Users,
     roles: ["coach"] as Role[],
+    condition: false,
+  },
+  {
+    to: "/perfil/$userId",
+    label: "Perfil",
+    icon: User,
+    roles: ["coach", "student"] as Role[],
+    condition: false,
   },
   // { to: "/par-q", label: "PAR-Q", icon: HeartPulse },
 ] as const;
@@ -55,6 +71,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const visibleItems = nav.filter((item) => {
     if (!item.roles) return true;
     if (!user?.role) return false;
+
+    if (item.condition) {
+      if (user?.myCoachId === 9) return true;
+      else return false;
+    }
+
     return item.roles.includes(user.role as Role);
   });
 
@@ -63,6 +85,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     Perfil: () => ({ userId: user?.id?.toString() ?? "" }),
     Clientes: () => ({}),
     Dashboard: () => ({}),
+    "Crear Rutina": () => ({ studentId: user?.studentId?.toString() ?? "" }),
   };
 
   useEffect(() => {
