@@ -13,3 +13,7 @@ export interface PhoneCode {
   id: number;
   code: string;
 }
+
+export interface TierMilestone {
+  min: number;
+}

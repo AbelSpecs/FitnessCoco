@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
+import { DashboardSkeleton } from "@/components/uiSkeletons/DashboardSkeleton";
 import {
   Dialog,
   DialogContent,
@@ -61,9 +62,10 @@ import { es } from "date-fns/locale";
 import { GetDailyStudentExerciseDto } from "@/dtos/exerciseDto";
 import { History } from "@/types/exercises";
 import { historyExercisesMapper } from "@/mappers/exercises";
-import { getSixDaysLaterFormatted } from "@/helpers/generics";
+import { calculateStreakExperience, getSixDaysLaterFormatted } from "@/helpers/generics";
 import { useWeeklyRecord } from "@/hooks/use-weeklyRecord";
-import { getCoachRiskRadar } from "@/services/streak.service";
+import { getCoachRiskRadar, getStudentStreak } from "@/services/streak.service";
+import { Tier } from "@/types";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -95,6 +97,7 @@ export const Route = createFileRoute("/")({
           dailyExercises: undefined,
           weeklyExercises: undefined,
           historyExercises: undefined,
+          studentStreakData: undefined,
         };
       }
 
@@ -106,11 +109,16 @@ export const Route = createFileRoute("/")({
       const threeDaysAgoStr = format(subDays(new Date(), 3), "yyyy-MM-dd");
       const yesterdayStr = format(subDays(new Date(), 1), "yyyy-MM-dd");
 
-      const [dailyExercises, weeklyExercises, historyExercises] = await Promise.all([
-        getDailyStudentExercisesByStudentIdAndDate(studentId, todayStr),
-        getDailyStudentExercisesByStudentIdAndDates(studentId, dateStringStart, sixDaysLaterStr),
-        getDailyStudentExercisesByStudentIdAndDates(studentId, threeDaysAgoStr, yesterdayStr),
-      ]);
+      const [dailyExercises, weeklyExercises, historyExercises, studentStreakData] =
+        await Promise.all([
+          getDailyStudentExercisesByStudentIdAndDate(studentId, todayStr),
+          getDailyStudentExercisesByStudentIdAndDates(studentId, dateStringStart, sixDaysLaterStr),
+          getDailyStudentExercisesByStudentIdAndDates(studentId, threeDaysAgoStr, yesterdayStr),
+          getStudentStreak(studentId).catch((error) => {
+            console.warn("No se pudo cargar la racha del alumno:", error);
+            return undefined;
+          }),
+        ]);
 
       const lastCompletedExercises = historyExercises.slice(
         historyExercises.length - 3,
@@ -125,6 +133,7 @@ export const Route = createFileRoute("/")({
         dailyExercises,
         weeklyExercises,
         lastCompletedExercises,
+        studentStreakData,
       };
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -132,6 +141,7 @@ export const Route = createFileRoute("/")({
     }
   },
   component: Dashboard,
+  pendingComponent: DashboardSkeleton,
   beforeLoad: ({ location }) => {
     const auth = localStorage.getItem("pyrosfit_user");
 
@@ -145,16 +155,6 @@ export const Route = createFileRoute("/")({
     }
   },
 });
-
-type Tier = {
-  min: number;
-  label: string;
-  card: string;
-  orb: string;
-  glow: string;
-  text: string;
-  ring: string;
-};
 
 /* del ámbar tibio al rojo fuego a medida que sube la racha */
 const TIERS: Tier[] = [
@@ -210,17 +210,15 @@ const tierFor = (streak: number) => [...TIERS].reverse().find((t) => streak >= t
 const nextTierFor = (streak: number) => TIERS.find((t) => t.min > streak) ?? null;
 
 function PrMedal({
+  prMedalInfo,
   record,
-  pending,
-  lifts,
   tier,
-  onLift,
+  onChange,
 }: {
+  prMedalInfo: boolean;
   record: number;
-  pending: number;
-  lifts: number;
   tier: { orb: string; glow: string; text: string; ring: string };
-  onLift: () => void;
+  onChange: () => void;
 }) {
   const R = 34;
   const C = 2 * Math.PI * R;
@@ -228,13 +226,18 @@ function PrMedal({
   return (
     <button
       type="button"
-      // onClick={onLift}
+      onClick={onChange}
       // title={`Récord ${record} kg · ${lifts}/3 hacia ${pending} kg`}
       className="relative flex h-20 w-20 shrink-0 items-center justify-center transition-transform hover:scale-105 active:scale-95"
     >
+      {prMedalInfo && (
+        <span className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-full font-display text-sm leading-none text-amber-500 whitespace-nowrap animate-float-up">
+          Peso Máx
+        </span>
+      )}
       <svg viewBox="0 0 80 80" className="absolute inset-0 h-full w-full -rotate-90">
         {[0].map((i) => {
-          const on = i < lifts;
+          // const on = i < lifts;
           return (
             <circle
               key={i}
@@ -243,26 +246,27 @@ function PrMedal({
               r={R}
               fill="none"
               stroke={tier.text}
-              className={on ? "" : "text-border"}
-              strokeWidth={on ? 4 : 3}
+              className={"text-border"}
+              strokeWidth={4}
               strokeLinecap="round"
               // strokeDasharray={`${arc} ${C - arc}`}
               strokeDashoffset={-(i * (C / 3)) - 2.5}
               style={{
                 transition: "stroke 400ms, stroke-width 400ms",
-                filter: on ? `drop-shadow(0 0 5px ${tier.text})` : undefined,
+                filter: `drop-shadow(0 0 5px ${tier.text})`,
               }}
             />
           );
         })}
       </svg>
+
       <div
         className="flex h-[52px] w-[52px] flex-col items-center justify-center rounded-full border border-border bg-background/60 backdrop-blur-md"
-        style={{ boxShadow: lifts > 0 ? tier.glow : undefined }}
+        style={{ boxShadow: tier.glow }}
       >
         <Dumbbell className="h-4 w-4" style={{ color: tier.text }} />
         <span className="font-display text-sm leading-none">{record}</span>
-        <span className="text-[8px] uppercase tracking-widest text-muted-foreground">kg</span>
+        <span className="text-[10px] uppercase tracking-widest text-muted-foreground">kg</span>
       </div>
     </button>
   );
@@ -281,31 +285,36 @@ function Dashboard() {
     weeklyExercises,
     riskRadarStudents,
     lastCompletedExercises,
+    studentStreakData,
   } = Route.useLoaderData();
-  const [streak, setStreak] = useState(14);
-  const [shields, setShields] = useState(2);
-  const [completed, setCompleted] = useState(false);
-  const [celebrate, setCelebrate] = useState(false);
+  const [streak, setStreak] = useState(() => studentStreakData?.currentStreak ?? 14);
+  const [shields, setShields] = useState(() => studentStreakData?.freezeShieldsAvailable ?? 2);
+  const [completed, setCompleted] = useState<boolean>(false);
+  const [celebrate, setCelebrate] = useState<boolean>(false);
   const [history, setHistory] = useState<History[]>(() =>
     lastCompletedExercises && lastCompletedExercises.length > 0
       ? historyExercisesMapper(lastCompletedExercises)
       : [],
   );
-  const [prRecord, setPrRecord] = useState(100);
-  const [prPending, setPrPending] = useState(102.5);
-  const [prLifts, setPrLifts] = useState(0);
+  const [prMedalInfo, setPrMedalInfo] = useState<boolean>(false);
+  const [prRecord, setPrRecord] = useState<number>(100);
+  const prevStreakRef = useRef<number>(streak);
 
-  const registerLift = () => {
-    setPrLifts((n) => {
-      const next = n + 1;
-      if (next >= 2) {
-        setPrRecord(prPending);
-        setPrPending((w) => w + 2.5);
-        return 0;
-      }
-      return next;
-    });
+  const ChangePrMedalInfo = () => {
+    setPrMedalInfo(!prMedalInfo);
   };
+
+  useEffect(() => {
+    if (studentStreakData) {
+      if (typeof studentStreakData.currentStreak === "number") {
+        setStreak(studentStreakData.currentStreak);
+      }
+      const shieldsCount = studentStreakData.freezeShieldsAvailable;
+      if (typeof shieldsCount === "number") {
+        setShields(shieldsCount);
+      }
+    }
+  }, [studentStreakData]);
 
   useEffect(() => {
     if (lastCompletedExercises && lastCompletedExercises.length > 0) {
@@ -317,7 +326,6 @@ function Dashboard() {
   }, [lastCompletedExercises]);
 
   // Guardamos la racha previa para detectar incrementos y disparar la felicitación
-  const prevStreakRef = useRef<number>(streak);
 
   // useEffect(() => {
   /*
@@ -365,10 +373,7 @@ function Dashboard() {
     [completeStudentsList, studentListData],
   );
   const dailyExercisesNum = useMemo(() => dailyExercises?.length || 0, [dailyExercises]);
-  // const dailyDuration = useMemo(
-  //   () => (dailyExercises ? calculateRoutineDurationInMin(dailyExercises as any) : 0),
-  //   [dailyExercises],
-  // );
+
   const dailyFocus = useMemo(() => {
     if (!dailyExercises || dailyExercises.length === 0) return todayPlan.focus;
     const groups = Array.from(
@@ -376,11 +381,6 @@ function Dashboard() {
     );
     return groups.length > 0 ? groups.join(", ") : todayPlan.focus;
   }, [dailyExercises, todayPlan.focus]);
-
-  // const weeklyStreak = useMemo(
-  //   () => (weeklyExercises ? calculateWeeklyStreak(weeklyExercises) : 0),
-  //   [weeklyExercises],
-  // );
 
   const weekRoutineDays = useMemo(() => {
     if (!weeklyExercises) return [];
@@ -481,7 +481,7 @@ function Dashboard() {
                 >
                   Pyros Streak
                 </p>
-                {/* <span
+                <span
                   className="rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest ring-1"
                   style={{
                     color: tier.text,
@@ -490,7 +490,7 @@ function Dashboard() {
                   }}
                 >
                   {tier.label}
-                </span> */}
+                </span>
               </div>
               <div className="flex justify-between items-center gap-4">
                 <div>
@@ -518,11 +518,10 @@ function Dashboard() {
                 </div>
 
                 <PrMedal
+                  prMedalInfo={prMedalInfo}
                   record={prRecord}
-                  pending={prPending}
-                  lifts={prLifts}
                   tier={tier}
-                  onLift={registerLift}
+                  onChange={ChangePrMedalInfo}
                 />
               </div>
 
@@ -542,11 +541,10 @@ function Dashboard() {
               {/* barra de experiencia por hitos */}
               <div className="mt-12">
                 <div className="relative h-1 rounded-full bg-background/60 ring-1 ring-border">
-                  {/* <div className="relative h-2"> */}
                   <div
                     className="h-full rounded-full transition-all duration-700"
                     style={{
-                      width: `${Math.min(100, (streak / TIERS[TIERS.length - 1].min) * 100)}%`,
+                      width: `${calculateStreakExperience(streak, TIERS)}%`,
                       backgroundImage: tier.orb,
                       boxShadow: tier.glow,
                     }}
@@ -555,7 +553,7 @@ function Dashboard() {
                   <div className="absolute inset-x-0 top-1/2 flex -translate-y-1/3 items-center justify-between">
                     {TIERS.map((t, i) => {
                       const reached = streak >= t.min;
-                      const size = 32 + i * 7; // 22 → 38 px
+                      const size = 32 + i * 7;
                       const flame = 20 + i * 2.5;
                       return (
                         <div key={t.min} className="flex flex-col items-center">
@@ -616,7 +614,11 @@ function Dashboard() {
           <Button
             // onClick={completeToday}
             disabled={completed}
-            className="mt-4 h-14 w-full rounded-2xl bg-gradient-secondary text-base font-bold text-foreground shadow-glow transition-all hover:brightness-110 active:scale-[0.98] disabled:opacity-60 hover:cursor-pointer"
+            className="mt-4 h-14 w-full rounded-2xl text-base font-bold text-foreground shadow-glow transition-all hover:brightness-110 active:scale-[0.98] disabled:opacity-60 hover:cursor-pointer"
+            style={{
+              boxShadow: tier.glow,
+              borderColor: tier.ring,
+            }}
           >
             <Link
               to="/rutina/$studentId/$dayId"

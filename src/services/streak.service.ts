@@ -1,5 +1,25 @@
-import { RiskRadarStudentDto, WorkoutCompletedDto } from "@/dtos/streakDto";
+import { RiskRadarStudentDto, StudentStreakDto, WorkoutCompletedDto } from "@/dtos/streakDto";
 import api from "./api";
+
+/**
+ * Obtiene el estado actual de la racha (streak) y escudos congeladores de un estudiante.
+ * Endpoint: GET /api/v1/Streaks/student/{studentId}
+ *
+ * @param studentId - ID del estudiante
+ * @returns Datos del estado de la racha del alumno
+ */
+export const getStudentStreak = async (studentId: number | string): Promise<StudentStreakDto> => {
+  try {
+    const response = await api.get(`/Streaks/student/${studentId}`);
+    const { data } = response;
+
+    return data?.data ?? data ?? response.data;
+  } catch (error) {
+    console.error(`Error al obtener la racha del estudiante ${studentId}`, error);
+    throw error;
+  }
+};
+
 
 /**
  * Registra un entrenamiento completado para calcular y actualizar la racha (streak) del estudiante.
