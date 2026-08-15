@@ -104,7 +104,6 @@ export const Route = createFileRoute("/rutina/$studentId/")({
 });
 
 function RutinaPage() {
-  const todayIndex = new Date().getDay();
   const { weekRoutineDays: routine, studentId } = Route.useLoaderData();
   const [weekRoutineDays, setWeekRoutineDays] = useState(routine);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(
@@ -115,8 +114,9 @@ function RutinaPage() {
     if (!date) return;
 
     try {
-      const dateStringStart = format(date, "yyyy-MM-dd");
-      const endOfThisWeek = getSixDaysLater(date);
+      const startOfWeekDate = startOfWeek(date, { weekStartsOn: 0 });
+      const endOfThisWeek = getSixDaysLater(startOfWeekDate);
+      const dateStringStart = format(startOfWeekDate, "yyyy-MM-dd");
       const dateStringEnd = format(endOfThisWeek, "yyyy-MM-dd");
       const exercisesData: GetDailyStudentExerciseDto[] =
         await getDailyStudentExercisesByStudentIdAndDates(
@@ -145,7 +145,7 @@ function RutinaPage() {
       });
 
       const weekRoutineDays: DayRoutine[] = Array.from({ length: 7 }, (_, i) => {
-        const currentDayDate = addDays(date!, i);
+        const currentDayDate = addDays(startOfWeekDate, i);
         const dateString = format(currentDayDate, "yyyy-MM-dd");
         const dayName = format(currentDayDate, "EEEE", { locale: es });
         const dayShort = format(currentDayDate, "eeeeee", { locale: es });
@@ -176,6 +176,9 @@ function RutinaPage() {
       setSelectedDate(date);
     }
   };
+
+  const todayDateStr = format(new Date(), "yyyy-MM-dd");
+
   return (
     <AppShell>
       <WeekSlider
@@ -196,8 +199,8 @@ function RutinaPage() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
-        {weekRoutineDays!.map((day, i) => {
-          const isToday = i === todayIndex;
+        {weekRoutineDays!.map((day) => {
+          const isToday = day.scheduledDate === todayDateStr;
           return (
             <Link
               key={day.id}

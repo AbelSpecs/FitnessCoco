@@ -46,6 +46,7 @@ import {
   updateDailyExercisesSets,
   updateCompleteDailyStudentExercises,
 } from "@/services/routine.service";
+import { postWorkoutCompleted } from "@/services/streak.service";
 import {
   DailyExerciseSetsDto,
   GetDailyStudentExerciseDto,
@@ -215,6 +216,12 @@ function ExerciseRow({ ex, index }: { ex: Exercise; index: number }) {
         ex.dailyExerciseId,
         exercisetoUpdate,
       );
+
+      // Actualizar la racha (streak) del estudiante al completar la rutina
+      await postWorkoutCompleted({
+        studentId: ex.studentId,
+        activityDate: ex.scheduledDate,
+      });
     } catch (error) {
       notify.error("Error al actualizar", "Intenta de nuevo");
       console.error(error);

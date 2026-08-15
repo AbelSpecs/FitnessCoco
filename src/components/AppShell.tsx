@@ -73,7 +73,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     if (!user?.role) return false;
 
     if (item.condition) {
-      if (user?.myCoachId === 9) return true;
+      if (Number(user?.myCoachId) === 9) return true;
       else return false;
     }
 
