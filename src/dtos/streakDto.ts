@@ -23,3 +23,13 @@ export interface RiskRadarStudentDto {
   daysInactive?: number;
   riskLevel?: number;
 }
+
+export interface StreakHistoryLogDto {
+  id: number;
+  studentId: number;
+  activityTypeId: number;
+  activityTypeCode: string;
+  activityTypeName: string;
+  activityDate: string;
+  createdAt: string;
+}

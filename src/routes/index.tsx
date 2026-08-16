@@ -61,10 +61,14 @@ import { format, addDays, startOfWeek, subDays } from "date-fns";
 import { es } from "date-fns/locale";
 import { GetDailyStudentExerciseDto } from "@/dtos/exerciseDto";
 import { History } from "@/types/exercises";
-import { historyExercisesMapper } from "@/mappers/exercises";
+import { combinedHistoryMapper, historyExercisesMapper, streakHistoryMapper } from "@/mappers/exercises";
 import { calculateStreakExperience, getSixDaysLaterFormatted } from "@/helpers/generics";
 import { useWeeklyRecord } from "@/hooks/use-weeklyRecord";
-import { getCoachRiskRadar, getStudentStreak } from "@/services/streak.service";
+import {
+  getCoachRiskRadar,
+  getStudentStreak,
+  getStudentStreakHistory,
+} from "@/services/streak.service";
 import { Tier } from "@/types";
 
 export const Route = createFileRoute("/")({
@@ -109,16 +113,25 @@ export const Route = createFileRoute("/")({
       const threeDaysAgoStr = format(subDays(new Date(), 3), "yyyy-MM-dd");
       const yesterdayStr = format(subDays(new Date(), 1), "yyyy-MM-dd");
 
-      const [dailyExercises, weeklyExercises, historyExercises, studentStreakData] =
-        await Promise.all([
-          getDailyStudentExercisesByStudentIdAndDate(studentId, todayStr),
-          getDailyStudentExercisesByStudentIdAndDates(studentId, dateStringStart, sixDaysLaterStr),
-          getDailyStudentExercisesByStudentIdAndDates(studentId, threeDaysAgoStr, yesterdayStr),
-          getStudentStreak(studentId).catch((error) => {
-            console.warn("No se pudo cargar la racha del alumno:", error);
-            return undefined;
-          }),
-        ]);
+      const [
+        dailyExercises,
+        weeklyExercises,
+        historyExercises,
+        studentStreakData,
+        streakHistoryLogs,
+      ] = await Promise.all([
+        getDailyStudentExercisesByStudentIdAndDate(studentId, todayStr),
+        getDailyStudentExercisesByStudentIdAndDates(studentId, dateStringStart, sixDaysLaterStr),
+        getDailyStudentExercisesByStudentIdAndDates(studentId, threeDaysAgoStr, yesterdayStr),
+        getStudentStreak(studentId).catch((error) => {
+          console.warn("No se pudo cargar la racha del alumno:", error);
+          return undefined;
+        }),
+        getStudentStreakHistory(studentId).catch((error) => {
+          console.warn("No se pudo cargar el historial de racha:", error);
+          return [];
+        }),
+      ]);
 
       const lastCompletedExercises = historyExercises.slice(
         historyExercises.length - 3,
@@ -134,6 +147,7 @@ export const Route = createFileRoute("/")({
         weeklyExercises,
         lastCompletedExercises,
         studentStreakData,
+        streakHistoryLogs,
       };
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -286,15 +300,14 @@ function Dashboard() {
     riskRadarStudents,
     lastCompletedExercises,
     studentStreakData,
+    streakHistoryLogs,
   } = Route.useLoaderData();
   const [streak, setStreak] = useState(() => studentStreakData?.currentStreak ?? 14);
   const [shields, setShields] = useState(() => studentStreakData?.freezeShieldsAvailable ?? 2);
   const [completed, setCompleted] = useState<boolean>(false);
   const [celebrate, setCelebrate] = useState<boolean>(false);
   const [history, setHistory] = useState<History[]>(() =>
-    lastCompletedExercises && lastCompletedExercises.length > 0
-      ? historyExercisesMapper(lastCompletedExercises)
-      : [],
+    combinedHistoryMapper(streakHistoryLogs, lastCompletedExercises),
   );
   const [prMedalInfo, setPrMedalInfo] = useState<boolean>(false);
   const [prRecord, setPrRecord] = useState<number>(100);
@@ -317,13 +330,8 @@ function Dashboard() {
   }, [studentStreakData]);
 
   useEffect(() => {
-    if (lastCompletedExercises && lastCompletedExercises.length > 0) {
-      const mappedHistory = historyExercisesMapper(lastCompletedExercises);
-      setHistory(mappedHistory);
-    } else {
-      setHistory([]);
-    }
-  }, [lastCompletedExercises]);
+    setHistory(combinedHistoryMapper(streakHistoryLogs, lastCompletedExercises));
+  }, [streakHistoryLogs, lastCompletedExercises]);
 
   // Guardamos la racha previa para detectar incrementos y disparar la felicitación
 

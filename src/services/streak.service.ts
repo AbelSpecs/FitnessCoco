@@ -1,4 +1,9 @@
-import { RiskRadarStudentDto, StudentStreakDto, WorkoutCompletedDto } from "@/dtos/streakDto";
+import {
+  RiskRadarStudentDto,
+  StreakHistoryLogDto,
+  StudentStreakDto,
+  WorkoutCompletedDto,
+} from "@/dtos/streakDto";
 import api from "./api";
 
 /**
@@ -58,3 +63,29 @@ export const getCoachRiskRadar = async (coachId: number | string): Promise<RiskR
     throw error;
   }
 };
+
+/**
+ * Obtiene el historial de logs y eventos de racha de un estudiante.
+ * Endpoint: GET /api/v1/Streaks/student/{studentId}/history
+ *
+ * @param studentId - ID del estudiante
+ * @param limit - Cantidad máxima de registros a retornar (por defecto 30)
+ * @returns Lista de eventos e historial de racha del alumno
+ */
+export const getStudentStreakHistory = async (
+  studentId: number | string,
+  limit: number = 30,
+): Promise<StreakHistoryLogDto[]> => {
+  try {
+    const response = await api.get(`/Streaks/student/${studentId}/history`, {
+      params: { limit },
+    });
+    const { data } = response;
+
+    return data?.data ?? data ?? response.data;
+  } catch (error) {
+    console.error(`Error al obtener el historial de racha del estudiante ${studentId}`, error);
+    throw error;
+  }
+};
+

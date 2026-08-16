@@ -1,4 +1,5 @@
 import { GetDailyStudentExerciseDto } from "@/dtos/exerciseDto";
+import { StreakHistoryLogDto } from "@/dtos/streakDto";
 import { Exercise, History, MuscleGroupSelect } from "@/types/exercises";
 import { determineDate } from "@/utils/determineDate";
 import { calculateRoutineDurationInMin } from "@/helpers/studentsHelper";
@@ -77,5 +78,53 @@ export const historyExercisesMapper = (
       min,
     };
   });
+};
+
+/**
+ * Transforma un arreglo de logs del historial de racha (`StreakHistoryLogDto`) obtenidos de la API
+ * en objetos tipo `History` compatibles con la vista del Dashboard.
+ *
+ * @param streakHistoryLogs Lista de DTOs del historial de racha
+ * @returns Arreglo de objetos `History` ({ name, date, min })
+ */
+export const streakHistoryMapper = (streakHistoryLogs: StreakHistoryLogDto[]): History[] => {
+  if (!streakHistoryLogs || streakHistoryLogs.length === 0) {
+    return [];
+  }
+
+  return streakHistoryLogs.map((log) => {
+    const rawDate = log.activityDate || log.createdAt || "";
+    const formattedDate = rawDate.includes("T") ? rawDate.split("T")[0] : rawDate;
+
+    return {
+      name: log.activityTypeName || "Entrenamiento",
+      date: formattedDate,
+      min: 45,
+    };
+  });
+};
+
+/**
+ * Combina y mapea los logs del historial de racha (`streakHistoryLogs`)
+ * y los ejercicios completados (`lastCompletedExercises`) en una única lista unificada de `History[]`.
+ *
+ * @param streakHistoryLogs Lista de DTOs del historial de racha
+ * @param lastCompletedExercises Lista de DTOs de ejercicios completados recientemente
+ * @returns Lista combinada y sin duplicados de actividades recientes
+ */
+export const combinedHistoryMapper = (
+  streakHistoryLogs?: StreakHistoryLogDto[],
+  lastCompletedExercises?: GetDailyStudentExerciseDto[],
+): History[] => {
+  const mappedStreakLogs = streakHistoryLogs ? streakHistoryMapper(streakHistoryLogs) : [];
+  const mappedExercises = lastCompletedExercises ? historyExercisesMapper(lastCompletedExercises) : [];
+
+  const combined = [...mappedStreakLogs, ...mappedExercises];
+
+  // Filtrar duplicados con la misma fecha y nombre de actividad
+  return combined.filter(
+    (item, index, self) =>
+      index === self.findIndex((t) => t.date === item.date && t.name === item.name),
+  );
 };
 
