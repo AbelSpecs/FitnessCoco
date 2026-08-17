@@ -1,6 +1,7 @@
 import { GetDailyStudentExerciseDto } from "@/dtos/exerciseDto";
-import { StreakHistoryLogDto } from "@/dtos/streakDto";
+import { RiskRadarStudentDto, StreakHistoryLogDto } from "@/dtos/streakDto";
 import { Exercise, History, MuscleGroupSelect } from "@/types/exercises";
+import { StudentInfo } from "@/types/user";
 import { determineDate } from "@/utils/determineDate";
 import { calculateRoutineDurationInMin } from "@/helpers/studentsHelper";
 
@@ -126,5 +127,60 @@ export const combinedHistoryMapper = (
     (item, index, self) =>
       index === self.findIndex((t) => t.date === item.date && t.name === item.name),
   );
+};
+
+/**
+ * Mapea los datos del radar de riesgo de abandono del coach (`RiskRadarStudentDto[]`)
+ * a la estructura de visualización `StudentInfo[]` para el Churn Risk Radar.
+ *
+ * @param riskRadarList Lista de DTOs del radar de riesgo
+ * @returns Lista de alumnos con formato de iniciales, riesgo y texto de inactividad
+ */
+export const riskRadarStudentsMapper = (
+  riskRadarList?: RiskRadarStudentDto[],
+): StudentInfo[] => {
+  if (!riskRadarList || riskRadarList.length === 0) {
+    return [];
+  }
+
+  return riskRadarList.map((item) => {
+    const studentName = item.studentName || `Alumno #${item.studentId}`;
+    const nameParts = studentName.trim().split(/\s+/);
+    const initials =
+      nameParts.length >= 2
+        ? `${nameParts[0][0]}${nameParts[1][0]}`.toUpperCase()
+        : studentName.slice(0, 2).toUpperCase();
+
+    const daysInactive = item.daysInactive ?? 0;
+    let lastWorkout = "";
+    if (daysInactive === 0) {
+      lastWorkout = "Hoy";
+    } else if (daysInactive === 1) {
+      lastWorkout = "Ayer";
+    } else if (daysInactive >= 999) {
+      lastWorkout = "Sin actividad";
+    } else {
+      lastWorkout = `Hace ${daysInactive} días`;
+    }
+
+    let risk: "high" | "medium" | "low" = "low";
+    if (item.riskLevel === 2) {
+      risk = "high";
+    } else if (item.riskLevel === 1) {
+      risk = "medium";
+    } else {
+      risk = "low";
+    }
+
+    return {
+      studentId: item.studentId.toString(),
+      name: studentName,
+      initials,
+      streak: item.currentStreak ?? 0,
+      lastWorkout,
+      inactivity: daysInactive >= 999 ? 30 : daysInactive,
+      risk,
+    };
+  });
 };
 

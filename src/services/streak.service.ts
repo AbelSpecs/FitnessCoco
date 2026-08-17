@@ -53,12 +53,14 @@ export const postWorkoutCompleted = async (workoutData: WorkoutCompletedDto) => 
  * @param coachId - ID del entrenador (coach)
  * @returns Datos del radar de riesgo para los clientes del coach
  */
-export const getCoachRiskRadar = async (coachId: number | string): Promise<RiskRadarStudentDto> => {
+export const getCoachRiskRadar = async (
+  coachId: number | string,
+): Promise<RiskRadarStudentDto[]> => {
   try {
     const response = await api.get(`/Streaks/coach/${coachId}/risk-radar`);
     const { data } = response;
 
-    return data;
+    return data?.data ?? data ?? response.data;
   } catch (error) {
     console.error(`Error al obtener el radar de riesgo del coach ${coachId}`, error);
     throw error;

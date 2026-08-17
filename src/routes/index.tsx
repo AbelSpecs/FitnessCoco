@@ -64,6 +64,7 @@ import { History } from "@/types/exercises";
 import {
   combinedHistoryMapper,
   historyExercisesMapper,
+  riskRadarStudentsMapper,
   streakHistoryMapper,
 } from "@/mappers/exercises";
 import { calculateStreakExperience, getSixDaysLaterFormatted } from "@/helpers/generics";
@@ -75,6 +76,9 @@ import {
   useFreezeShield,
 } from "@/services/streak.service";
 import { Tier } from "@/types";
+import { Student, StudentInfo } from "@/types/user";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -93,9 +97,18 @@ export const Route = createFileRoute("/")({
     try {
       if (role === "coach") {
         const [completeStudentsList, studentListData, riskRadarStudents] = await Promise.all([
-          getStudents(),
-          getCoachStudents(coachId),
-          getCoachRiskRadar(coachId),
+          getStudents().catch((err) => {
+            console.warn("Error al cargar lista completa de alumnos:", err);
+            return [];
+          }),
+          getCoachStudents(coachId).catch((err) => {
+            console.warn("Error al cargar alumnos del coach:", err);
+            return [];
+          }),
+          getCoachRiskRadar(coachId).catch((err) => {
+            console.warn("Error al cargar radar de riesgo:", err);
+            return [];
+          }),
         ]);
 
         return {
@@ -224,6 +237,73 @@ const TIERS: Tier[] = [
   },
 ];
 
+const STUDENTS: StudentInfo[] = [
+  {
+    studentId: "1",
+    name: "Carlos Mendoza",
+    initials: "CM",
+    streak: 0,
+    lastWorkout: "Hace 5 días",
+    inactivity: 5,
+    risk: "high",
+  },
+  {
+    studentId: "2",
+    name: "Sofía Rodríguez",
+    initials: "SR",
+    streak: 2,
+    lastWorkout: "Hace 3 días",
+    inactivity: 3,
+    risk: "medium",
+  },
+  {
+    studentId: "3",
+    name: "María Gómez",
+    initials: "MG",
+    streak: 14,
+    lastWorkout: "Ayer",
+    inactivity: 1,
+    risk: "low",
+  },
+  {
+    studentId: "4",
+    name: "Julián Ferrer",
+    initials: "JF",
+    streak: 0,
+    lastWorkout: "Hace 8 días",
+    inactivity: 8,
+    risk: "high",
+  },
+  {
+    studentId: "5",
+    name: "Lucía Ibarra",
+    initials: "LI",
+    streak: 6,
+    lastWorkout: "Hoy",
+    inactivity: 0,
+    risk: "low",
+  },
+  {
+    studentId: "6",
+    name: "Diego Salas",
+    initials: "DS",
+    streak: 1,
+    lastWorkout: "Hace 3 días",
+    inactivity: 3,
+    risk: "medium",
+  },
+];
+
+const RISK_META = {
+  high: {
+    label: "Riesgo Alto",
+    dot: "🔴",
+    cls: "bg-destructive/15 text-destructive ring-destructive/40",
+  },
+  medium: { label: "Riesgo Medio", dot: "🟡", cls: "bg-warning/15 text-warning ring-warning/40" },
+  low: { label: "Normal", dot: "🟢", cls: "bg-success/15 text-success ring-success/40" },
+} as const;
+
 const tierFor = (streak: number) => [...TIERS].reverse().find((t) => streak >= t.min) ?? TIERS[0];
 
 const nextTierFor = (streak: number) => TIERS.find((t) => t.min > streak) ?? null;
@@ -320,6 +400,12 @@ function Dashboard() {
   const [prRecord, setPrRecord] = useState<number>(100);
   const prevStreakRef = useRef<number>(streak);
 
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState<"all" | StudentInfo["risk"]>("all");
+  const [target, setTarget] = useState<StudentInfo | null>(null);
+  const [message, setMessage] = useState("");
+  const [sent, setSent] = useState(false);
+
   const handleUseShield = async () => {
     if (!user?.studentId || shields <= 0 || usingShield) return;
     try {
@@ -361,42 +447,6 @@ function Dashboard() {
   useEffect(() => {
     setHistory(combinedHistoryMapper(streakHistoryLogs, lastCompletedExercises));
   }, [streakHistoryLogs, lastCompletedExercises]);
-
-  // Guardamos la racha previa para detectar incrementos y disparar la felicitación
-
-  // useEffect(() => {
-  /*
-   * LÓGICA DE STREAKS CON ENDPOINT FUTURO:
-   * Cuando el endpoint para consultar la racha del estudiante esté disponible en el backend:
-   * 1. Consultar la racha del estudiante (ej: const streakData = await getStreakByStudent(user.studentId);)
-   * 2. Si la nueva racha es mayor a la racha almacenada en el estado:
-   *    - Actualizar el estado de racha: setStreak(streakData.currentStreak);
-   *    - Disparar el modal de felicitación: setCelebrate(true);
-   *
-   * Ejemplo de implementación:
-   * async function syncStudentStreak() {
-   *   try {
-   *     // const streakData = await getStreakByStudentId(user?.studentId);
-   *     // if (streakData && streakData.streak > streak) {
-   *     //   setStreak(streakData.streak);
-   *     //   setCelebrate(true);
-   *     // }
-   *   } catch (error) {
-   *     console.error("Error al obtener la racha del usuario:", error);
-   *   }
-   * }
-   * syncStudentStreak();
-   */
-
-  // Detección en frontend: si el valor de `streak` se incrementa respecto al valor previo, se activa el diálogo de felicitaciones
-  //   if (streak > prevStreakRef.current) {
-  //     setCelebrate(true);
-  //     prevStreakRef.current = streak;
-  //   }
-  // }, [streak]);
-
-  // const maxWeightLifted = useWeeklyRecord(weeklyExercises);
-  // console.log(maxWeightLifted);
 
   const studentsNumber = useMemo(
     () => (studentListData ? countActiveClients(studentListData) : 0),
@@ -448,12 +498,46 @@ function Dashboard() {
   const next = nextTierFor(streak);
   const progress = next ? ((streak - tier.min) / (next.min - tier.min)) * 100 : 100;
 
-  const completeToday = () => {
-    if (completed) return;
-    setStreak((s) => s + 1);
-    setHistory((h) => [{ name: "Full Body Fuego", date: "Hoy", min: 55 }, ...h.slice(0, 2)]);
-    setCompleted(true);
-    setCelebrate(true);
+  const coachStudentsRadar: StudentInfo[] = useMemo(() => {
+    if (riskRadarStudents && riskRadarStudents.length > 0) {
+      return riskRadarStudentsMapper(riskRadarStudents);
+    }
+    return STUDENTS;
+  }, [riskRadarStudents]);
+
+  const kpiTotalStudents = useMemo(() => {
+    if (studentListData && studentListData.length > 0) {
+      return studentListData.length.toString();
+    }
+    return coachStudentsRadar.length.toString();
+  }, [studentListData, coachStudentsRadar]);
+
+  const kpiAverageStreak = useMemo(() => {
+    if (coachStudentsRadar.length === 0) return "0.0";
+    const totalStreak = coachStudentsRadar.reduce((acc, curr) => acc + curr.streak, 0);
+    return (totalStreak / coachStudentsRadar.length).toFixed(1);
+  }, [coachStudentsRadar]);
+
+  const kpiHighRiskCount = useMemo(() => {
+    return coachStudentsRadar.filter((s) => s.risk === "high").length.toString();
+  }, [coachStudentsRadar]);
+
+  const rows = useMemo(
+    () =>
+      coachStudentsRadar.filter(
+        (s) =>
+          (filter === "all" || s.risk === filter) &&
+          s.name.toLowerCase().includes(query.toLowerCase()),
+      ),
+    [coachStudentsRadar, query, filter],
+  );
+
+  const openContact = (s: StudentInfo) => {
+    setTarget(s);
+    setSent(false);
+    setMessage(
+      `¡Hola ${s.name.split(" ")[0]}! Notamos que hace ${s.inactivity} días que no entrenás. ¿Coordinamos tu próxima sesión? 💪🔥`,
+    );
   };
 
   return (
@@ -472,7 +556,7 @@ function Dashboard() {
       </div> */}
 
       {/* Card streak */}
-      {user!.role === "student" && (
+      {user!.role === "student" ? (
         <div className="w-full">
           {/* header */}
           <div className="flex items-start gap-3">
@@ -825,6 +909,215 @@ function Dashboard() {
             </DialogContent>
           </Dialog>
         </div>
+      ) : (
+        <div className="space-y-6">
+          <div>
+            <p className="text-xs uppercase tracking-[0.3em] text-primary-glow">Coach Panel</p>
+            <h1 className="font-display text-4xl tracking-wide sm:text-5xl">Churn Risk Radar</h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Detectá alumnos en riesgo de abandono antes de perderlos.
+            </p>
+          </div>
+
+          {/* KPIs */}
+          <div className="grid gap-4 sm:grid-cols-3">
+            <Kpi
+              icon={Users}
+              label="Alumnos asignados"
+              value={kpiTotalStudents}
+              hint="en seguimiento"
+            />
+            <Kpi
+              icon={TrendingUp}
+              label="Racha promedio"
+              value={kpiAverageStreak}
+              hint="días por alumno"
+            />
+            <Kpi
+              icon={AlertTriangle}
+              label="Riesgo alto"
+              value={kpiHighRiskCount}
+              hint="requieren contacto"
+              danger={Number(kpiHighRiskCount) > 0}
+            />
+          </div>
+
+          {/* tabla */}
+          <Card className="border-border bg-gradient-card p-4 sm:p-6">
+            <div className="mb-5 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              <div className="relative w-full lg:max-w-xs">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Buscar alumno..."
+                  className="pl-9"
+                />
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {(
+                  [
+                    ["all", "Todos"],
+                    ["high", "🔴 Alto Riesgo"],
+                    ["medium", "🟡 Medio Riesgo"],
+                    ["low", "🟢 Normal"],
+                  ] as const
+                ).map(([key, label]) => (
+                  <button
+                    key={key}
+                    onClick={() => setFilter(key)}
+                    className={`rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-all ${
+                      filter === key
+                        ? "border-primary-glow/50 bg-gradient-primary text-primary-foreground shadow-glow"
+                        : "border-border bg-background/40 text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[820px] border-collapse text-sm">
+                <thead>
+                  <tr className="text-left text-[11px] uppercase tracking-widest text-muted-foreground">
+                    <th className="pb-3 font-medium">Alumno</th>
+                    <th className="pb-3 font-medium">Racha actual</th>
+                    <th className="pb-3 font-medium">Último entrenamiento</th>
+                    <th className="pb-3 font-medium">Inactividad</th>
+                    <th className="pb-3 font-medium">Riesgo</th>
+                    <th className="pb-3 text-right font-medium">Acción</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((s) => {
+                    const meta = RISK_META[s.risk ?? "low"];
+                    return (
+                      <tr
+                        key={s.studentId}
+                        className="border-t border-border transition-colors hover:bg-background/40"
+                      >
+                        <td className="py-3.5">
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-secondary font-display text-sm text-primary-glow">
+                              {s.initials}
+                            </div>
+                            <span className="font-medium">{s.name}</span>
+                          </div>
+                        </td>
+                        <td className="py-3.5">
+                          <span className="inline-flex items-center gap-1.5">
+                            <Flame
+                              className={`h-4 w-4 ${
+                                s.streak > 0 ? "text-primary" : "text-muted-foreground/40"
+                              }`}
+                            />
+                            <span className="font-display text-lg">{s.streak}</span>
+                            <span className="text-xs text-muted-foreground">días</span>
+                          </span>
+                        </td>
+                        <td className="py-3.5 text-muted-foreground">{s.lastWorkout}</td>
+                        <td className="py-3.5">
+                          <div className="flex items-center gap-2">
+                            <div className="h-1.5 w-24 overflow-hidden rounded-full bg-secondary">
+                              <div
+                                className={`h-full rounded-full ${
+                                  s.risk === "high"
+                                    ? "bg-destructive"
+                                    : s.risk === "medium"
+                                      ? "bg-warning"
+                                      : "bg-success"
+                                }`}
+                                style={{ width: `${Math.min(s.inactivity ?? 0 / 8, 1) * 100}%` }}
+                              />
+                            </div>
+                            <span className="text-xs text-muted-foreground">{s.inactivity}d</span>
+                          </div>
+                        </td>
+                        <td className="py-3.5">
+                          <span
+                            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ring-1 ${meta.cls}`}
+                          >
+                            {meta.dot} {meta.label}
+                          </span>
+                        </td>
+                        <td className="py-3.5 text-right">
+                          <Button
+                            size="sm"
+                            variant={s.risk === "high" ? "default" : "outline"}
+                            onClick={() => openContact(s)}
+                            className={
+                              s.risk === "high"
+                                ? "bg-gradient-primary text-primary-foreground shadow-glow hover:brightness-110"
+                                : ""
+                            }
+                          >
+                            <MessageCircle className="h-4 w-4" /> Contactar
+                          </Button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {rows.length === 0 && (
+                    <tr>
+                      <td colSpan={6} className="py-10 text-center text-muted-foreground">
+                        Sin resultados para esta búsqueda.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+
+          <Dialog open={!!target} onOpenChange={(o) => !o && setTarget(null)}>
+            <DialogContent className="border-border bg-gradient-card sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle className="font-display text-2xl tracking-wide">
+                  Mensaje de motivación
+                </DialogTitle>
+                <DialogDescription>
+                  {target
+                    ? `Enviar a ${target.name} · ${target.lastWorkout?.toLowerCase() ?? "Hoy"}`
+                    : ""}
+                </DialogDescription>
+              </DialogHeader>
+
+              {sent ? (
+                <div className="py-6 text-center">
+                  <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-success/15 ring-1 ring-success/40">
+                    <Send className="h-6 w-6 text-success" />
+                  </div>
+                  <p className="font-display text-2xl">¡Mensaje enviado!</p>
+                  <p className="text-sm text-muted-foreground">
+                    Le llegará por WhatsApp y notificación en la app.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <Textarea
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
+                    rows={4}
+                    className="resize-none"
+                  />
+                  <DialogFooter className="gap-2 sm:gap-2">
+                    <Button variant="outline" onClick={() => setTarget(null)}>
+                      Cancelar
+                    </Button>
+                    <Button
+                      onClick={() => setSent(true)}
+                      className="bg-gradient-primary text-primary-foreground shadow-glow hover:brightness-110"
+                    >
+                      <Send className="h-4 w-4" /> Enviar por WhatsApp
+                    </Button>
+                  </DialogFooter>
+                </>
+              )}
+            </DialogContent>
+          </Dialog>
+        </div>
       )}
 
       {/* Hero */}
@@ -1102,6 +1395,37 @@ function Dashboard() {
       </Card> */}
       {/* </div> */}
     </AppShell>
+  );
+}
+
+function Kpi({
+  icon: Icon,
+  label,
+  value,
+  hint,
+  danger,
+}: {
+  icon: React.ElementType;
+  label: string;
+  value: string;
+  hint: string;
+  danger?: boolean;
+}) {
+  return (
+    <Card
+      className={`relative overflow-hidden border-border p-5 ${
+        danger ? "bg-destructive/10" : "bg-gradient-card"
+      }`}
+    >
+      <div className="flex items-center gap-2 text-muted-foreground">
+        <Icon className={`h-4 w-4 ${danger ? "text-destructive" : "text-primary-glow"}`} />
+        <p className="text-[10px] uppercase tracking-widest">{label}</p>
+      </div>
+      <p className={`mt-2 font-display text-5xl leading-none ${danger ? "text-destructive" : ""}`}>
+        {value}
+      </p>
+      <p className="mt-1 text-xs text-muted-foreground">{hint}</p>
+    </Card>
   );
 }
 
