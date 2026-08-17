@@ -2,7 +2,7 @@ import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ChevronRight, Clock, Dumbbell } from "lucide-react";
+import { CheckCircle2, ChevronRight, Clock, Dumbbell } from "lucide-react";
 import { useState } from "react";
 import { CompleteDate, DailyExerciseSets, DayRoutine, Exercise } from "@/types/exercises";
 import { determineDate } from "@/utils/determineDate";
@@ -234,15 +234,24 @@ function RutinaPage() {
                     Descanso
                   </Badge>
                 ) : (
-                  <div className="flex items-center gap-3 text-xs opacity-80">
-                    {/* <span className="flex items-center gap-1">
-                      <Clock className="h-3 w-3" />
-                      {day.estimated} min
-                    </span> */}
-                    <span className="flex items-center gap-1">
-                      <Dumbbell className="h-3 w-3" />
-                      {day.exercises!.length} ej.
-                    </span>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3 text-xs opacity-80">
+                      {/* <span className="flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        {day.estimated} min
+                      </span> */}
+                      <span className="flex items-center gap-1">
+                        <Dumbbell className="h-3 w-3" />
+                        {day.exercises!.length} ej.
+                      </span>
+                    </div>
+                    {day.exercises &&
+                      day.exercises.length > 0 &&
+                      day.exercises.every((ex) => ex.isCompleted) && (
+                        <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 text-[10px] gap-1">
+                          <CheckCircle2 className="h-3 w-3" /> Hecho
+                        </Badge>
+                      )}
                   </div>
                 )}
               </Card>

@@ -12,7 +12,7 @@ export interface StudentStreakDto {
 }
 
 export interface WorkoutCompletedDto {
-  studentId?: number;
+  studentId: number;
   activityDate: string;
 }
 

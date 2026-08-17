@@ -218,10 +218,18 @@ function ExerciseRow({ ex, index }: { ex: Exercise; index: number }) {
       );
 
       // Actualizar la racha (streak) del estudiante al completar la rutina
+      const isoActivityDate = ex.scheduledDate
+        ? new Date(
+            ex.scheduledDate.includes("T") ? ex.scheduledDate : `${ex.scheduledDate}T12:00:00Z`,
+          ).toISOString()
+        : new Date().toISOString();
+
       await postWorkoutCompleted({
-        studentId: ex.studentId,
-        activityDate: ex.scheduledDate,
+        studentId: Number(ex.studentId),
+        activityDate: isoActivityDate,
       });
+
+      notify.success("¡Ejercicio completado!", "Racha y progreso actualizados 🔥");
     } catch (error) {
       notify.error("Error al actualizar", "Intenta de nuevo");
       console.error(error);

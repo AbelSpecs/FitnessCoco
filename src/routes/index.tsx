@@ -304,7 +304,9 @@ function Dashboard() {
   } = Route.useLoaderData();
   const [streak, setStreak] = useState(() => studentStreakData?.currentStreak ?? 14);
   const [shields, setShields] = useState(() => studentStreakData?.freezeShieldsAvailable ?? 2);
-  const [completed, setCompleted] = useState<boolean>(false);
+  const [completed, setCompleted] = useState<boolean>(
+    () => !!studentStreakData?.isCompletedToday,
+  );
   const [celebrate, setCelebrate] = useState<boolean>(false);
   const [history, setHistory] = useState<History[]>(() =>
     combinedHistoryMapper(streakHistoryLogs, lastCompletedExercises),
@@ -325,6 +327,9 @@ function Dashboard() {
       const shieldsCount = studentStreakData.freezeShieldsAvailable;
       if (typeof shieldsCount === "number") {
         setShields(shieldsCount);
+      }
+      if (typeof studentStreakData.isCompletedToday === "boolean") {
+        setCompleted(studentStreakData.isCompletedToday);
       }
     }
   }, [studentStreakData]);

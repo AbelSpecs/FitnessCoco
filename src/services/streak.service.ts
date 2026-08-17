@@ -36,9 +36,9 @@ export const getStudentStreak = async (studentId: number | string): Promise<Stud
 export const postWorkoutCompleted = async (workoutData: WorkoutCompletedDto) => {
   try {
     const response = await api.post("/Streaks/workout-completed", workoutData);
-    const { data } = response.data;
+    const { data } = response;
 
-    return data ?? response.data;
+    return data?.data ?? data ?? response.data;
   } catch (error) {
     console.error("Error al registrar entrenamiento completado", error);
     throw error;
