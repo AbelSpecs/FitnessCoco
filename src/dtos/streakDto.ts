@@ -33,3 +33,7 @@ export interface StreakHistoryLogDto {
   activityDate: string;
   createdAt: string;
 }
+
+export interface UseFreezeShieldDto {
+  shieldDate?: string;
+}

@@ -61,13 +61,18 @@ import { format, addDays, startOfWeek, subDays } from "date-fns";
 import { es } from "date-fns/locale";
 import { GetDailyStudentExerciseDto } from "@/dtos/exerciseDto";
 import { History } from "@/types/exercises";
-import { combinedHistoryMapper, historyExercisesMapper, streakHistoryMapper } from "@/mappers/exercises";
+import {
+  combinedHistoryMapper,
+  historyExercisesMapper,
+  streakHistoryMapper,
+} from "@/mappers/exercises";
 import { calculateStreakExperience, getSixDaysLaterFormatted } from "@/helpers/generics";
-import { useWeeklyRecord } from "@/hooks/use-weeklyRecord";
+import { notify } from "@/components/NotificationCenter";
 import {
   getCoachRiskRadar,
   getStudentStreak,
   getStudentStreakHistory,
+  useFreezeShield,
 } from "@/services/streak.service";
 import { Tier } from "@/types";
 
@@ -304,16 +309,35 @@ function Dashboard() {
   } = Route.useLoaderData();
   const [streak, setStreak] = useState(() => studentStreakData?.currentStreak ?? 14);
   const [shields, setShields] = useState(() => studentStreakData?.freezeShieldsAvailable ?? 2);
-  const [completed, setCompleted] = useState<boolean>(
-    () => !!studentStreakData?.isCompletedToday,
-  );
+  const [completed, setCompleted] = useState<boolean>(() => !!studentStreakData?.isCompletedToday);
   const [celebrate, setCelebrate] = useState<boolean>(false);
   const [history, setHistory] = useState<History[]>(() =>
     combinedHistoryMapper(streakHistoryLogs, lastCompletedExercises),
   );
+  const [shieldModalOpen, setShieldModalOpen] = useState<boolean>(false);
+  const [usingShield, setUsingShield] = useState<boolean>(false);
   const [prMedalInfo, setPrMedalInfo] = useState<boolean>(false);
   const [prRecord, setPrRecord] = useState<number>(100);
   const prevStreakRef = useRef<number>(streak);
+
+  const handleUseShield = async () => {
+    if (!user?.studentId || shields <= 0 || usingShield) return;
+    try {
+      setUsingShield(true);
+      await useFreezeShield(user.studentId);
+      setShields((prev) => Math.max(0, prev - 1));
+      notify.success("¡Escudo de Hielo activado!", "Tu racha está protegida ante inactividad 🛡️❄️");
+      setShieldModalOpen(false);
+    } catch (error) {
+      console.error("Error al usar escudo congelador:", error);
+      notify.error(
+        "Error al activar escudo",
+        "No se pudo usar el escudo de hielo. Intenta nuevamente.",
+      );
+    } finally {
+      setUsingShield(false);
+    }
+  };
 
   const ChangePrMedalInfo = () => {
     setPrMedalInfo(!prMedalInfo);
@@ -540,15 +564,22 @@ function Dashboard() {
 
               {/* escudos */}
               <button
-                onClick={() => shields > 0 && setShields((s) => s - 1)}
-                className="mt-5 flex w-full items-center gap-3 rounded-xl border border-border bg-background/40 p-3 text-left backdrop-blur-md transition-colors hover:border-primary/60"
+                type="button"
+                onClick={() => setShieldModalOpen(true)}
+                className="mt-5 flex w-full items-center gap-3 rounded-xl border border-border bg-background/40 p-3 text-left backdrop-blur-md transition-colors hover:border-primary/60 hover:cursor-pointer"
               >
-                <Shield className="h-5 w-5 text-primary-glow" />
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 border border-primary/20">
+                  <Shield className="h-5 w-5 text-primary-glow" />
+                </div>
                 <div className="flex-1">
                   <p className="text-sm font-semibold">Escudos de Hielo 🛡️</p>
-                  <p className="text-xs text-muted-foreground">Protegen tu racha un día</p>
+                  <p className="text-xs text-muted-foreground">
+                    {shields > 0
+                      ? "Protegen tu racha ante un día de inactividad"
+                      : "No tienes escudos disponibles en este momento"}
+                  </p>
                 </div>
-                <span className="font-display text-lg text-primary-glow">{shields}/2</span>
+                <span className="font-display text-lg text-primary-glow">{shields} disp.</span>
               </button>
 
               {/* barra de experiencia por hitos */}
@@ -731,6 +762,66 @@ function Dashboard() {
               >
                 <PartyPopper className="h-4 w-4" /> ¡Vamos!
               </Button>
+            </DialogContent>
+          </Dialog>
+
+          {/* Dialogo de Escudo de Hielo / Freeze Shield */}
+          <Dialog open={shieldModalOpen} onOpenChange={setShieldModalOpen}>
+            <DialogContent className="max-w-sm border-border bg-gradient-card text-center">
+              <DialogHeader className="items-center">
+                <div className="mb-2 flex h-16 w-16 items-center justify-center rounded-full bg-cyan-500/15 text-cyan-400 border border-cyan-500/30 shadow-glow">
+                  <Shield className="h-8 w-8 text-cyan-400 animate-pulse" />
+                </div>
+                <DialogTitle className="font-display text-2xl tracking-wide">
+                  Escudos de Hielo 🛡️❄️
+                </DialogTitle>
+                <DialogDescription className="text-sm text-muted-foreground mt-2">
+                  {shields > 0 ? (
+                    <>
+                      Tienes{" "}
+                      <strong className="text-foreground">
+                        {shields} {shields === 1 ? "escudo disponible" : "escudos disponibles"}
+                      </strong>
+                      . Al activar un escudo, tu racha de{" "}
+                      <strong className="text-foreground">{streak} días</strong> no se romperá si
+                      hoy o mañana no puedes entrenar.
+                    </>
+                  ) : (
+                    <>
+                      No te quedan escudos disponibles. Sigue entrenando y alcanzando nuevos hitos
+                      de racha para desbloquear más escudos.
+                    </>
+                  )}
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter className="flex flex-col sm:flex-row gap-2 mt-4">
+                {shields > 0 ? (
+                  <>
+                    <Button
+                      variant="ghost"
+                      onClick={() => setShieldModalOpen(false)}
+                      disabled={usingShield}
+                      className="w-full sm:w-auto"
+                    >
+                      Cancelar
+                    </Button>
+                    <Button
+                      onClick={handleUseShield}
+                      disabled={usingShield}
+                      className="w-full sm:w-auto bg-gradient-primary text-primary-foreground shadow-glow hover:brightness-110"
+                    >
+                      {usingShield ? "Activando..." : "Activar Escudo 🛡️"}
+                    </Button>
+                  </>
+                ) : (
+                  <Button
+                    onClick={() => setShieldModalOpen(false)}
+                    className="w-full bg-gradient-primary text-primary-foreground shadow-glow"
+                  >
+                    Entendido
+                  </Button>
+                )}
+              </DialogFooter>
             </DialogContent>
           </Dialog>
         </div>

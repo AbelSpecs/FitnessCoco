@@ -2,6 +2,7 @@ import {
   RiskRadarStudentDto,
   StreakHistoryLogDto,
   StudentStreakDto,
+  UseFreezeShieldDto,
   WorkoutCompletedDto,
 } from "@/dtos/streakDto";
 import api from "./api";
@@ -85,6 +86,30 @@ export const getStudentStreakHistory = async (
     return data?.data ?? data ?? response.data;
   } catch (error) {
     console.error(`Error al obtener el historial de racha del estudiante ${studentId}`, error);
+    throw error;
+  }
+};
+
+/**
+ * Utiliza un escudo de congelación para proteger la racha del estudiante ante inactividad.
+ * Endpoint: POST /api/v1/Streaks/student/{studentId}/use-freeze-shield
+ *
+ * @param studentId - ID del estudiante
+ * @param shieldDate - Fecha opcional para la que se aplica el escudo
+ * @returns Respuesta de confirmación del uso del escudo
+ */
+export const useFreezeShield = async (
+  studentId: number | string,
+  shieldDate?: string,
+) => {
+  try {
+    const payload: UseFreezeShieldDto = shieldDate ? { shieldDate } : {};
+    const response = await api.post(`/Streaks/student/${studentId}/use-freeze-shield`, payload);
+    const { data } = response;
+
+    return data?.data ?? data ?? response.data;
+  } catch (error) {
+    console.error(`Error al usar escudo de congelación para el estudiante ${studentId}`, error);
     throw error;
   }
 };
