@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as RegisterInfoRouteImport } from './routes/register-info'
 import { Route as RegisterRouteImport } from './routes/register'
+import { Route as RankingRouteImport } from './routes/ranking'
 import { Route as ProgresoRouteImport } from './routes/progreso'
 import { Route as ParQRouteImport } from './routes/par-q'
 import { Route as LoginRouteImport } from './routes/login'
@@ -29,6 +30,11 @@ const RegisterInfoRoute = RegisterInfoRouteImport.update({
 const RegisterRoute = RegisterRouteImport.update({
   id: '/register',
   path: '/register',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RankingRoute = RankingRouteImport.update({
+  id: '/ranking',
+  path: '/ranking',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProgresoRoute = ProgresoRouteImport.update({
@@ -82,6 +88,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/par-q': typeof ParQRoute
   '/progreso': typeof ProgresoRoute
+  '/ranking': typeof RankingRoute
   '/register': typeof RegisterRoute
   '/register-info': typeof RegisterInfoRoute
   '/clientes/$studentId': typeof ClientesStudentIdRoute
@@ -95,6 +102,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/par-q': typeof ParQRoute
   '/progreso': typeof ProgresoRoute
+  '/ranking': typeof RankingRoute
   '/register': typeof RegisterRoute
   '/register-info': typeof RegisterInfoRoute
   '/clientes/$studentId': typeof ClientesStudentIdRoute
@@ -109,6 +117,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/par-q': typeof ParQRoute
   '/progreso': typeof ProgresoRoute
+  '/ranking': typeof RankingRoute
   '/register': typeof RegisterRoute
   '/register-info': typeof RegisterInfoRoute
   '/clientes/$studentId': typeof ClientesStudentIdRoute
@@ -124,6 +133,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/par-q'
     | '/progreso'
+    | '/ranking'
     | '/register'
     | '/register-info'
     | '/clientes/$studentId'
@@ -137,6 +147,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/par-q'
     | '/progreso'
+    | '/ranking'
     | '/register'
     | '/register-info'
     | '/clientes/$studentId'
@@ -150,6 +161,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/par-q'
     | '/progreso'
+    | '/ranking'
     | '/register'
     | '/register-info'
     | '/clientes/$studentId'
@@ -164,6 +176,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   ParQRoute: typeof ParQRoute
   ProgresoRoute: typeof ProgresoRoute
+  RankingRoute: typeof RankingRoute
   RegisterRoute: typeof RegisterRoute
   RegisterInfoRoute: typeof RegisterInfoRoute
   ClientesStudentIdRoute: typeof ClientesStudentIdRoute
@@ -187,6 +200,13 @@ declare module '@tanstack/react-router' {
       path: '/register'
       fullPath: '/register'
       preLoaderRoute: typeof RegisterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ranking': {
+      id: '/ranking'
+      path: '/ranking'
+      fullPath: '/ranking'
+      preLoaderRoute: typeof RankingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/progreso': {
@@ -260,6 +280,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   ParQRoute: ParQRoute,
   ProgresoRoute: ProgresoRoute,
+  RankingRoute: RankingRoute,
   RegisterRoute: RegisterRoute,
   RegisterInfoRoute: RegisterInfoRoute,
   ClientesStudentIdRoute: ClientesStudentIdRoute,

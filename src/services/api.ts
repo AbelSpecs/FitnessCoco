@@ -1,7 +1,8 @@
 import axios from "axios";
 import { useAuthStore } from "../store/authStore";
 // Obtenemos la URL base desde las variables de entorno de Vite
-const API_BASE_URL = import.meta.env.VITE_API_URL;
+// const API_BASE_URL = import.meta.env.VITE_API_URL;
+const API_BASE_URL = "https://api.pyrosfit.com/api/v1";
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {

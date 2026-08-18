@@ -86,3 +86,10 @@ export interface DayRoutine {
   estimated: string;
   exercises: Exercise[];
 }
+
+export interface History {
+  name: string;
+  date: string;
+  min: number;
+}
+

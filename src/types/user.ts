@@ -17,9 +17,13 @@ export interface Student {
 export interface StudentInfo {
   studentId: string;
   name: string;
-  fitnessGoal: string;
-  plan: "basic" | "health" | "pro";
+  fitnessGoal?: string;
+  plan?: "basic" | "health" | "pro";
   streak: number;
+  initials?: string;
+  lastWorkout?: string;
+  inactivity?: number;
+  risk?: "high" | "medium" | "low";
 }
 
 export interface Coach {
