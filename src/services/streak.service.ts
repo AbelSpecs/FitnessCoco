@@ -1,6 +1,7 @@
 import {
   RiskRadarStudentDto,
   StreakHistoryLogDto,
+  StreakLeaderboardItemDto,
   StudentStreakDto,
   UseFreezeShieldDto,
   WorkoutCompletedDto,
@@ -112,6 +113,54 @@ export const useFreezeShield = async (
     return data?.data ?? data ?? response.data;
   } catch (error) {
     console.error(`Error al usar escudo de congelación para el estudiante ${studentId}`, error);
+    throw error;
+  }
+};
+
+/**
+ * Obtiene el ranking global de rachas de la plataforma.
+ * Endpoint: GET /api/v1/Streaks/leaderboard
+ *
+ * @param limit - Cantidad máxima de alumnos en el ranking (por defecto 50)
+ * @returns Lista del leaderboard global de rachas
+ */
+export const getGlobalStreakLeaderboard = async (
+  limit: number = 50,
+): Promise<StreakLeaderboardItemDto[]> => {
+  try {
+    const response = await api.get("/Streaks/leaderboard", {
+      params: { limit },
+    });
+    const { data } = response;
+
+    return data?.data ?? data ?? response.data;
+  } catch (error) {
+    console.error("Error al obtener el ranking global de rachas", error);
+    throw error;
+  }
+};
+
+/**
+ * Obtiene el ranking (leaderboard) de rachas de los alumnos de un coach.
+ * Endpoint: GET /api/v1/Streaks/coach/{coachId}/leaderboard
+ *
+ * @param coachId - ID del coach
+ * @param limit - Cantidad máxima de alumnos en el ranking (por defecto 50)
+ * @returns Lista del leaderboard de alumnos del coach
+ */
+export const getCoachStreakLeaderboard = async (
+  coachId: number | string,
+  limit: number = 50,
+): Promise<StreakLeaderboardItemDto[]> => {
+  try {
+    const response = await api.get(`/Streaks/coach/${coachId}/leaderboard`, {
+      params: { limit },
+    });
+    const { data } = response;
+
+    return data?.data ?? data ?? response.data;
+  } catch (error) {
+    console.error(`Error al obtener el ranking de alumnos del coach ${coachId}`, error);
     throw error;
   }
 };

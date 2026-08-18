@@ -37,3 +37,13 @@ export interface StreakHistoryLogDto {
 export interface UseFreezeShieldDto {
   shieldDate?: string;
 }
+
+export interface StreakLeaderboardItemDto {
+  rank: number;
+  studentId: number;
+  studentName: string;
+  currentStreak: number;
+  longestStreak: number;
+  lastCompletedDate?: string | null;
+  freezeShieldsAvailable: number;
+}

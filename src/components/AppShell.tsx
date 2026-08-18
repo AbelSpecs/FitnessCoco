@@ -11,6 +11,7 @@ import {
   Menu,
   X,
   Users,
+  Trophy,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
@@ -42,6 +43,13 @@ const nav = [
     label: "Rutina",
     icon: Calendar,
     roles: ["student"] as Role[],
+    condition: false,
+  },
+  {
+    to: "/ranking",
+    label: "Podio",
+    icon: Trophy,
+    roles: ["coach", "student"] as Role[],
     condition: false,
   },
   // { to: "/progreso", label: "Progreso", icon: TrendingUp },
@@ -85,6 +93,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     Perfil: () => ({ userId: user?.id?.toString() ?? "" }),
     Clientes: () => ({}),
     Dashboard: () => ({}),
+    Podio: () => ({}),
+    Ranking: () => ({}),
     "Crear Rutina": () => ({ studentId: user?.studentId?.toString() ?? "" }),
   };
 
@@ -326,7 +336,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       {/* Mobile bottom nav */}
       <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 backdrop-blur-xl bg-sidebar/90 border-t border-sidebar-border safe-bottom">
-        <div className={`grid grid-cols-${visibleItems.length}`}>
+        <div
+          className="grid"
+          style={{ gridTemplateColumns: `repeat(${visibleItems.length}, minmax(0, 1fr))` }}
+        >
           {visibleItems.map((item) => {
             if (user?.role && !item.roles.includes(user.role as Role)) {
               return;
