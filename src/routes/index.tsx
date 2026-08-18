@@ -397,7 +397,9 @@ function Dashboard() {
   const [shieldModalOpen, setShieldModalOpen] = useState<boolean>(false);
   const [usingShield, setUsingShield] = useState<boolean>(false);
   const [prMedalInfo, setPrMedalInfo] = useState<boolean>(false);
-  const [prRecord, setPrRecord] = useState<number>(100);
+  const [prRecord, setPrRecord] = useState<number>(() =>
+    calculateMaxWeightLifted(weeklyExercises),
+  );
   const prevStreakRef = useRef<number>(streak);
 
   const [query, setQuery] = useState("");
@@ -443,6 +445,12 @@ function Dashboard() {
       }
     }
   }, [studentStreakData]);
+
+  useEffect(() => {
+    if (weeklyExercises && weeklyExercises.length > 0) {
+      setPrRecord(calculateMaxWeightLifted(weeklyExercises));
+    }
+  }, [weeklyExercises]);
 
   useEffect(() => {
     setHistory(combinedHistoryMapper(streakHistoryLogs, lastCompletedExercises));
@@ -770,7 +778,7 @@ function Dashboard() {
               </Card>
             ) : (
               <div className="space-y-2">
-                {history.map((h, i) => (
+                {history.slice(0, 4).map((h, i) => (
                   <Card
                     key={`${h.name}-${i}`}
                     className="flex items-center gap-3 border-border bg-gradient-card p-3"

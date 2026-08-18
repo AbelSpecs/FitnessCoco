@@ -113,7 +113,7 @@ export const Route = createFileRoute("/clientes/$studentId")({
         getUser(studentResponse.userId),
         getDailyStudentExercisesByStudentIdAndDate(
           Number(params.studentId),
-          new Date().toISOString(),
+          format(new Date(), "yyyy-MM-dd"),
         ),
         getMuscleGroups(),
       ]);
@@ -203,7 +203,7 @@ function ClientRoutinesPage() {
     muscleGroupName: "",
     description: "",
     coachNotes: "",
-    scheduledDate: new Date().toISOString(),
+    scheduledDate: format(new Date(), "yyyy-MM-dd"),
     dailyExerciseSets: [emptySet()],
   });
   // update state
@@ -219,7 +219,7 @@ function ClientRoutinesPage() {
       muscleGroupName: "",
       description: "",
       coachNotes: "",
-      scheduledDate: new Date().toISOString(),
+      scheduledDate: format(new Date(), "yyyy-MM-dd"),
       dailyExerciseSets: [emptySet()],
     });
     setSelectedDate(new Date());
@@ -318,11 +318,12 @@ function ClientRoutinesPage() {
   const handleSearchDatePickerDate = async (date: Date | undefined) => {
     if (!date) return;
 
-    setSelectedDateSearch(new Date(date.toISOString()));
+    setSelectedDateSearch(date);
 
     try {
+      const dateString = format(date, "yyyy-MM-dd");
       const updatedRoutines: GetDailyStudentExerciseDto[] =
-        await getDailyStudentExercisesByStudentIdAndDate(Number(studentId), date.toISOString());
+        await getDailyStudentExercisesByStudentIdAndDate(Number(studentId), dateString);
 
       const completeExercisesMapped: Exercise[] = exercisesMapper(updatedRoutines);
       setRoutines(completeExercisesMapped);
@@ -513,18 +514,21 @@ function ClientRoutinesPage() {
       },
     );
 
+    const scheduledDateFormatted = format(selectedDate || new Date(), "yyyy-MM-dd");
+
     const dailyExerciseData: DailyStudentExerciseDto = {
       assign: {
         coachId: user!.coachId!,
         studentId: Number(studentId),
         exerciseId: routineForm.exerciseId,
-        scheduledDate: selectedDate!.toISOString(),
+        scheduledDate: scheduledDateFormatted,
         dailyExerciseSets: dailyExerciseSetsData,
         coachNotes: routineForm.coachNotes!,
       },
     };
 
     try {
+      console.log("dailyExerciseData:", dailyExerciseData);
       const exercisesResponse = await postDailyStudentExercises(dailyExerciseData);
 
       const exerciseExtraData = await getExercise(exercisesResponse.exerciseId);
@@ -909,13 +913,10 @@ function ClientRoutinesPage() {
           ) : (
             <div className="space-y-3">
               {routines.map((routine, index) => {
-                const today = new Date();
-                today.setUTCHours(0, 0, 0, 0);
-                const correctedToday = addDays(today, 1);
-                const todayFormatted = format(correctedToday, "yyyy-MM-dd");
-                const routineDay = new Date(routine.scheduledDate);
-                const correctedRoutineDay = addDays(routineDay, 1);
-                const routineDayFormatted = format(correctedRoutineDay, "yyyy-MM-dd");
+                const todayFormatted = format(new Date(), "yyyy-MM-dd");
+                const routineDayFormatted = routine.scheduledDate.includes("T")
+                  ? routine.scheduledDate.split("T")[0]
+                  : routine.scheduledDate;
 
                 const isFutureRoutine = todayFormatted <= routineDayFormatted;
 

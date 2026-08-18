@@ -41,14 +41,12 @@ export const calculateMaxWeightLifted = (exercises: GetDailyStudentExerciseDto[]
   let maxWeight = 0;
 
   exercises.forEach((ex) => {
-    if (ex.isCompleted && ex.dailyExerciseSets) {
+    if (ex.dailyExerciseSets && ex.dailyExerciseSets.length > 0) {
       ex.dailyExerciseSets.forEach((set) => {
-        if (set.isAchieved) {
-          const currentWeight = Number(set.actualWeight) || 0;
+        const actualWeight = Number(set.actualWeight) || 0;
 
-          if (currentWeight > maxWeight) {
-            maxWeight = currentWeight;
-          }
+        if (actualWeight > maxWeight) {
+          maxWeight = actualWeight;
         }
       });
     }

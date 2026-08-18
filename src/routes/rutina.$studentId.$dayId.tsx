@@ -29,7 +29,7 @@ import {
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   LineChart,
   Line,
@@ -123,8 +123,14 @@ function DayDetail() {
   const { dayId } = useParams({ from: "/rutina/$studentId/$dayId" });
   const { dayExercises } = Route.useLoaderData();
   const { user } = useAuthStore();
+  const [exercisesList, setExercisesList] = useState<Exercise[]>(dayExercises || []);
+
+  useEffect(() => {
+    setExercisesList(dayExercises || []);
+  }, [dayExercises]);
+
   const actualDay: DayRoutine = useMemo(() => {
-    if (!dayExercises || dayExercises.length === 0) {
+    if (!exercisesList || exercisesList.length === 0) {
       return {
         id: 0,
         scheduledDate: dayId || "",
@@ -140,14 +146,58 @@ function DayDetail() {
     return {
       id: 0,
       scheduledDate: dayId || "",
-      name: dayExercises[0].day,
-      short: dayExercises[0].short,
+      name: exercisesList[0].day,
+      short: exercisesList[0].short,
       estimated: "",
       rest: false,
-      muscleGroupName: dayExercises[0].muscleGroupName || "Entrenamiento",
-      exercises: dayExercises,
+      muscleGroupName: exercisesList[0].muscleGroupName || "Entrenamiento",
+      exercises: exercisesList,
     };
-  }, [dayExercises, dayId]);
+  }, [exercisesList, dayId]);
+
+  const handleExerciseComplete = async (ex: Exercise, studentNotes?: string) => {
+    const exercisetoUpdate: UpdateCompleteDailyStudentExerciseDto = {
+      isCompleted: true,
+      studentNotes: studentNotes || "",
+    };
+
+    try {
+      await updateCompleteDailyStudentExercises(ex.dailyExerciseId, exercisetoUpdate);
+
+      const nextList = exercisesList.map((item) =>
+        item.dailyExerciseId === ex.dailyExerciseId
+          ? { ...item, isCompleted: true, studentNotes: studentNotes || item.studentNotes }
+          : item,
+      );
+      setExercisesList(nextList);
+
+      const allCompleted = nextList.length > 0 && nextList.every((item) => item.isCompleted);
+      console.log(allCompleted);
+      if (allCompleted) {
+        // Formatear fecha localmente sin desfases de UTC
+        const dateStr = ex.scheduledDate
+          ? ex.scheduledDate.split("T")[0]
+          : dayId || format(new Date(), "yyyy-MM-dd");
+        const isoActivityDate = `${dateStr}T12:00:00Z`;
+
+        await postWorkoutCompleted({
+          studentId: Number(ex.studentId || user?.studentId),
+          activityDate: isoActivityDate,
+        });
+
+        notify.success(
+          "¡Rutina completada!",
+          "Has completado todos los ejercicios del día. Racha y progreso actualizados 🔥",
+        );
+      } else {
+        notify.success("¡Ejercicio completado!", "Progreso guardado 💪");
+      }
+    } catch (error) {
+      notify.error("Error al actualizar", "Intenta de nuevo");
+      console.error(error);
+      throw error;
+    }
+  };
 
   return (
     <AppShell>
@@ -168,13 +218,6 @@ function DayDetail() {
           </h1>
           {!actualDay?.rest && (
             <div className="flex flex-wrap items-center gap-3 sm:gap-4 mt-4 sm:mt-5 text-xs sm:text-sm">
-              {/* <span className="flex items-center gap-2">
-                <Clock className="h-4 w-4 text-primary-glow" /> {actualDay?.estimated} min
-              </span>
-              <span className="flex items-center gap-2">
-                <Flame className="h-4 w-4 text-primary-glow" /> ~{Number(actualDay?.estimated) * 8}{" "}
-                kcal
-              </span> */}
               <Badge variant="secondary">{actualDay?.exercises.length} ejercicios</Badge>
             </div>
           )}
@@ -193,7 +236,14 @@ function DayDetail() {
       ) : (
         <div className="space-y-3">
           {actualDay?.exercises.map((ex, i) => {
-            return <ExerciseRow key={ex.dailyExerciseId} ex={ex} index={i + 1} />;
+            return (
+              <ExerciseRow
+                key={ex.dailyExerciseId}
+                ex={ex}
+                index={i + 1}
+                onComplete={handleExerciseComplete}
+              />
+            );
           })}
         </div>
       )}
@@ -201,41 +251,28 @@ function DayDetail() {
   );
 }
 
-function ExerciseRow({ ex, index }: { ex: Exercise; index: number }) {
-  const [finalDone, setFinalDone] = useState(ex.isCompleted);
-  const [notes, setNotes] = useState(ex.studentNotes);
+function ExerciseRow({
+  ex,
+  index,
+  onComplete,
+}: {
+  ex: Exercise;
+  index: number;
+  onComplete: (ex: Exercise, notes?: string) => Promise<void>;
+}) {
+  const [loading, setLoading] = useState(false);
+  const [notes, setNotes] = useState(ex.studentNotes || "");
   const [showSets, setShowSets] = useState(false);
 
-  const handleExerciseUpdate = async (ex: Exercise) => {
-    const exercisetoUpdate: UpdateCompleteDailyStudentExerciseDto = {
-      isCompleted: true,
-      studentNotes: notes,
-    };
+  const handleFinish = async () => {
+    if (ex.isCompleted || loading) return;
+    setLoading(true);
     try {
-      const updatedExercise = await updateCompleteDailyStudentExercises(
-        ex.dailyExerciseId,
-        exercisetoUpdate,
-      );
-
-      // Actualizar la racha (streak) del estudiante al completar la rutina
-      const isoActivityDate = ex.scheduledDate
-        ? new Date(
-            ex.scheduledDate.includes("T") ? ex.scheduledDate : `${ex.scheduledDate}T12:00:00Z`,
-          ).toISOString()
-        : new Date().toISOString();
-
-      await postWorkoutCompleted({
-        studentId: Number(ex.studentId),
-        activityDate: isoActivityDate,
-      });
-
-      notify.success("¡Ejercicio completado!", "Racha y progreso actualizados 🔥");
+      await onComplete(ex, notes);
     } catch (error) {
-      notify.error("Error al actualizar", "Intenta de nuevo");
       console.error(error);
-      return;
     } finally {
-      setFinalDone(true);
+      setLoading(false);
     }
   };
 
@@ -244,12 +281,12 @@ function ExerciseRow({ ex, index }: { ex: Exercise; index: number }) {
       <div className="flex items-start gap-3 sm:gap-4">
         <div
           className={`h-10 w-10 sm:h-12 sm:w-12 rounded-xl flex items-center justify-center font-display text-lg sm:text-xl shrink-0 ${
-            finalDone
+            ex.isCompleted
               ? "bg-success text-success-foreground"
               : "bg-gradient-primary text-primary-foreground"
           }`}
         >
-          {finalDone ? <CheckCircle2 className="h-5 w-5" /> : index}
+          {ex.isCompleted ? <CheckCircle2 className="h-5 w-5" /> : index}
         </div>
 
         <div className="flex-1 min-w-0">
@@ -258,9 +295,6 @@ function ExerciseRow({ ex, index }: { ex: Exercise; index: number }) {
               <h3 className="font-display text-xl sm:text-2xl leading-tight break-words">
                 {ex.exerciseName}
               </h3>
-              {/* <p className="text-[11px] sm:text-xs text-muted-foreground mt-0.5">
-                {set!.setNumber} series × {set!.targetReps} · descanso {set!.restTime}s
-              </p> */}
             </div>
 
             <div className="flex gap-2 shrink-0">
@@ -274,8 +308,6 @@ function ExerciseRow({ ex, index }: { ex: Exercise; index: number }) {
                 {showSets ? "Ocultar" : "Series"}
                 {showSets ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
               </Button>
-              {/* <HistoryDialog ex={set} /> */}
-              {/* <VideoDialog ex={set} /> */}
             </div>
           </div>
 
@@ -290,20 +322,18 @@ function ExerciseRow({ ex, index }: { ex: Exercise; index: number }) {
           )}
           <Textarea
             placeholder="Comentarios: sensación, asistencia, dolor, etc."
-            value={ex.studentNotes || notes}
+            value={notes}
             onChange={(e) => setNotes(e.target.value)}
             className="mt-2 bg-background/50 min-h-[60px]"
-            disabled={finalDone}
+            disabled={ex.isCompleted || loading}
           />
           <Button
-            variant={finalDone ? "secondary" : "hero"}
-            onClick={() => {
-              handleExerciseUpdate(ex);
-            }}
+            variant={ex.isCompleted ? "secondary" : "hero"}
+            onClick={handleFinish}
             className="h-9 text-xs font-medium uppercase tracking-wider truncate"
-            disabled={finalDone}
+            disabled={ex.isCompleted || loading}
           >
-            {finalDone ? "Completado" : "Terminar Ejercicio"}
+            {ex.isCompleted ? "Completado" : loading ? "Guardando..." : "Terminar Ejercicio"}
           </Button>
         </div>
       </div>

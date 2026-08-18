@@ -61,7 +61,8 @@ export const historyExercisesMapper = (
   const grouped: Record<string, GetDailyStudentExerciseDto[]> = {};
 
   historyExercises.forEach((ex: GetDailyStudentExerciseDto) => {
-    const dateKey = ex.scheduledDate;
+    const dateKey = ex.scheduledDate ? ex.scheduledDate.split("T")[0] : "";
+    if (!dateKey) return;
     if (!grouped[dateKey]) grouped[dateKey] = [];
     grouped[dateKey].push(ex);
   });
@@ -107,11 +108,12 @@ export const streakHistoryMapper = (streakHistoryLogs: StreakHistoryLogDto[]): H
 
 /**
  * Combina y mapea los logs del historial de racha (`streakHistoryLogs`)
- * y los ejercicios completados (`lastCompletedExercises`) en una única lista unificada de `History[]`.
+ * y los ejercicios completados (`lastCompletedExercises`) en una única lista unificada de `History[]`,
+ * ordenada cronológicamente de más reciente a más antiguo y limitada a los 4 ítems más recientes.
  *
  * @param streakHistoryLogs Lista de DTOs del historial de racha
  * @param lastCompletedExercises Lista de DTOs de ejercicios completados recientemente
- * @returns Lista combinada y sin duplicados de actividades recientes
+ * @returns Lista de hasta 4 actividades recientes más nuevas
  */
 export const combinedHistoryMapper = (
   streakHistoryLogs?: StreakHistoryLogDto[],
@@ -123,10 +125,15 @@ export const combinedHistoryMapper = (
   const combined = [...mappedStreakLogs, ...mappedExercises];
 
   // Filtrar duplicados con la misma fecha y nombre de actividad
-  return combined.filter(
+  const unique = combined.filter(
     (item, index, self) =>
       index === self.findIndex((t) => t.date === item.date && t.name === item.name),
   );
+
+  // Ordenar de más reciente a más antiguo y devolver solo los 4 más recientes
+  return unique
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    .slice(0, 4);
 };
 
 /**
