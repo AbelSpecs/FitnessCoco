@@ -50,6 +50,7 @@ import {
   calculateWeeklyStreak,
   calculateMaxWeightLifted,
   calculateRoutineDurationInMin,
+  formatDuration,
 } from "@/helpers/studentsHelper";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getStudents } from "@/services/student.service";
@@ -151,10 +152,10 @@ export const Route = createFileRoute("/")({
         }),
       ]);
 
-      const lastCompletedExercises = historyExercises.slice(
-        historyExercises.length - 3,
-        historyExercises.length - 1,
-      );
+      // const lastCompletedExercises = historyExercises.slice(
+      //   historyExercises.length - 3,
+      //   historyExercises.length - 1,
+      // );
 
       return {
         role,
@@ -163,7 +164,7 @@ export const Route = createFileRoute("/")({
         studentListData: undefined,
         dailyExercises,
         weeklyExercises,
-        lastCompletedExercises,
+        lastCompletedExercises: historyExercises,
         studentStreakData,
         streakHistoryLogs,
       };
@@ -397,9 +398,7 @@ function Dashboard() {
   const [shieldModalOpen, setShieldModalOpen] = useState<boolean>(false);
   const [usingShield, setUsingShield] = useState<boolean>(false);
   const [prMedalInfo, setPrMedalInfo] = useState<boolean>(false);
-  const [prRecord, setPrRecord] = useState<number>(() =>
-    calculateMaxWeightLifted(weeklyExercises),
-  );
+  const [prRecord, setPrRecord] = useState<number>(() => calculateMaxWeightLifted(weeklyExercises));
   const prevStreakRef = useRef<number>(streak);
 
   const [query, setQuery] = useState("");
@@ -792,9 +791,9 @@ function Dashboard() {
                         <CalendarDays className="h-3 w-3" /> {h.date}
                       </p>
                     </div>
-                    <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                      <Clock className="h-3 w-3" />
-                      {h.min}′
+                    <span className="flex items-center gap-1 text-xs text-muted-foreground whitespace-nowrap">
+                      <Clock className="h-3 w-3 text-primary-glow" />
+                      {formatDuration(h.seconds ?? (h.min ? h.min * 60 : 1))}
                     </span>
                   </Card>
                 ))}

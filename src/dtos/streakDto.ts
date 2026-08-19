@@ -47,3 +47,10 @@ export interface StreakLeaderboardItemDto {
   lastCompletedDate?: string | null;
   freezeShieldsAvailable: number;
 }
+
+export interface AdjustStreakDto {
+  currentStreak?: number;
+  longestStreak?: number;
+  freezeShields?: number;
+  reason?: string;
+}

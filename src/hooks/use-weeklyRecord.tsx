@@ -5,7 +5,6 @@ import { startOfWeek } from "date-fns";
 
 export const useWeeklyRecord = (exercises: GetDailyStudentExerciseDto[]) => {
   const [maxWeight, setMaxWeight] = useState<number>(0);
-  console.log(exercises);
 
   useEffect(() => {
     const storageKey = "pyrosfit_weekly_max_weight";

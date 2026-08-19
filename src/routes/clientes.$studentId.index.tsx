@@ -100,7 +100,7 @@ const emptySet = (): DailyExerciseSetsForm => ({
   isAchieved: false,
 });
 
-export const Route = createFileRoute("/clientes/$studentId")({
+export const Route = createFileRoute("/clientes/$studentId/")({
   head: () => ({
     meta: [
       { title: "Rutinas del cliente — PyrosFit" },
@@ -615,10 +615,10 @@ function ClientRoutinesPage() {
                 to="/clientes/$studentId/edit"
                 params={{ studentId }}
                 className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl border border-border bg-gradient-card text-xs font-medium text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors cursor-pointer"
-                title="Ajustar racha y métricas del alumno"
+                title="Ajustar cliente y métricas del alumno"
               >
                 <UserCog className="h-4 w-4 text-primary-glow" />
-                <span className="hidden sm:inline">Ajustar racha</span>
+                <span className="hidden sm:inline">Ajustar cliente</span>
               </Link>
               <Button
                 onClick={handleAdd}

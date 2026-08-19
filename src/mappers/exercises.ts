@@ -3,7 +3,10 @@ import { RiskRadarStudentDto, StreakHistoryLogDto } from "@/dtos/streakDto";
 import { Exercise, History, MuscleGroupSelect } from "@/types/exercises";
 import { StudentInfo } from "@/types/user";
 import { determineDate } from "@/utils/determineDate";
-import { calculateRoutineDurationInMin } from "@/helpers/studentsHelper";
+import {
+  calculateRoutineDurationInMin,
+  calculateRoutineDurationInSeconds,
+} from "@/helpers/studentsHelper";
 
 export const exercisesMapper = (
   apiRoutines: GetDailyStudentExerciseDto[],
@@ -18,13 +21,12 @@ export const exercisesMapper = (
       ? muscleGroups.find((m) => m.name === item.muscleGroupName)?.id
       : 0;
 
-    const exerciseMapped: Exercise = {
+    return {
       dailyExerciseId: item.id,
       exerciseId: item.exerciseId,
       coachId: item.coachId,
       studentId: item.studentId,
       exerciseName: item.exerciseName,
-      muscleGroupId: muscleGroupId,
       muscleGroupName: item.muscleGroupName,
       coachNotes: item.coachNotes,
       studentNotes: item.studentNotes,
@@ -32,10 +34,9 @@ export const exercisesMapper = (
       scheduledDate: item.scheduledDate,
       day: completeDay,
       short: shortDay,
-      dailyExerciseSets: item.dailyExerciseSets.map((set) => set),
+      dailyExerciseSets: item.dailyExerciseSets,
+      muscleGroupId: muscleGroupId || 0,
     };
-
-    return exerciseMapped;
   });
 };
 
@@ -46,7 +47,8 @@ export const exercisesMapper = (
  * Cada elemento del historial resultante contiene:
  * - `name`: Los nombres de los grupos musculares trabajados (unidos por '&') o "Rutina" como fallback.
  * - `date`: La fecha asignada al entrenamiento en formato YYYY-MM-DD.
- * - `min`: La duración estimada en minutos calculada a partir de los sets de ejercicios.
+ * - `seconds`: La duración estimada en segundos calculada a partir de los sets de ejercicios.
+ * - `min`: La duración estimada en minutos.
  *
  * @param historyExercises Lista de DTOs de ejercicios diarios asignados al estudiante.
  * @returns Un arreglo de objetos tipo `History` formateado para el estado del Dashboard.
@@ -72,12 +74,13 @@ export const historyExercisesMapper = (
       new Set(exercises.map((e) => e.muscleGroupName).filter(Boolean)),
     );
     const name = muscleGroups.length > 0 ? muscleGroups.join(" & ") : "Rutina";
-    const min = calculateRoutineDurationInMin(exercises as any) || 45;
+    const seconds = calculateRoutineDurationInSeconds(exercises as any) || 1;
 
     return {
       name,
       date: dateStr,
-      min,
+      seconds,
+      min: Math.round(seconds / 60),
     };
   });
 };
@@ -85,9 +88,10 @@ export const historyExercisesMapper = (
 /**
  * Transforma un arreglo de logs del historial de racha (`StreakHistoryLogDto`) obtenidos de la API
  * en objetos tipo `History` compatibles con la vista del Dashboard.
+ * Si no cuenta con duración registrada, se asigna por defecto 1 segundo (1s).
  *
  * @param streakHistoryLogs Lista de DTOs del historial de racha
- * @returns Arreglo de objetos `History` ({ name, date, min })
+ * @returns Arreglo de objetos `History` ({ name, date, seconds, min })
  */
 export const streakHistoryMapper = (streakHistoryLogs: StreakHistoryLogDto[]): History[] => {
   if (!streakHistoryLogs || streakHistoryLogs.length === 0) {
@@ -101,7 +105,8 @@ export const streakHistoryMapper = (streakHistoryLogs: StreakHistoryLogDto[]): H
     return {
       name: log.activityTypeName || "Entrenamiento",
       date: formattedDate,
-      min: 45,
+      seconds: 1, // En caso de no tener tiempo se coloca 1s
+      min: 0,
     };
   });
 };
@@ -120,18 +125,21 @@ export const combinedHistoryMapper = (
   lastCompletedExercises?: GetDailyStudentExerciseDto[],
 ): History[] => {
   const mappedStreakLogs = streakHistoryLogs ? streakHistoryMapper(streakHistoryLogs) : [];
-  const mappedExercises = lastCompletedExercises ? historyExercisesMapper(lastCompletedExercises) : [];
+  const mappedExercises = lastCompletedExercises
+    ? historyExercisesMapper(lastCompletedExercises)
+    : [];
 
   const combined = [...mappedStreakLogs, ...mappedExercises];
 
-  // Filtrar duplicados con la misma fecha y nombre de actividad
-  const unique = combined.filter(
-    (item, index, self) =>
-      index === self.findIndex((t) => t.date === item.date && t.name === item.name),
-  );
+  // Filtrar duplicados con la misma fecha, nombre de actividad y minutos
+  // const unique = combined.filter(
+  //   (item, index, self) =>
+  //     index ===
+  //     self.findIndex((t) => t.date === item.date && t.name === item.name && t.min === item.min),
+  // );
 
   // Ordenar de más reciente a más antiguo y devolver solo los 4 más recientes
-  return unique
+  return combined
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
     .slice(0, 4);
 };
@@ -143,9 +151,7 @@ export const combinedHistoryMapper = (
  * @param riskRadarList Lista de DTOs del radar de riesgo
  * @returns Lista de alumnos con formato de iniciales, riesgo y texto de inactividad
  */
-export const riskRadarStudentsMapper = (
-  riskRadarList?: RiskRadarStudentDto[],
-): StudentInfo[] => {
+export const riskRadarStudentsMapper = (riskRadarList?: RiskRadarStudentDto[]): StudentInfo[] => {
   if (!riskRadarList || riskRadarList.length === 0) {
     return [];
   }
@@ -190,4 +196,3 @@ export const riskRadarStudentsMapper = (
     };
   });
 };
-
