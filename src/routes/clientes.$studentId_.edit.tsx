@@ -111,13 +111,18 @@ function ClientEditPanelPage() {
   };
 
   const handleSave = async () => {
+    if (!metrics.reason.trim()) {
+      notify.warning("Razón requerida", "Debes ingresar el motivo o justificación del ajuste.");
+      return;
+    }
+
     try {
       setSaving(true);
       await adjustStudentStreak(studentId, {
         currentStreak: metrics.currentStreak,
         longestStreak: metrics.longestStreak,
         freezeShields: metrics.shields,
-        reason: metrics.reason || "Ajuste manual por el entrenador",
+        reason: metrics.reason.trim(),
       });
 
       notify.success("Cliente actualizado", `Se guardaron los cambios de ${clientName}`);
@@ -183,7 +188,7 @@ function ClientEditPanelPage() {
             <div>
               <h2 className="font-display text-xl sm:text-2xl leading-none">Métricas del alumno</h2>
               <p className="text-xs text-muted-foreground mt-1">
-                Ajusta racha, escudos y motivación para gamificación.
+                Ajusta rachas y escudos para gamificación.
               </p>
             </div>
           </div>
@@ -244,17 +249,17 @@ function ClientEditPanelPage() {
           <div className="rounded-xl border border-border bg-background/40 p-4 mb-6">
             <Label className="text-[10px] uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
               <FileText className="h-3.5 w-3.5 text-primary-glow" />
-              Razón / motivación
+              Razón de ajuste <span className="text-destructive font-bold">*</span>
             </Label>
             <Textarea
               value={metrics.reason}
               onChange={(e) => update("reason", e.target.value)}
-              placeholder="Escribe el motivo del alumno para entrenar, objetivo actual o nota interna del coach..."
+              placeholder="Escribe el motivo o justificación del ajuste..."
               rows={4}
               className="mt-2.5 bg-background/60 border-border focus-visible:ring-primary/40 resize-none"
             />
             <p className="text-[10px] text-muted-foreground mt-1.5">
-              Visible para el equipo de coaching y auditada en los registros de racha.
+              Obligatorio. Quedará registrado en la auditoría de cambios del alumno.
             </p>
           </div>
 
@@ -268,8 +273,8 @@ function ClientEditPanelPage() {
             </Button>
             <Button
               onClick={handleSave}
-              disabled={saving}
-              className="bg-gradient-primary hover:opacity-90 shadow-glow cursor-pointer"
+              disabled={saving || !metrics.reason.trim()}
+              className="bg-gradient-primary hover:opacity-90 shadow-glow cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {saving ? (
                 <span className="flex items-center gap-2">
