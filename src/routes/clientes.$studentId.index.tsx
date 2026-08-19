@@ -37,6 +37,7 @@ import {
   RefreshCw,
   Sparkles,
   CheckCircle2,
+  UserCog,
 } from "lucide-react";
 import { notify } from "@/components/NotificationCenter";
 import { AppShell } from "@/components/AppShell";
@@ -99,7 +100,7 @@ const emptySet = (): DailyExerciseSetsForm => ({
   isAchieved: false,
 });
 
-export const Route = createFileRoute("/clientes/$studentId")({
+export const Route = createFileRoute("/clientes/$studentId/")({
   head: () => ({
     meta: [
       { title: "Rutinas del cliente — PyrosFit" },
@@ -610,13 +611,24 @@ function ClientRoutinesPage() {
                 </div>
               </div>
             </div>
-            <Button
-              onClick={handleAdd}
-              className="bg-gradient-primary hover:opacity-90 shadow-glow"
-              size="lg"
-            >
-              <Plus className="h-4 w-4 mr-1" /> Añadir rutina
-            </Button>
+            <div className="flex items-center gap-2">
+              <Link
+                to="/clientes/$studentId/edit"
+                params={{ studentId }}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl border border-border bg-gradient-card text-xs font-medium text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors cursor-pointer"
+                title="Ajustar racha y métricas del alumno"
+              >
+                <UserCog className="h-4 w-4 text-primary-glow" />
+                <span className="hidden sm:inline">Ajustar racha</span>
+              </Link>
+              <Button
+                onClick={handleAdd}
+                className="bg-gradient-primary hover:opacity-90 shadow-glow cursor-pointer"
+                size="lg"
+              >
+                <Plus className="h-4 w-4 mr-1" /> Añadir rutina
+              </Button>
+            </div>
           </div>
 
           {showForm && (

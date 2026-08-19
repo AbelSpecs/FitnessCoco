@@ -1,4 +1,5 @@
 import {
+  AdjustStreakDto,
   RiskRadarStudentDto,
   StreakHistoryLogDto,
   StreakLeaderboardItemDto,
@@ -164,4 +165,28 @@ export const getCoachStreakLeaderboard = async (
     throw error;
   }
 };
+
+/**
+ * Permite ajustar manualmente la racha y escudos de un alumno (uso por Coach o Administrador).
+ * Endpoint: POST /api/v1/Streaks/student/{studentId}/adjust
+ *
+ * @param studentId - ID del estudiante
+ * @param adjustData - Valores a ajustar (currentStreak, longestStreak, freezeShields, reason)
+ * @returns Respuesta con la información de racha actualizada
+ */
+export const adjustStudentStreak = async (
+  studentId: number | string,
+  adjustData: AdjustStreakDto,
+) => {
+  try {
+    const response = await api.post(`/Streaks/student/${studentId}/adjust`, adjustData);
+    const { data } = response;
+
+    return data?.data ?? data ?? response.data;
+  } catch (error) {
+    console.error(`Error al ajustar la racha del estudiante ${studentId}`, error);
+    throw error;
+  }
+};
+
 

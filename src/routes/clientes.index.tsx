@@ -77,7 +77,8 @@ function ClientesPage() {
     if (!newQuery) return students;
     return students.filter(
       (c) =>
-        c.name.toLowerCase().includes(newQuery) || c.fitnessGoal.toLowerCase().includes(newQuery),
+        c.name.toLowerCase().includes(newQuery) ||
+        (c.fitnessGoal?.toLowerCase().includes(newQuery) ?? false),
     );
   }, [query, students]);
   return (

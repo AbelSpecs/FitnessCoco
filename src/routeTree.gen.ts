@@ -18,9 +18,10 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ClientesIndexRouteImport } from './routes/clientes.index'
 import { Route as PerfilUserIdRouteImport } from './routes/perfil.$userId'
-import { Route as ClientesStudentIdRouteImport } from './routes/clientes.$studentId'
 import { Route as RutinaStudentIdIndexRouteImport } from './routes/rutina.$studentId.index'
+import { Route as ClientesStudentIdIndexRouteImport } from './routes/clientes.$studentId.index'
 import { Route as RutinaStudentIdDayIdRouteImport } from './routes/rutina.$studentId.$dayId'
+import { Route as ClientesStudentIdEditRouteImport } from './routes/clientes.$studentId_.edit'
 
 const RegisterInfoRoute = RegisterInfoRouteImport.update({
   id: '/register-info',
@@ -67,19 +68,24 @@ const PerfilUserIdRoute = PerfilUserIdRouteImport.update({
   path: '/perfil/$userId',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ClientesStudentIdRoute = ClientesStudentIdRouteImport.update({
-  id: '/clientes/$studentId',
-  path: '/clientes/$studentId',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const RutinaStudentIdIndexRoute = RutinaStudentIdIndexRouteImport.update({
   id: '/rutina/$studentId/',
   path: '/rutina/$studentId/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ClientesStudentIdIndexRoute = ClientesStudentIdIndexRouteImport.update({
+  id: '/clientes/$studentId/',
+  path: '/clientes/$studentId/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RutinaStudentIdDayIdRoute = RutinaStudentIdDayIdRouteImport.update({
   id: '/rutina/$studentId/$dayId',
   path: '/rutina/$studentId/$dayId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ClientesStudentIdEditRoute = ClientesStudentIdEditRouteImport.update({
+  id: '/clientes/$studentId_/edit',
+  path: '/clientes/$studentId/edit',
   getParentRoute: () => rootRouteImport,
 } as any)
 
@@ -91,10 +97,11 @@ export interface FileRoutesByFullPath {
   '/ranking': typeof RankingRoute
   '/register': typeof RegisterRoute
   '/register-info': typeof RegisterInfoRoute
-  '/clientes/$studentId': typeof ClientesStudentIdRoute
   '/perfil/$userId': typeof PerfilUserIdRoute
   '/clientes/': typeof ClientesIndexRoute
+  '/clientes/$studentId/edit': typeof ClientesStudentIdEditRoute
   '/rutina/$studentId/$dayId': typeof RutinaStudentIdDayIdRoute
+  '/clientes/$studentId/': typeof ClientesStudentIdIndexRoute
   '/rutina/$studentId/': typeof RutinaStudentIdIndexRoute
 }
 export interface FileRoutesByTo {
@@ -105,10 +112,11 @@ export interface FileRoutesByTo {
   '/ranking': typeof RankingRoute
   '/register': typeof RegisterRoute
   '/register-info': typeof RegisterInfoRoute
-  '/clientes/$studentId': typeof ClientesStudentIdRoute
   '/perfil/$userId': typeof PerfilUserIdRoute
   '/clientes': typeof ClientesIndexRoute
+  '/clientes/$studentId/edit': typeof ClientesStudentIdEditRoute
   '/rutina/$studentId/$dayId': typeof RutinaStudentIdDayIdRoute
+  '/clientes/$studentId': typeof ClientesStudentIdIndexRoute
   '/rutina/$studentId': typeof RutinaStudentIdIndexRoute
 }
 export interface FileRoutesById {
@@ -120,10 +128,11 @@ export interface FileRoutesById {
   '/ranking': typeof RankingRoute
   '/register': typeof RegisterRoute
   '/register-info': typeof RegisterInfoRoute
-  '/clientes/$studentId': typeof ClientesStudentIdRoute
   '/perfil/$userId': typeof PerfilUserIdRoute
   '/clientes/': typeof ClientesIndexRoute
+  '/clientes/$studentId_/edit': typeof ClientesStudentIdEditRoute
   '/rutina/$studentId/$dayId': typeof RutinaStudentIdDayIdRoute
+  '/clientes/$studentId/': typeof ClientesStudentIdIndexRoute
   '/rutina/$studentId/': typeof RutinaStudentIdIndexRoute
 }
 export interface FileRouteTypes {
@@ -136,10 +145,11 @@ export interface FileRouteTypes {
     | '/ranking'
     | '/register'
     | '/register-info'
-    | '/clientes/$studentId'
     | '/perfil/$userId'
     | '/clientes/'
+    | '/clientes/$studentId/edit'
     | '/rutina/$studentId/$dayId'
+    | '/clientes/$studentId/'
     | '/rutina/$studentId/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -150,10 +160,11 @@ export interface FileRouteTypes {
     | '/ranking'
     | '/register'
     | '/register-info'
-    | '/clientes/$studentId'
     | '/perfil/$userId'
     | '/clientes'
+    | '/clientes/$studentId/edit'
     | '/rutina/$studentId/$dayId'
+    | '/clientes/$studentId'
     | '/rutina/$studentId'
   id:
     | '__root__'
@@ -164,10 +175,11 @@ export interface FileRouteTypes {
     | '/ranking'
     | '/register'
     | '/register-info'
-    | '/clientes/$studentId'
     | '/perfil/$userId'
     | '/clientes/'
+    | '/clientes/$studentId_/edit'
     | '/rutina/$studentId/$dayId'
+    | '/clientes/$studentId/'
     | '/rutina/$studentId/'
   fileRoutesById: FileRoutesById
 }
@@ -179,10 +191,11 @@ export interface RootRouteChildren {
   RankingRoute: typeof RankingRoute
   RegisterRoute: typeof RegisterRoute
   RegisterInfoRoute: typeof RegisterInfoRoute
-  ClientesStudentIdRoute: typeof ClientesStudentIdRoute
   PerfilUserIdRoute: typeof PerfilUserIdRoute
   ClientesIndexRoute: typeof ClientesIndexRoute
+  ClientesStudentIdEditRoute: typeof ClientesStudentIdEditRoute
   RutinaStudentIdDayIdRoute: typeof RutinaStudentIdDayIdRoute
+  ClientesStudentIdIndexRoute: typeof ClientesStudentIdIndexRoute
   RutinaStudentIdIndexRoute: typeof RutinaStudentIdIndexRoute
 }
 
@@ -251,13 +264,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PerfilUserIdRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/clientes/$studentId': {
-      id: '/clientes/$studentId'
-      path: '/clientes/$studentId'
-      fullPath: '/clientes/$studentId'
-      preLoaderRoute: typeof ClientesStudentIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/rutina/$studentId/': {
       id: '/rutina/$studentId/'
       path: '/rutina/$studentId'
@@ -265,11 +271,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RutinaStudentIdIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/clientes/$studentId/': {
+      id: '/clientes/$studentId/'
+      path: '/clientes/$studentId'
+      fullPath: '/clientes/$studentId/'
+      preLoaderRoute: typeof ClientesStudentIdIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/rutina/$studentId/$dayId': {
       id: '/rutina/$studentId/$dayId'
       path: '/rutina/$studentId/$dayId'
       fullPath: '/rutina/$studentId/$dayId'
       preLoaderRoute: typeof RutinaStudentIdDayIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/clientes/$studentId_/edit': {
+      id: '/clientes/$studentId_/edit'
+      path: '/clientes/$studentId/edit'
+      fullPath: '/clientes/$studentId/edit'
+      preLoaderRoute: typeof ClientesStudentIdEditRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -283,10 +303,11 @@ const rootRouteChildren: RootRouteChildren = {
   RankingRoute: RankingRoute,
   RegisterRoute: RegisterRoute,
   RegisterInfoRoute: RegisterInfoRoute,
-  ClientesStudentIdRoute: ClientesStudentIdRoute,
   PerfilUserIdRoute: PerfilUserIdRoute,
   ClientesIndexRoute: ClientesIndexRoute,
+  ClientesStudentIdEditRoute: ClientesStudentIdEditRoute,
   RutinaStudentIdDayIdRoute: RutinaStudentIdDayIdRoute,
+  ClientesStudentIdIndexRoute: ClientesStudentIdIndexRoute,
   RutinaStudentIdIndexRoute: RutinaStudentIdIndexRoute,
 }
 export const routeTree = rootRouteImport
