@@ -153,10 +153,10 @@ export const Route = createFileRoute("/")({
       ]);
       console.log(streakHistoryLogs);
 
-      const lastCompletedExercises = historyExercises.slice(
-        historyExercises.length - 3,
-        historyExercises.length - 1,
-      );
+      // const lastCompletedExercises = historyExercises.slice(
+      //   historyExercises.length - 3,
+      //   historyExercises.length - 1,
+      // );
 
       return {
         role,
@@ -165,7 +165,7 @@ export const Route = createFileRoute("/")({
         studentListData: undefined,
         dailyExercises,
         weeklyExercises,
-        lastCompletedExercises,
+        lastCompletedExercises: historyExercises,
         studentStreakData,
         streakHistoryLogs,
       };
