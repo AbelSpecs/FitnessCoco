@@ -55,24 +55,67 @@ export const calculateMaxWeightLifted = (exercises: GetDailyStudentExerciseDto[]
   return maxWeight;
 };
 
-export const calculateRoutineDurationInMin = (exercises: GetDailyStudentExerciseDto[] = []) => {
+export const calculateRoutineDurationInSeconds = (
+  exercises: GetDailyStudentExerciseDto[] = [],
+): number => {
   let totalSeconds = 0;
   exercises.forEach((ex) => {
     if (ex.dailyExerciseSets) {
       ex.dailyExerciseSets.forEach((set) => {
-        // Asume 45 segundos de ejecución por set (45s)
+        // Asume 45 segundos de ejecución por set
         totalSeconds += 45;
-
         if (set.restTime) {
-          const parts = set.restTime.split(":").map(Number);
-          if (parts.length === 3) {
-            totalSeconds += parts[0] * 3600 + parts[1] * 60 + parts[2];
-          } else if (parts.length === 2) {
-            totalSeconds += parts[0] * 60 + parts[1];
+          const restStr = String(set.restTime).trim();
+          if (restStr.includes(":")) {
+            const parts = restStr.split(":").map(Number);
+            if (parts.length === 3) {
+              totalSeconds += (parts[0] || 0) * 3600 + (parts[1] || 0) * 60 + (parts[2] || 0);
+            } else if (parts.length === 2) {
+              totalSeconds += (parts[0] || 0) * 60 + (parts[1] || 0);
+            }
+          } else {
+            const num = Number(restStr);
+            if (!isNaN(num) && num > 0) {
+              totalSeconds += num;
+            }
           }
         }
       });
     }
   });
-  return Math.round(totalSeconds / 60);
+  return totalSeconds > 0 ? totalSeconds : 1;
 };
+
+export const calculateRoutineDurationInMin = (exercises: GetDailyStudentExerciseDto[] = []) => {
+  const seconds = calculateRoutineDurationInSeconds(exercises);
+  return Math.max(1, Math.round(seconds / 60));
+};
+
+/**
+ * Formatea una duración en segundos para diferenciar segundos (s), minutos (min) y horas (h).
+ * Ejemplos:
+ * - 1 -> "1 s"
+ * - 45 -> "45 s"
+ * - 120 -> "2 min"
+ * - 150 -> "2 min 30 s"
+ * - 3600 -> "1 h"
+ * - 3660 -> "1 h 1 min"
+ */
+export const formatDuration = (totalSeconds: number = 1): string => {
+  if (!totalSeconds || totalSeconds <= 0) return "1 s";
+
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  if (hours > 0) {
+    return minutes > 0 ? `${hours} h ${minutes} min` : `${hours} h`;
+  }
+
+  if (minutes > 0) {
+    return seconds > 0 ? `${minutes} min ${seconds} s` : `${minutes} min`;
+  }
+
+  return `${seconds} s`;
+};
+

@@ -90,6 +90,7 @@ export interface DayRoutine {
 export interface History {
   name: string;
   date: string;
-  min: number;
+  min?: number;
+  seconds?: number;
 }
 
