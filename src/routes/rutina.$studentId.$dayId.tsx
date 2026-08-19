@@ -172,7 +172,7 @@ function DayDetail() {
       setExercisesList(nextList);
 
       const allCompleted = nextList.length > 0 && nextList.every((item) => item.isCompleted);
-      console.log(allCompleted);
+
       if (allCompleted) {
         // Formatear fecha localmente sin desfases de UTC
         const dateStr = ex.scheduledDate

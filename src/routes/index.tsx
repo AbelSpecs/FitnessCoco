@@ -151,7 +151,6 @@ export const Route = createFileRoute("/")({
           return [];
         }),
       ]);
-      console.log(streakHistoryLogs);
 
       // const lastCompletedExercises = historyExercises.slice(
       //   historyExercises.length - 3,
