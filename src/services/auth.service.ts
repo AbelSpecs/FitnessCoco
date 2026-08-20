@@ -1,4 +1,9 @@
-import { CoachStudent, LoginCredentials, RegisterCredentials } from "@/types/auth";
+import {
+  CoachStudent,
+  ConfirmEmailPayload,
+  LoginCredentials,
+  RegisterCredentials,
+} from "@/types/auth";
 import api from "./api";
 
 export const register = async (credentials: RegisterCredentials) => {
@@ -38,3 +43,20 @@ export const login = async (credentials: LoginCredentials) => {
     throw error;
   }
 };
+
+export const confirmEmail = async (payload: ConfirmEmailPayload) => {
+  try {
+    const code = payload.code || payload.token || "";
+    const response = await api.post("/Users/ConfirmEmail", {
+      code,
+      token: code,
+      userId: payload.userId ? Number(payload.userId) : undefined,
+    });
+
+    return response.data?.data ?? response.data;
+  } catch (error) {
+    console.error("Error al confirmar correo", error);
+    throw error;
+  }
+};
+

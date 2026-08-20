@@ -166,20 +166,23 @@ function LoginPage() {
             </Button>
           </form>
           <p className="text-center text-sm text-muted-foreground">
-            ¿No tienes cuenta y eres entrenador?{" "}
+            ¿Eres entrenador?{" "}
             <Link to="/register" className="text-primary font-medium hover:underline">
-              Regístrate
+              Regístrate Aquí
             </Link>
           </p>
           <p className="text-center text-sm text-muted-foreground">
-            ¿No tienes cuenta y no quieres entrenador?{" "}
+            ¿Quieres entrenar?{" "}
             <Link
               to="/register-info"
               search={{ coachId: "9" }}
               className="text-primary font-medium hover:underline"
             >
-              Regístrate aqui
+              Crea tu cuenta Aquí
             </Link>
+          </p>
+          <p className="text-center text-xs text-muted-foreground/75 pt-2 border-t border-border/40 leading-relaxed">
+            * Si eres cliente, pídele a tu entrenador que te comparta el link de registro.
           </p>
           {isLoading && <SpinnerOverlay label="Iniciando" />}
         </div>
