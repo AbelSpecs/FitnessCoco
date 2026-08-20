@@ -51,3 +51,10 @@ export interface CoachStudent {
   studentId: number;
   status: boolean;
 }
+
+export interface ConfirmEmailPayload {
+  userId?: number | string;
+  token?: string;
+  code?: string;
+}
+

@@ -15,6 +15,7 @@ import { Route as RankingRouteImport } from './routes/ranking'
 import { Route as ProgresoRouteImport } from './routes/progreso'
 import { Route as ParQRouteImport } from './routes/par-q'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as ConfirmEmailRouteImport } from './routes/confirm-email'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ClientesIndexRouteImport } from './routes/clientes.index'
 import { Route as PerfilUserIdRouteImport } from './routes/perfil.$userId'
@@ -52,6 +53,11 @@ const ParQRoute = ParQRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ConfirmEmailRoute = ConfirmEmailRouteImport.update({
+  id: '/confirm-email',
+  path: '/confirm-email',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -97,6 +103,7 @@ const ClientesStudentIdEditRoute = ClientesStudentIdEditRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/confirm-email': typeof ConfirmEmailRoute
   '/login': typeof LoginRoute
   '/par-q': typeof ParQRoute
   '/progreso': typeof ProgresoRoute
@@ -113,6 +120,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/confirm-email': typeof ConfirmEmailRoute
   '/login': typeof LoginRoute
   '/par-q': typeof ParQRoute
   '/progreso': typeof ProgresoRoute
@@ -129,6 +137,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/confirm-email': typeof ConfirmEmailRoute
   '/login': typeof LoginRoute
   '/par-q': typeof ParQRoute
   '/progreso': typeof ProgresoRoute
@@ -147,6 +156,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/confirm-email'
     | '/login'
     | '/par-q'
     | '/progreso'
@@ -163,6 +173,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/confirm-email'
     | '/login'
     | '/par-q'
     | '/progreso'
@@ -178,6 +189,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/confirm-email'
     | '/login'
     | '/par-q'
     | '/progreso'
@@ -195,6 +207,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ConfirmEmailRoute: typeof ConfirmEmailRoute
   LoginRoute: typeof LoginRoute
   ParQRoute: typeof ParQRoute
   ProgresoRoute: typeof ProgresoRoute
@@ -251,6 +264,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/confirm-email': {
+      id: '/confirm-email'
+      path: '/confirm-email'
+      fullPath: '/confirm-email'
+      preLoaderRoute: typeof ConfirmEmailRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -325,6 +345,7 @@ const ClientesStudentIdRouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ConfirmEmailRoute: ConfirmEmailRoute,
   LoginRoute: LoginRoute,
   ParQRoute: ParQRoute,
   ProgresoRoute: ProgresoRoute,
