@@ -29,6 +29,7 @@ export interface CoachDto {
   bio?: string;
   isVerified?: boolean;
   certifications?: string;
+  bannerUrl?: string;
 }
 
 export interface CoachStudentsDto {
