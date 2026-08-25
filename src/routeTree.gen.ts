@@ -12,18 +12,18 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as RegisterInfoRouteImport } from './routes/register-info'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as RankingRouteImport } from './routes/ranking'
-import { Route as ProgresoRouteImport } from './routes/progress'
+import { Route as ProgressRouteImport } from './routes/progress'
 import { Route as ParQRouteImport } from './routes/par-q'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ConfirmEmailRouteImport } from './routes/confirm-email'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as ClientesIndexRouteImport } from './routes/clients.index'
+import { Route as ClientsIndexRouteImport } from './routes/clients.index'
 import { Route as PerfilUserIdRouteImport } from './routes/perfil.$userId'
-import { Route as ClientesStudentIdRouteImport } from './routes/clients.$studentId'
-import { Route as RutinaStudentIdIndexRouteImport } from './routes/routine.$studentId.index'
-import { Route as ClientesStudentIdIndexRouteImport } from './routes/clients.$studentId.index'
-import { Route as RutinaStudentIdDayIdRouteImport } from './routes/routine.$studentId.$dayId'
-import { Route as ClientesStudentIdEditRouteImport } from './routes/clients.$studentId_.edit'
+import { Route as ClientsStudentIdRouteImport } from './routes/clients.$studentId'
+import { Route as RoutineStudentIdIndexRouteImport } from './routes/routine.$studentId.index'
+import { Route as ClientsStudentIdIndexRouteImport } from './routes/clients.$studentId.index'
+import { Route as RoutineStudentIdDayIdRouteImport } from './routes/routine.$studentId.$dayId'
+import { Route as ClientsStudentIdEditRouteImport } from './routes/clients.$studentId_.edit'
 
 const RegisterInfoRoute = RegisterInfoRouteImport.update({
   id: '/register-info',
@@ -40,9 +40,9 @@ const RankingRoute = RankingRouteImport.update({
   path: '/ranking',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ProgresoRoute = ProgresoRouteImport.update({
-  id: '/progreso',
-  path: '/progreso',
+const ProgressRoute = ProgressRouteImport.update({
+  id: '/progress',
+  path: '/progress',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ParQRoute = ParQRouteImport.update({
@@ -65,9 +65,9 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ClientesIndexRoute = ClientesIndexRouteImport.update({
-  id: '/clientes/',
-  path: '/clientes/',
+const ClientsIndexRoute = ClientsIndexRouteImport.update({
+  id: '/clients/',
+  path: '/clients/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PerfilUserIdRoute = PerfilUserIdRouteImport.update({
@@ -75,29 +75,29 @@ const PerfilUserIdRoute = PerfilUserIdRouteImport.update({
   path: '/perfil/$userId',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ClientesStudentIdRoute = ClientesStudentIdRouteImport.update({
-  id: '/clientes/$studentId',
-  path: '/clientes/$studentId',
+const ClientsStudentIdRoute = ClientsStudentIdRouteImport.update({
+  id: '/clients/$studentId',
+  path: '/clients/$studentId',
   getParentRoute: () => rootRouteImport,
 } as any)
-const RutinaStudentIdIndexRoute = RutinaStudentIdIndexRouteImport.update({
-  id: '/rutina/$studentId/',
-  path: '/rutina/$studentId/',
+const RoutineStudentIdIndexRoute = RoutineStudentIdIndexRouteImport.update({
+  id: '/routine/$studentId/',
+  path: '/routine/$studentId/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ClientesStudentIdIndexRoute = ClientesStudentIdIndexRouteImport.update({
+const ClientsStudentIdIndexRoute = ClientsStudentIdIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => ClientesStudentIdRoute,
+  getParentRoute: () => ClientsStudentIdRoute,
 } as any)
-const RutinaStudentIdDayIdRoute = RutinaStudentIdDayIdRouteImport.update({
-  id: '/rutina/$studentId/$dayId',
-  path: '/rutina/$studentId/$dayId',
+const RoutineStudentIdDayIdRoute = RoutineStudentIdDayIdRouteImport.update({
+  id: '/routine/$studentId/$dayId',
+  path: '/routine/$studentId/$dayId',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ClientesStudentIdEditRoute = ClientesStudentIdEditRouteImport.update({
-  id: '/clientes/$studentId_/edit',
-  path: '/clientes/$studentId/edit',
+const ClientsStudentIdEditRoute = ClientsStudentIdEditRouteImport.update({
+  id: '/clients/$studentId_/edit',
+  path: '/clients/$studentId/edit',
   getParentRoute: () => rootRouteImport,
 } as any)
 
@@ -106,33 +106,33 @@ export interface FileRoutesByFullPath {
   '/confirm-email': typeof ConfirmEmailRoute
   '/login': typeof LoginRoute
   '/par-q': typeof ParQRoute
-  '/progreso': typeof ProgresoRoute
+  '/progress': typeof ProgressRoute
   '/ranking': typeof RankingRoute
   '/register': typeof RegisterRoute
   '/register-info': typeof RegisterInfoRoute
-  '/clientes/$studentId': typeof ClientesStudentIdRouteWithChildren
+  '/clients/$studentId': typeof ClientsStudentIdRouteWithChildren
   '/perfil/$userId': typeof PerfilUserIdRoute
-  '/clientes/': typeof ClientesIndexRoute
-  '/clientes/$studentId/edit': typeof ClientesStudentIdEditRoute
-  '/rutina/$studentId/$dayId': typeof RutinaStudentIdDayIdRoute
-  '/clientes/$studentId/': typeof ClientesStudentIdIndexRoute
-  '/rutina/$studentId/': typeof RutinaStudentIdIndexRoute
+  '/clients/': typeof ClientsIndexRoute
+  '/clients/$studentId/edit': typeof ClientsStudentIdEditRoute
+  '/routine/$studentId/$dayId': typeof RoutineStudentIdDayIdRoute
+  '/clients/$studentId/': typeof ClientsStudentIdIndexRoute
+  '/routine/$studentId/': typeof RoutineStudentIdIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/confirm-email': typeof ConfirmEmailRoute
   '/login': typeof LoginRoute
   '/par-q': typeof ParQRoute
-  '/progreso': typeof ProgresoRoute
+  '/progress': typeof ProgressRoute
   '/ranking': typeof RankingRoute
   '/register': typeof RegisterRoute
   '/register-info': typeof RegisterInfoRoute
   '/perfil/$userId': typeof PerfilUserIdRoute
-  '/clientes': typeof ClientesIndexRoute
-  '/clientes/$studentId/edit': typeof ClientesStudentIdEditRoute
-  '/rutina/$studentId/$dayId': typeof RutinaStudentIdDayIdRoute
-  '/clientes/$studentId': typeof ClientesStudentIdIndexRoute
-  '/rutina/$studentId': typeof RutinaStudentIdIndexRoute
+  '/clients': typeof ClientsIndexRoute
+  '/clients/$studentId/edit': typeof ClientsStudentIdEditRoute
+  '/routine/$studentId/$dayId': typeof RoutineStudentIdDayIdRoute
+  '/clients/$studentId': typeof ClientsStudentIdIndexRoute
+  '/routine/$studentId': typeof RoutineStudentIdIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -140,17 +140,17 @@ export interface FileRoutesById {
   '/confirm-email': typeof ConfirmEmailRoute
   '/login': typeof LoginRoute
   '/par-q': typeof ParQRoute
-  '/progreso': typeof ProgresoRoute
+  '/progress': typeof ProgressRoute
   '/ranking': typeof RankingRoute
   '/register': typeof RegisterRoute
   '/register-info': typeof RegisterInfoRoute
-  '/clientes/$studentId': typeof ClientesStudentIdRouteWithChildren
+  '/clients/$studentId': typeof ClientsStudentIdRouteWithChildren
   '/perfil/$userId': typeof PerfilUserIdRoute
-  '/clientes/': typeof ClientesIndexRoute
-  '/clientes/$studentId_/edit': typeof ClientesStudentIdEditRoute
-  '/rutina/$studentId/$dayId': typeof RutinaStudentIdDayIdRoute
-  '/clientes/$studentId/': typeof ClientesStudentIdIndexRoute
-  '/rutina/$studentId/': typeof RutinaStudentIdIndexRoute
+  '/clients/': typeof ClientsIndexRoute
+  '/clients/$studentId_/edit': typeof ClientsStudentIdEditRoute
+  '/routine/$studentId/$dayId': typeof RoutineStudentIdDayIdRoute
+  '/clients/$studentId/': typeof ClientsStudentIdIndexRoute
+  '/routine/$studentId/': typeof RoutineStudentIdIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -159,50 +159,50 @@ export interface FileRouteTypes {
     | '/confirm-email'
     | '/login'
     | '/par-q'
-    | '/progreso'
+    | '/progress'
     | '/ranking'
     | '/register'
     | '/register-info'
-    | '/clientes/$studentId'
+    | '/clients/$studentId'
     | '/perfil/$userId'
-    | '/clientes/'
-    | '/clientes/$studentId/edit'
-    | '/rutina/$studentId/$dayId'
-    | '/clientes/$studentId/'
-    | '/rutina/$studentId/'
+    | '/clients/'
+    | '/clients/$studentId/edit'
+    | '/routine/$studentId/$dayId'
+    | '/clients/$studentId/'
+    | '/routine/$studentId/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/confirm-email'
     | '/login'
     | '/par-q'
-    | '/progreso'
+    | '/progress'
     | '/ranking'
     | '/register'
     | '/register-info'
     | '/perfil/$userId'
-    | '/clientes'
-    | '/clientes/$studentId/edit'
-    | '/rutina/$studentId/$dayId'
-    | '/clientes/$studentId'
-    | '/rutina/$studentId'
+    | '/clients'
+    | '/clients/$studentId/edit'
+    | '/routine/$studentId/$dayId'
+    | '/clients/$studentId'
+    | '/routine/$studentId'
   id:
     | '__root__'
     | '/'
     | '/confirm-email'
     | '/login'
     | '/par-q'
-    | '/progreso'
+    | '/progress'
     | '/ranking'
     | '/register'
     | '/register-info'
-    | '/clientes/$studentId'
+    | '/clients/$studentId'
     | '/perfil/$userId'
-    | '/clientes/'
-    | '/clientes/$studentId_/edit'
-    | '/rutina/$studentId/$dayId'
-    | '/clientes/$studentId/'
-    | '/rutina/$studentId/'
+    | '/clients/'
+    | '/clients/$studentId_/edit'
+    | '/routine/$studentId/$dayId'
+    | '/clients/$studentId/'
+    | '/routine/$studentId/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -210,16 +210,16 @@ export interface RootRouteChildren {
   ConfirmEmailRoute: typeof ConfirmEmailRoute
   LoginRoute: typeof LoginRoute
   ParQRoute: typeof ParQRoute
-  ProgresoRoute: typeof ProgresoRoute
+  ProgressRoute: typeof ProgressRoute
   RankingRoute: typeof RankingRoute
   RegisterRoute: typeof RegisterRoute
   RegisterInfoRoute: typeof RegisterInfoRoute
-  ClientesStudentIdRoute: typeof ClientesStudentIdRouteWithChildren
+  ClientsStudentIdRoute: typeof ClientsStudentIdRouteWithChildren
   PerfilUserIdRoute: typeof PerfilUserIdRoute
-  ClientesIndexRoute: typeof ClientesIndexRoute
-  ClientesStudentIdEditRoute: typeof ClientesStudentIdEditRoute
-  RutinaStudentIdDayIdRoute: typeof RutinaStudentIdDayIdRoute
-  RutinaStudentIdIndexRoute: typeof RutinaStudentIdIndexRoute
+  ClientsIndexRoute: typeof ClientsIndexRoute
+  ClientsStudentIdEditRoute: typeof ClientsStudentIdEditRoute
+  RoutineStudentIdDayIdRoute: typeof RoutineStudentIdDayIdRoute
+  RoutineStudentIdIndexRoute: typeof RoutineStudentIdIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -245,11 +245,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RankingRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/progreso': {
-      id: '/progreso'
-      path: '/progreso'
-      fullPath: '/progreso'
-      preLoaderRoute: typeof ProgresoRouteImport
+    '/progress': {
+      id: '/progress'
+      path: '/progress'
+      fullPath: '/progress'
+      preLoaderRoute: typeof ProgressRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/par-q': {
@@ -280,11 +280,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/clientes/': {
-      id: '/clientes/'
-      path: '/clientes'
-      fullPath: '/clientes/'
-      preLoaderRoute: typeof ClientesIndexRouteImport
+    '/clients/': {
+      id: '/clients/'
+      path: '/clients'
+      fullPath: '/clients/'
+      preLoaderRoute: typeof ClientsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/perfil/$userId': {
@@ -294,70 +294,70 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PerfilUserIdRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/clientes/$studentId': {
-      id: '/clientes/$studentId'
-      path: '/clientes/$studentId'
-      fullPath: '/clientes/$studentId'
-      preLoaderRoute: typeof ClientesStudentIdRouteImport
+    '/clients/$studentId': {
+      id: '/clients/$studentId'
+      path: '/clients/$studentId'
+      fullPath: '/clients/$studentId'
+      preLoaderRoute: typeof ClientsStudentIdRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/rutina/$studentId/': {
-      id: '/rutina/$studentId/'
-      path: '/rutina/$studentId'
-      fullPath: '/rutina/$studentId/'
-      preLoaderRoute: typeof RutinaStudentIdIndexRouteImport
+    '/routine/$studentId/': {
+      id: '/routine/$studentId/'
+      path: '/routine/$studentId'
+      fullPath: '/routine/$studentId/'
+      preLoaderRoute: typeof RoutineStudentIdIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/clientes/$studentId/': {
-      id: '/clientes/$studentId/'
+    '/clients/$studentId/': {
+      id: '/clients/$studentId/'
       path: '/'
-      fullPath: '/clientes/$studentId/'
-      preLoaderRoute: typeof ClientesStudentIdIndexRouteImport
-      parentRoute: typeof ClientesStudentIdRoute
+      fullPath: '/clients/$studentId/'
+      preLoaderRoute: typeof ClientsStudentIdIndexRouteImport
+      parentRoute: typeof ClientsStudentIdRoute
     }
-    '/rutina/$studentId/$dayId': {
-      id: '/rutina/$studentId/$dayId'
-      path: '/rutina/$studentId/$dayId'
-      fullPath: '/rutina/$studentId/$dayId'
-      preLoaderRoute: typeof RutinaStudentIdDayIdRouteImport
+    '/routine/$studentId/$dayId': {
+      id: '/routine/$studentId/$dayId'
+      path: '/routine/$studentId/$dayId'
+      fullPath: '/routine/$studentId/$dayId'
+      preLoaderRoute: typeof RoutineStudentIdDayIdRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/clientes/$studentId_/edit': {
-      id: '/clientes/$studentId_/edit'
-      path: '/clientes/$studentId/edit'
-      fullPath: '/clientes/$studentId/edit'
-      preLoaderRoute: typeof ClientesStudentIdEditRouteImport
+    '/clients/$studentId_/edit': {
+      id: '/clients/$studentId_/edit'
+      path: '/clients/$studentId/edit'
+      fullPath: '/clients/$studentId/edit'
+      preLoaderRoute: typeof ClientsStudentIdEditRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
 }
 
-interface ClientesStudentIdRouteChildren {
-  ClientesStudentIdIndexRoute: typeof ClientesStudentIdIndexRoute
+interface ClientsStudentIdRouteChildren {
+  ClientsStudentIdIndexRoute: typeof ClientsStudentIdIndexRoute
 }
 
-const ClientesStudentIdRouteChildren: ClientesStudentIdRouteChildren = {
-  ClientesStudentIdIndexRoute: ClientesStudentIdIndexRoute,
+const ClientsStudentIdRouteChildren: ClientsStudentIdRouteChildren = {
+  ClientsStudentIdIndexRoute: ClientsStudentIdIndexRoute,
 }
 
-const ClientesStudentIdRouteWithChildren =
-  ClientesStudentIdRoute._addFileChildren(ClientesStudentIdRouteChildren)
+const ClientsStudentIdRouteWithChildren =
+  ClientsStudentIdRoute._addFileChildren(ClientsStudentIdRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ConfirmEmailRoute: ConfirmEmailRoute,
   LoginRoute: LoginRoute,
   ParQRoute: ParQRoute,
-  ProgresoRoute: ProgresoRoute,
+  ProgressRoute: ProgressRoute,
   RankingRoute: RankingRoute,
   RegisterRoute: RegisterRoute,
   RegisterInfoRoute: RegisterInfoRoute,
-  ClientesStudentIdRoute: ClientesStudentIdRouteWithChildren,
+  ClientsStudentIdRoute: ClientsStudentIdRouteWithChildren,
   PerfilUserIdRoute: PerfilUserIdRoute,
-  ClientesIndexRoute: ClientesIndexRoute,
-  ClientesStudentIdEditRoute: ClientesStudentIdEditRoute,
-  RutinaStudentIdDayIdRoute: RutinaStudentIdDayIdRoute,
-  RutinaStudentIdIndexRoute: RutinaStudentIdIndexRoute,
+  ClientsIndexRoute: ClientsIndexRoute,
+  ClientsStudentIdEditRoute: ClientsStudentIdEditRoute,
+  RoutineStudentIdDayIdRoute: RoutineStudentIdDayIdRoute,
+  RoutineStudentIdIndexRoute: RoutineStudentIdIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

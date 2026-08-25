@@ -32,6 +32,7 @@ export interface Coach {
   bio?: string;
   certifications?: string;
   isVerified?: boolean;
+  bannerUrl?: string;
 }
 
 export interface User {

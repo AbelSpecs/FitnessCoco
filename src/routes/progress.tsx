@@ -17,7 +17,7 @@ import {
   Legend,
 } from "recharts";
 
-export const Route = createFileRoute("/progreso")({
+export const Route = createFileRoute("/progress")({
   head: () => ({
     meta: [
       { title: "Progreso — PYROSFIT" },

@@ -35,9 +35,16 @@ export const userCoachMapper = (apiUser: CoachDto) => {
   const userToMap = apiUser;
 
   const userMapped: User = {
+    id: userToMap.userId,
     firstName: userToMap.firstName,
+    lastName: userToMap.lastName,
     coach: {
+      id: userToMap.id,
+      userId: userToMap.userId,
       bio: userToMap.bio,
+      certifications: userToMap.certifications,
+      isVerified: userToMap.isVerified,
+      bannerUrl: userToMap.bannerUrl,
     },
     isStudent: false,
   };
