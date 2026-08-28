@@ -4,6 +4,7 @@ import {
   ForgotPasswordPayload,
   LoginCredentials,
   RegisterCredentials,
+  ResetPasswordPayload,
 } from "@/types/auth";
 import api from "./api";
 
@@ -70,6 +71,24 @@ export const forgotPassword = async (payload: ForgotPasswordPayload) => {
     return response.data;
   } catch (error) {
     console.error("Error al solicitar recuperación de contraseña:", error);
+    throw error;
+  }
+};
+
+export const resetPassword = async (payload: ResetPasswordPayload) => {
+  try {
+    const code = payload.code || payload.token || "";
+    const response = await api.post("/Users/ResetPassword", {
+      code,
+      token: code,
+      newPassword: payload.newPassword,
+      confirmPassword: payload.confirmPassword ?? payload.newPassword,
+      ...(payload.userId ? { userId: Number(payload.userId) } : {}),
+    });
+
+    return response.data;
+  } catch (error) {
+    console.error("Error al restablecer la contraseña:", error);
     throw error;
   }
 };
