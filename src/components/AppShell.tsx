@@ -32,14 +32,14 @@ const nav = [
     condition: false,
   },
   {
-    to: "/clientes/$studentId",
+    to: "/clients/$studentId",
     label: "Crear Rutina",
     icon: Dumbbell,
     roles: ["student"] as Role[],
     condition: true,
   },
   {
-    to: "/rutina/$studentId",
+    to: "/routine/$studentId",
     label: "Rutina",
     icon: Calendar,
     roles: ["student"] as Role[],
@@ -54,7 +54,7 @@ const nav = [
   },
   // { to: "/progreso", label: "Progreso", icon: TrendingUp },
   {
-    to: "/clientes",
+    to: "/clients",
     label: "Clientes",
     icon: Users,
     roles: ["coach"] as Role[],
