@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as RegisterInfoRouteImport } from './routes/register-info'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as RankingRouteImport } from './routes/ranking'
@@ -26,6 +27,11 @@ import { Route as ClientsStudentIdIndexRouteImport } from './routes/clients.$stu
 import { Route as RoutineStudentIdDayIdRouteImport } from './routes/routine.$studentId.$dayId'
 import { Route as ClientsStudentIdEditRouteImport } from './routes/clients.$studentId_.edit'
 
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RegisterInfoRoute = RegisterInfoRouteImport.update({
   id: '/register-info',
   path: '/register-info',
@@ -117,6 +123,7 @@ export interface FileRoutesByFullPath {
   '/ranking': typeof RankingRoute
   '/register': typeof RegisterRoute
   '/register-info': typeof RegisterInfoRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/clients/$studentId': typeof ClientsStudentIdRouteWithChildren
   '/perfil/$userId': typeof PerfilUserIdRoute
   '/clients/': typeof ClientsIndexRoute
@@ -135,6 +142,7 @@ export interface FileRoutesByTo {
   '/ranking': typeof RankingRoute
   '/register': typeof RegisterRoute
   '/register-info': typeof RegisterInfoRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/perfil/$userId': typeof PerfilUserIdRoute
   '/clients': typeof ClientsIndexRoute
   '/clients/$studentId/edit': typeof ClientsStudentIdEditRoute
@@ -153,6 +161,7 @@ export interface FileRoutesById {
   '/ranking': typeof RankingRoute
   '/register': typeof RegisterRoute
   '/register-info': typeof RegisterInfoRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/clients/$studentId': typeof ClientsStudentIdRouteWithChildren
   '/perfil/$userId': typeof PerfilUserIdRoute
   '/clients/': typeof ClientsIndexRoute
@@ -173,6 +182,7 @@ export interface FileRouteTypes {
     | '/ranking'
     | '/register'
     | '/register-info'
+    | '/reset-password'
     | '/clients/$studentId'
     | '/perfil/$userId'
     | '/clients/'
@@ -191,6 +201,7 @@ export interface FileRouteTypes {
     | '/ranking'
     | '/register'
     | '/register-info'
+    | '/reset-password'
     | '/perfil/$userId'
     | '/clients'
     | '/clients/$studentId/edit'
@@ -208,6 +219,7 @@ export interface FileRouteTypes {
     | '/ranking'
     | '/register'
     | '/register-info'
+    | '/reset-password'
     | '/clients/$studentId'
     | '/perfil/$userId'
     | '/clients/'
@@ -227,6 +239,7 @@ export interface RootRouteChildren {
   RankingRoute: typeof RankingRoute
   RegisterRoute: typeof RegisterRoute
   RegisterInfoRoute: typeof RegisterInfoRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
   ClientsStudentIdRoute: typeof ClientsStudentIdRouteWithChildren
   PerfilUserIdRoute: typeof PerfilUserIdRoute
   ClientsIndexRoute: typeof ClientsIndexRoute
@@ -237,6 +250,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/register-info': {
       id: '/register-info'
       path: '/register-info'
@@ -373,6 +393,7 @@ const rootRouteChildren: RootRouteChildren = {
   RankingRoute: RankingRoute,
   RegisterRoute: RegisterRoute,
   RegisterInfoRoute: RegisterInfoRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
   ClientsStudentIdRoute: ClientsStudentIdRouteWithChildren,
   PerfilUserIdRoute: PerfilUserIdRoute,
   ClientsIndexRoute: ClientsIndexRoute,
