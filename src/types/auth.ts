@@ -58,3 +58,7 @@ export interface ConfirmEmailPayload {
   code?: string;
 }
 
+export interface ForgotPasswordPayload {
+  email: string;
+}
+
