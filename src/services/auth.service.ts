@@ -1,6 +1,7 @@
 import {
   CoachStudent,
   ConfirmEmailPayload,
+  ForgotPasswordPayload,
   LoginCredentials,
   RegisterCredentials,
 } from "@/types/auth";
@@ -56,6 +57,19 @@ export const confirmEmail = async (payload: ConfirmEmailPayload) => {
     return response.data?.data ?? response.data;
   } catch (error) {
     console.error("Error al confirmar correo", error);
+    throw error;
+  }
+};
+
+export const forgotPassword = async (payload: ForgotPasswordPayload) => {
+  try {
+    const response = await api.post("/Users/ForgotPassword", {
+      email: payload.email.trim(),
+    });
+
+    return response.data;
+  } catch (error) {
+    console.error("Error al solicitar recuperación de contraseña:", error);
     throw error;
   }
 };
