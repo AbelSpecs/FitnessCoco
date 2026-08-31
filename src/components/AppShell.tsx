@@ -198,17 +198,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         {!collapsed && (
           <div className="p-4 m-3 rounded-xl bg-gradient-card border border-sidebar-border">
             <div className="flex items-center gap-3">
-              <ProfileMenu initial={user!.firstName!.charAt(0)} align="left" />
+              <ProfileMenu initial={user?.firstName?.charAt(0) || "U"} align="left" />
               <div className="min-w-0">
-                <p className="text-sm font-medium truncate">{user!.firstName}</p>
-                <p className="text-xs text-muted-foreground">Cliente • Pro</p>
+                <p className="text-sm font-medium truncate">{user?.firstName || "Usuario"}</p>
+                <p className="text-xs text-muted-foreground">
+                  {user?.role === "coach" ? "Entrenador" : "Cliente • Pro"}
+                </p>
               </div>
             </div>
           </div>
         )}
         {collapsed && (
           <div className="p-3 flex justify-center">
-            <ProfileMenu initial={user!.firstName!.charAt(0)} align="left" />
+            <ProfileMenu initial={user?.firstName?.charAt(0) || "U"} align="left" />
           </div>
         )}
       </aside>
@@ -277,10 +279,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
             <div className="p-4 m-3 rounded-xl bg-gradient-card border border-sidebar-border">
               <div className="flex items-center gap-3">
-                <ProfileMenu initial={user!.firstName!.charAt(0)} align="left" />
+                <ProfileMenu initial={user?.firstName?.charAt(0) || "U"} align="left" />
                 <div className="min-w-0">
-                  <p className="text-sm font-medium truncate">{user!.firstName}</p>
-                  <p className="text-xs text-muted-foreground">Cliente • Pro</p>
+                  <p className="text-sm font-medium truncate">{user?.firstName || "Usuario"}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {user?.role === "coach" ? "Entrenador" : "Cliente • Pro"}
+                  </p>
                 </div>
               </div>
             </div>
@@ -322,9 +326,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <Button variant="ghost" size="icon" aria-label="Notificaciones">
                 <Bell className="h-4 w-4" />
               </Button>
-              <div className="lg:hidden">
-                <ProfileMenu initial={user!.firstName!.charAt(0)} size="sm" align="right" />
-              </div>
+              <ProfileMenu initial={user?.firstName?.charAt(0) || "U"} size="sm" align="right" />
             </div>
           </div>
         </header>

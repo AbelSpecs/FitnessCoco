@@ -1,5 +1,5 @@
 import { Coach, Student, User } from "@/types/user";
-
+import { useAuthStore } from "@/store/authStore";
 import api from "./api";
 
 export const createStudent = async (studentData: Student) => {
@@ -35,6 +35,28 @@ export const getUser = async (id: number) => {
     return data;
   } catch (error) {
     console.error("Error al obtener el perfil del usuario", error);
+    throw error;
+  }
+};
+
+export const updateProfilePictures = async (
+  userId: number,
+  payload: {
+    profilePicture?: string | null;
+    bannerPicture?: string | null;
+  },
+) => {
+  try {
+    const response = await api.put(`/Users/${userId}/profilePictures`, {
+      userId: Number(userId),
+      profilePicture: payload.profilePicture ?? null,
+      bannerPicture: payload.bannerPicture ?? null,
+    });
+
+    const data = response.data?.data !== undefined ? response.data.data : response.data;
+    return data;
+  } catch (error) {
+    console.error("Error al actualizar fotos de perfil/banner del usuario", error);
     throw error;
   }
 };

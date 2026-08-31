@@ -7,8 +7,11 @@ export const userStudentMapper = (apiUser: StudentDto) => {
   const userToMap = apiUser;
 
   const userMapped: User = {
+    id: userToMap.userId || userToMap.id,
     firstName: userToMap.firstName,
     lastName: userToMap.lastName,
+    profilePictureUrl: userToMap.profilePictureUrl,
+    // bannerPicture: userToMap.bannerPicture,
     age: age(userToMap.birthdate!),
     streak: 12,
     student: {
@@ -35,16 +38,27 @@ export const userCoachMapper = (apiUser: CoachDto) => {
   const userToMap = apiUser;
 
   const userMapped: User = {
-    id: userToMap.userId,
+    id: userToMap.userId || userToMap.id,
     firstName: userToMap.firstName,
     lastName: userToMap.lastName,
+    profilePictureKey: userToMap.profilePictureKey,
+    bannerPictureKey: userToMap.bannerPictureKey,
     coach: {
       id: userToMap.id,
       userId: userToMap.userId,
       bio: userToMap.bio,
       certifications: userToMap.certifications,
       isVerified: userToMap.isVerified,
-      bannerUrl: userToMap.bannerUrl,
+      // bannerUrl: userToMap.bannerPicture || userToMap.bannerUrl,
+      // bannerPictureKey: userToMap.bannerPictureKey,
+      // profilePictureKey: userToMap.profilePictureKey,
+      experienceYears: userToMap.experienceYears ?? userToMap.yearsOfExperience ?? 0,
+      studentsCount: userToMap.studentsCount,
+      routinesCount: userToMap.routinesCount,
+      rating: userToMap.rating,
+      sessionsPerWeek: userToMap.sessionsPerWeek,
+      retentionRate: userToMap.retentionRate,
+      averageStreak: userToMap.averageStreak,
     },
     isStudent: false,
   };

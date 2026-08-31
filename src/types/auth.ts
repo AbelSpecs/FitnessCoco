@@ -43,6 +43,9 @@ export interface UserAuth {
   myCoachId?: number;
   email?: string;
   firstName?: string;
+  profilePicture?: string;
+  profilePictureKey?: string;
+  profilePictureUrl?: string;
   role?: Role;
 }
 
@@ -69,4 +72,3 @@ export interface ResetPasswordPayload {
   newPassword: string;
   confirmPassword?: string;
 }
-

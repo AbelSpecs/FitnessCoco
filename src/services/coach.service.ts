@@ -37,3 +37,21 @@ export const getCoachStudents = async (coachId: number) => {
     throw error;
   }
 };
+
+export const updateCoach = async (coachData: Partial<Coach>) => {
+  try {
+    const response = await api.put(`/Coaches/${coachData.id}`, {
+      id: coachData.id,
+      bio: coachData.bio,
+      certifications: coachData.certifications,
+      yearsOfExperience: coachData.experienceYears,
+      profilePicture: coachData.profilePicture,
+      bannerPicture: coachData.bannerPicture || coachData.bannerUrl,
+    });
+    const { data } = response.data;
+    return data;
+  } catch (error) {
+    console.error("Error al actualizar el perfil del coach", error);
+    throw error;
+  }
+};

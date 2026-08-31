@@ -33,6 +33,19 @@ export interface Coach {
   certifications?: string;
   isVerified?: boolean;
   bannerUrl?: string;
+  bannerPicture?: string;
+  profilePicture?: string;
+  profilePictureKey?: string;
+  bannerPictureKey?: string;
+  profilePictureUrl?: string;
+  bannerPictureUrl?: string;
+  experienceYears?: number;
+  studentsCount?: number;
+  routinesCount?: number;
+  rating?: number;
+  sessionsPerWeek?: number;
+  retentionRate?: number;
+  averageStreak?: number;
 }
 
 export interface User {
@@ -42,6 +55,10 @@ export interface User {
   gender?: string;
   age?: number;
   streak?: number;
+  profilePictureKey?: string;
+  bannerPictureKey?: string;
+  profilePictureUrl?: string;
+  bannerPictureUrl?: string;
   planType?: "basic" | "health" | "pro";
   parqCompleted?: boolean;
   parqValidUntil?: string;
