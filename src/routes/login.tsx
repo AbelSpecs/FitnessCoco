@@ -67,27 +67,31 @@ function LoginPage() {
       const data = await login(loginData);
       const { id, token } = data;
       const [userData, studentData, coachData] = await Promise.all([
-        getUser(id),
-        getStudent(id),
-        getCoach(id),
+        getUser(id).catch(() => null),
+        getStudent(id).catch(() => null),
+        getCoach(id).catch(() => null),
       ]);
 
       let myCoachId = 0;
-      if (studentData !== null) {
-        const details = await getUserDetails(userData.id);
-        const { coach } = details;
-        const { id } = coach;
-        myCoachId = id;
+      if (studentData !== null && userData) {
+        try {
+          const details = await getUserDetails(userData.id).catch(() => null);
+          if (details?.coach?.id) {
+            myCoachId = details.coach.id;
+          }
+        } catch {
+          myCoachId = 0;
+        }
       }
 
-      const { firstName } = userData;
+      const firstName = userData?.firstName || "Usuario";
 
       const user: UserAuth = {
         id,
         firstName,
-        studentId: studentData === null ? 0 : studentData.id,
+        studentId: studentData?.id ?? (studentData ? Number(studentData) : 0),
         myCoachId: studentData === null ? 0 : myCoachId,
-        coachId: coachData === null ? 0 : coachData.id,
+        coachId: coachData?.id ?? 0,
         role: studentData === null ? "coach" : "student",
       };
 
@@ -97,7 +101,7 @@ function LoginPage() {
       notify.success("Logueado con exito!");
       navigate({ to: "/perfil/$userId", params: { userId: id } });
     } catch (error) {
-      console.error("error al iniciar sesion");
+      console.error("error al iniciar sesion", error);
       notify.error("error", "Error al iniciar Sesión");
     } finally {
       setLoading(false);
