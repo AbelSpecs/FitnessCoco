@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { resolveMediaUrl } from "@/services/storage.service";
 
-interface StorageImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
+export interface StorageImageProps extends Omit<React.ImgHTMLAttributes<HTMLImageElement>, "src"> {
   storageKey?: string | null;
   src?: string | null;
   fallback?: React.ReactNode;
