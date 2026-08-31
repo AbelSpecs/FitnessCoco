@@ -53,7 +53,8 @@ export const Route = createFileRoute("/perfil/$userId")({
       const user = await getUserDetails(Number(params.userId));
       const { student = null, coach = null, profilePictureKey, bannerPictureKey } = user;
 
-      const profileKey = profilePictureKey || coach?.profilePictureKey || student?.profilePictureKey;
+      const profileKey =
+        profilePictureKey || coach?.profilePictureKey || student?.profilePictureKey;
       const bannerKey = bannerPictureKey || coach?.bannerPictureKey || student?.bannerPictureKey;
 
       const profilePictureUrl = profileKey ? getServeUrl(profileKey) : undefined;
@@ -190,6 +191,14 @@ function Perfil() {
             }
           : prev,
       );
+
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(
+          new CustomEvent("pyrosfit_avatar_updated", {
+            detail: { key: presign.key, url: newProfileUrl },
+          }),
+        );
+      }
 
       notify.success("¡Foto de perfil actualizada con éxito!");
     } catch (error: any) {
@@ -373,16 +382,14 @@ function Perfil() {
     userData?.coach?.bannerPicture ||
     userData?.coach?.bannerUrl;
   const currentBannerUrl =
-    userData?.bannerPictureUrl ||
-    (currentBannerKey ? getServeUrl(currentBannerKey) : undefined);
+    userData?.bannerPictureUrl || (currentBannerKey ? getServeUrl(currentBannerKey) : undefined);
 
   const currentProfileKey =
     userData?.profilePictureKey ||
     userData?.coach?.profilePictureKey ||
     userData?.coach?.profilePicture;
   const currentProfileUrl =
-    userData?.profilePictureUrl ||
-    (currentProfileKey ? getServeUrl(currentProfileKey) : undefined);
+    userData?.profilePictureUrl || (currentProfileKey ? getServeUrl(currentProfileKey) : undefined);
 
   return (
     <AppShell>

@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import { LogOut, User as UserIcon } from "lucide-react";
+import { LogOut } from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/authStore";
 import StorageImage from "@/components/StorageImage";
+import { getUser } from "@/services/user.service";
+import { getServeUrl } from "@/services/storage.service";
 
 interface ProfileMenuProps {
   initial: string;
@@ -13,9 +15,69 @@ interface ProfileMenuProps {
 
 export function ProfileMenu({ initial, size = "md", align = "right" }: ProfileMenuProps) {
   const [open, setOpen] = useState(false);
+  const [avatarKey, setAvatarKey] = useState<string | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const { logout, user } = useAuthStore();
+
+  // 1. Cargar imagen de perfil desde la API una vez iniciada la sesión
+  useEffect(() => {
+    if (!user?.id) return;
+
+    let isMounted = true;
+
+    const fetchUserProfile = async () => {
+      try {
+        const userData = await getUser(user.id);
+        if (!isMounted) return;
+
+        const key =
+          userData?.profilePictureKey ||
+          userData?.profilePicture ||
+          userData?.coach?.profilePictureKey ||
+          userData?.student?.profilePictureKey ||
+          null;
+
+        if (key) {
+          setAvatarKey(key);
+          setAvatarUrl(getServeUrl(key));
+        } else {
+          setAvatarKey(null);
+          setAvatarUrl(null);
+        }
+      } catch (err) {
+        console.error("Error al cargar foto de perfil en barra:", err);
+      }
+    };
+
+    fetchUserProfile();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [user?.id]);
+
+  // 2. Escuchar evento en tiempo real para cuando se cambie la foto de perfil en la vista de perfil
+  useEffect(() => {
+    const handleAvatarUpdated = (event: Event) => {
+      const customEvent = event as CustomEvent<{ key?: string; url?: string }>;
+      if (customEvent.detail) {
+        if (customEvent.detail.key) {
+          setAvatarKey(customEvent.detail.key);
+          setAvatarUrl(customEvent.detail.url || getServeUrl(customEvent.detail.key));
+        } else {
+          setAvatarKey(null);
+          setAvatarUrl(null);
+        }
+      }
+    };
+
+    window.addEventListener("pyrosfit_avatar_updated", handleAvatarUpdated);
+    return () => {
+      window.removeEventListener("pyrosfit_avatar_updated", handleAvatarUpdated);
+    };
+  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -54,10 +116,10 @@ export function ProfileMenu({ initial, size = "md", align = "right" }: ProfileMe
           avatarSize,
         )}
       >
-        {user?.profilePicture || user?.profilePictureKey ? (
+        {avatarUrl || avatarKey ? (
           <StorageImage
-            src={user?.profilePictureUrl}
-            storageKey={user?.profilePictureKey || user?.profilePicture}
+            src={avatarUrl}
+            storageKey={avatarKey}
             alt={user?.firstName || "Avatar"}
             className="w-full h-full object-cover"
             containerClassName="w-full h-full flex items-center justify-center bg-transparent"
@@ -82,11 +144,27 @@ export function ProfileMenu({ initial, size = "md", align = "right" }: ProfileMe
             align === "right" ? "right-0" : "left-0",
           )}
         >
-          <div className="px-4 py-3 bg-gradient-card border-b border-border">
-            <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-              Sesión activa
-            </p>
-            <p className="text-sm font-medium truncate">{user?.firstName}</p>
+          <div className="px-4 py-3 bg-gradient-card border-b border-border flex items-center gap-3">
+            <div className="h-9 w-9 rounded-full bg-card/80 border border-border/60 overflow-hidden shrink-0">
+              <StorageImage
+                src={avatarUrl}
+                storageKey={avatarKey}
+                alt={user?.firstName || "Avatar"}
+                className="w-full h-full object-cover"
+                containerClassName="w-full h-full flex items-center justify-center bg-transparent"
+                fallback={
+                  <div className="w-full h-full bg-gradient-primary flex items-center justify-center text-primary-foreground text-xs shadow-glow">
+                    {initial}
+                  </div>
+                }
+              />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+                Sesión activa
+              </p>
+              <p className="text-sm font-medium truncate">{user?.firstName || "Usuario"}</p>
+            </div>
           </div>
           <div className="p-1">
             <button
