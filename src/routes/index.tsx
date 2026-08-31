@@ -139,9 +139,18 @@ export const Route = createFileRoute("/")({
         studentStreakData,
         streakHistoryLogs,
       ] = await Promise.all([
-        getDailyStudentExercisesByStudentIdAndDate(studentId, todayStr),
-        getDailyStudentExercisesByStudentIdAndDates(studentId, dateStringStart, sixDaysLaterStr),
-        getDailyStudentExercisesByStudentIdAndDates(studentId, threeDaysAgoStr, yesterdayStr),
+        getDailyStudentExercisesByStudentIdAndDate(studentId, todayStr).catch((err) => {
+          console.warn("No se pudieron cargar ejercicios diarios:", err);
+          return [];
+        }),
+        getDailyStudentExercisesByStudentIdAndDates(studentId, dateStringStart, sixDaysLaterStr).catch((err) => {
+          console.warn("No se pudieron cargar ejercicios semanales:", err);
+          return [];
+        }),
+        getDailyStudentExercisesByStudentIdAndDates(studentId, threeDaysAgoStr, yesterdayStr).catch((err) => {
+          console.warn("No se pudieron cargar ejercicios anteriores:", err);
+          return [];
+        }),
         getStudentStreak(studentId).catch((error) => {
           console.warn("No se pudo cargar la racha del alumno:", error);
           return undefined;
@@ -152,25 +161,30 @@ export const Route = createFileRoute("/")({
         }),
       ]);
 
-      // const lastCompletedExercises = historyExercises.slice(
-      //   historyExercises.length - 3,
-      //   historyExercises.length - 1,
-      // );
-
       return {
         role,
         riskRadarStudents: undefined,
         completeStudentsList: undefined,
         studentListData: undefined,
-        dailyExercises,
-        weeklyExercises,
-        lastCompletedExercises: historyExercises,
+        dailyExercises: dailyExercises || [],
+        weeklyExercises: weeklyExercises || [],
+        lastCompletedExercises: historyExercises || [],
         studentStreakData,
-        streakHistoryLogs,
+        streakHistoryLogs: streakHistoryLogs || [],
       };
     } catch (error) {
-      console.error("Error fetching data:", error);
-      throw error;
+      console.error("Error fetching data in dashboard loader:", error);
+      return {
+        role: "student",
+        riskRadarStudents: undefined,
+        completeStudentsList: undefined,
+        studentListData: undefined,
+        dailyExercises: [],
+        weeklyExercises: [],
+        lastCompletedExercises: [],
+        studentStreakData: undefined,
+        streakHistoryLogs: [],
+      };
     }
   },
   component: Dashboard,
@@ -756,7 +770,7 @@ function Dashboard() {
             }}
           >
             <Link
-              to="/rutina/$studentId/$dayId"
+              to="/routine/$studentId/$dayId"
               params={{
                 studentId: user!.studentId.toString(),
                 dayId: format(new Date(), "yyyy-MM-dd"),
@@ -809,7 +823,7 @@ function Dashboard() {
                 return (
                   <Link
                     key={d.id}
-                    to="/rutina/$studentId/$dayId"
+                    to="/routine/$studentId/$dayId"
                     params={{ studentId: user!.studentId.toString(), dayId: d.id }}
                     className="flex items-center gap-3 group"
                   >
@@ -1158,7 +1172,7 @@ function Dashboard() {
               {user?.role === "student" && (
                 <Button variant="hero" size="lg" asChild className="w-full sm:w-auto">
                   <Link
-                    to="/rutina/$studentId"
+                    to="/routine/$studentId"
                     params={{ studentId: user?.studentId?.toString() ?? "" }}
                   >
                     <Zap className="h-4 w-4" />
@@ -1222,7 +1236,7 @@ function Dashboard() {
             </div>
             <Button variant="ghost" size="sm" asChild>
               <Link
-                to="/rutina/$studentId/$dayId"
+                to="/routine/$studentId/$dayId"
                 params={{
                   studentId: user!.studentId.toString(),
                   dayId: format(new Date(), "yyyy-MM-dd"),
@@ -1276,7 +1290,7 @@ function Dashboard() {
                 return (
                   <Link
                     key={d.id}
-                    to="/rutina/$studentId/$dayId"
+                    to="/routine/$studentId/$dayId"
                     params={{ studentId: user!.studentId.toString(), dayId: d.id }}
                     className="flex items-center gap-3 group"
                   >
@@ -1310,7 +1324,7 @@ function Dashboard() {
                 <h2 className="font-display text-3xl">Tus Clientes</h2>
               </div>
               <Button variant="ghost" size="sm" asChild>
-                <Link to="/clientes">
+                <Link to="/clients">
                   Ver todos <ChevronRight className="h-4 w-4" />
                 </Link>
               </Button>
@@ -1319,7 +1333,7 @@ function Dashboard() {
               {studentListData?.slice(0, 5).map((student: CoachStudentsDto) => (
                 <Link
                   key={student.studentId}
-                  to="/clientes/$studentId"
+                  to="/clients/$studentId"
                   params={{ studentId: student.studentId.toString() }}
                   className="flex items-center gap-3 p-2 -mx-2 rounded-lg hover:bg-primary/5 transition-colors group"
                 >
