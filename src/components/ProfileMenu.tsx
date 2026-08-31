@@ -50,20 +50,27 @@ export function ProfileMenu({ initial, size = "md", align = "right" }: ProfileMe
         aria-expanded={open}
         aria-label="Menú de perfil"
         className={cn(
-          "rounded-full bg-gradient-primary flex items-center justify-center font-display shrink-0 ring-offset-2 ring-offset-background transition-all hover:shadow-glow focus:outline-none focus:ring-2 focus:ring-primary overflow-hidden",
+          "rounded-full bg-card/80 backdrop-blur-md border border-border/60 flex items-center justify-center font-display shrink-0 ring-offset-2 ring-offset-background transition-all hover:shadow-glow focus:outline-none focus:ring-2 focus:ring-primary overflow-hidden",
           avatarSize,
         )}
       >
-        {user?.profilePicture ? (
+        {user?.profilePicture || user?.profilePictureKey ? (
           <StorageImage
-            storageKey={user.profilePicture}
+            src={user?.profilePictureUrl}
+            storageKey={user?.profilePictureKey || user?.profilePicture}
             alt={user?.firstName || "Avatar"}
             className="w-full h-full object-cover"
-            containerClassName="w-full h-full"
-            fallback={<span>{initial}</span>}
+            containerClassName="w-full h-full flex items-center justify-center bg-transparent"
+            fallback={
+              <div className="w-full h-full bg-gradient-primary flex items-center justify-center text-primary-foreground shadow-glow">
+                {initial}
+              </div>
+            }
           />
         ) : (
-          initial
+          <div className="w-full h-full bg-gradient-primary flex items-center justify-center text-primary-foreground shadow-glow">
+            {initial}
+          </div>
         )}
       </button>
 

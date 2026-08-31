@@ -44,6 +44,8 @@ export interface UserAuth {
   email?: string;
   firstName?: string;
   profilePicture?: string;
+  profilePictureKey?: string;
+  profilePictureUrl?: string;
   role?: Role;
 }
 

@@ -2,21 +2,6 @@ import { Coach, Student, User } from "@/types/user";
 import { useAuthStore } from "@/store/authStore";
 import api from "./api";
 
-const getAuthToken = (): string | null => {
-  let token = useAuthStore.getState().token;
-  if (!token) {
-    const rawToken = localStorage.getItem("pyrosfit_token");
-    if (rawToken) {
-      try {
-        token = JSON.parse(rawToken);
-      } catch {
-        token = rawToken;
-      }
-    }
-  }
-  return token ?? null;
-};
-
 export const createStudent = async (studentData: Student) => {
   try {
     const response = await api.post("/Students", { student: studentData });
@@ -56,25 +41,17 @@ export const getUser = async (id: number) => {
 
 export const updateProfilePictures = async (
   userId: number,
-  payload: { profilePicture?: string | null; bannerPicture?: string | null },
+  payload: {
+    profilePicture?: string | null;
+    bannerPicture?: string | null;
+  },
 ) => {
   try {
-    const token = getAuthToken();
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-    };
-    if (token) {
-      headers["Authorization"] = `Bearer ${token}`;
-    }
-
-    const response = await api.put(
-      `/Users/${userId}/profilePictures`,
-      {
-        profilePicture: payload.profilePicture ?? null,
-        bannerPicture: payload.bannerPicture ?? null,
-      },
-      { headers },
-    );
+    const response = await api.put(`/Users/${userId}/profilePictures`, {
+      userId: Number(userId),
+      profilePicture: payload.profilePicture ?? null,
+      bannerPicture: payload.bannerPicture ?? null,
+    });
 
     const data = response.data?.data !== undefined ? response.data.data : response.data;
     return data;

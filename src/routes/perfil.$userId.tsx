@@ -33,8 +33,10 @@ import { updateCoach } from "@/services/coach.service";
 import { getQr } from "@/services/general.service";
 import { userCoachMapper, userStudentMapper } from "@/mappers/user";
 import {
+  getFileContentType,
   getPresignedBannerUrl,
   getPresignedProfileUrl,
+  getServeUrl,
   uploadFileToPresignedUrl,
 } from "@/services/storage.service";
 import StorageImage from "@/components/StorageImage";
@@ -49,12 +51,20 @@ export const Route = createFileRoute("/perfil/$userId")({
   loader: async ({ params }) => {
     try {
       const user = await getUserDetails(Number(params.userId));
-      const { student = null, coach = null, profilePicture, bannerPicture } = user;
+      const { student = null, coach = null, profilePictureKey, bannerPictureKey } = user;
+
+      const profileKey = profilePictureKey || coach?.profilePictureKey || student?.profilePictureKey;
+      const bannerKey = bannerPictureKey || coach?.bannerPictureKey || student?.bannerPictureKey;
+
+      const profilePictureUrl = profileKey ? getServeUrl(profileKey) : undefined;
+      const bannerPictureUrl = bannerKey ? getServeUrl(bannerKey) : undefined;
 
       if (student) {
         const userData: User = userStudentMapper(student);
-        if (profilePicture) userData.profilePicture = profilePicture;
-        if (bannerPicture) userData.bannerPicture = bannerPicture;
+        userData.profilePictureKey = profileKey;
+        userData.bannerPictureKey = bannerKey;
+        userData.profilePictureUrl = profilePictureUrl;
+        userData.bannerPictureUrl = bannerPictureUrl;
 
         return { userData };
       } else {
@@ -65,17 +75,10 @@ export const Route = createFileRoute("/perfil/$userId")({
         const urlToShare = `${BASE_URL}/register-info?coachId=${coach?.id || ""}`;
 
         const userData: User = userCoachMapper(coach || {});
-        if (profilePicture) {
-          userData.profilePicture = profilePicture;
-          if (userData.coach) userData.coach.profilePicture = profilePicture;
-        }
-        if (bannerPicture) {
-          userData.bannerPicture = bannerPicture;
-          if (userData.coach) {
-            userData.coach.bannerPicture = bannerPicture;
-            userData.coach.bannerUrl = bannerPicture;
-          }
-        }
+        userData.profilePictureKey = profileKey;
+        userData.bannerPictureKey = bannerKey;
+        userData.profilePictureUrl = profilePictureUrl;
+        userData.bannerPictureUrl = bannerPictureUrl;
 
         return { userData, base64, urlToShare };
       }
@@ -151,33 +154,37 @@ function Perfil() {
 
     try {
       notify.info("Subiendo foto de perfil...");
+      const contentType = getFileContentType(file);
       // 1. Obtener URL presignada
       const presign = await getPresignedProfileUrl({
         userId: currentUserId,
         fileName: file.name,
-        contentType: file.type,
+        contentType,
         expiresInSeconds: 300,
       });
 
       // 2. Subida binaria directa a Cloudflare R2 / S3
-      await uploadFileToPresignedUrl(presign.uploadUrl, file);
+      await uploadFileToPresignedUrl(presign.uploadUrl, file, contentType);
 
       // 3. Persistir key en base de datos
       await updateProfilePictures(currentUserId, {
         profilePicture: presign.key,
-        bannerPicture: userData?.bannerPicture || userData?.coach?.bannerPicture || null,
+        bannerPicture: userData?.bannerPictureKey || userData?.coach?.bannerPicture || null,
       });
 
       // 4. Actualizar estado local
+      const newProfileUrl = getServeUrl(presign.key);
       setUserData((prev) =>
         prev
           ? {
               ...prev,
-              profilePicture: presign.key,
+              profilePictureKey: presign.key,
+              profilePictureUrl: newProfileUrl,
               coach: prev.coach
                 ? {
                     ...prev.coach,
-                    profilePicture: presign.key,
+                    profilePictureKey: presign.key,
+                    profilePictureUrl: newProfileUrl,
                   }
                 : undefined,
             }
@@ -213,34 +220,37 @@ function Perfil() {
 
     try {
       notify.info("Subiendo imagen de portada...");
+      const contentType = getFileContentType(file);
       // 1. Obtener URL presignada para banner
       const presign = await getPresignedBannerUrl({
         trainerId,
         fileName: file.name,
-        contentType: file.type,
+        contentType,
         expiresInSeconds: 300,
       });
 
       // 2. Subida binaria directa a Cloudflare R2 / S3
-      await uploadFileToPresignedUrl(presign.uploadUrl, file);
+      await uploadFileToPresignedUrl(presign.uploadUrl, file, contentType);
 
       // 3. Persistir key en base de datos
       await updateProfilePictures(currentUserId, {
-        profilePicture: userData?.profilePicture || null,
+        profilePicture: userData?.profilePictureKey || null,
         bannerPicture: presign.key,
       });
 
       // 4. Actualizar estado local
+      const newBannerUrl = getServeUrl(presign.key);
       setUserData((prev) =>
         prev
           ? {
               ...prev,
-              bannerPicture: presign.key,
+              bannerPictureKey: presign.key,
+              bannerPictureUrl: newBannerUrl,
               coach: prev.coach
                 ? {
                     ...prev.coach,
-                    bannerPicture: presign.key,
-                    bannerUrl: presign.key,
+                    bannerPictureKey: presign.key,
+                    bannerPictureUrl: newBannerUrl,
                   }
                 : undefined,
             }
@@ -263,7 +273,7 @@ function Perfil() {
 
     try {
       await updateProfilePictures(currentUserId, {
-        profilePicture: userData?.profilePicture || null,
+        profilePicture: userData?.profilePictureKey || null,
         bannerPicture: null,
       });
 
@@ -271,12 +281,15 @@ function Perfil() {
         prev
           ? {
               ...prev,
-              bannerPicture: "",
+              bannerPictureKey: undefined,
+              bannerPictureUrl: undefined,
               coach: prev.coach
                 ? {
                     ...prev.coach,
-                    bannerPicture: "",
-                    bannerUrl: "",
+                    bannerPictureKey: undefined,
+                    bannerPictureUrl: undefined,
+                    bannerPicture: undefined,
+                    bannerUrl: undefined,
                   }
                 : undefined,
             }
@@ -304,8 +317,9 @@ function Perfil() {
         if (userData?.coach) {
           await updateCoach({
             ...userData.coach,
-            profilePicture: userData.profilePicture || userData.coach.profilePicture,
-            bannerPicture: userData.bannerPicture || userData.coach.bannerPicture || userData.coach.bannerUrl,
+            profilePicture: userData.profilePictureKey || userData.coach.profilePicture,
+            bannerPicture:
+              userData.bannerPictureKey || userData.coach.bannerPicture || userData.coach.bannerUrl,
           });
           setUserCompleteData(userData);
           notify.success("Perfil de entrenador guardado");
@@ -353,8 +367,22 @@ function Perfil() {
     }
   };
 
-  const currentBannerKey = userData?.coach?.bannerPicture || userData?.coach?.bannerUrl || userData?.bannerPicture;
-  const currentProfileKey = userData?.profilePicture || userData?.coach?.profilePicture;
+  const currentBannerKey =
+    userData?.bannerPictureKey ||
+    userData?.coach?.bannerPictureKey ||
+    userData?.coach?.bannerPicture ||
+    userData?.coach?.bannerUrl;
+  const currentBannerUrl =
+    userData?.bannerPictureUrl ||
+    (currentBannerKey ? getServeUrl(currentBannerKey) : undefined);
+
+  const currentProfileKey =
+    userData?.profilePictureKey ||
+    userData?.coach?.profilePictureKey ||
+    userData?.coach?.profilePicture;
+  const currentProfileUrl =
+    userData?.profilePictureUrl ||
+    (currentProfileKey ? getServeUrl(currentProfileKey) : undefined);
 
   return (
     <AppShell>
@@ -378,8 +406,9 @@ function Perfil() {
         <Card className="mb-6 sm:mb-8 border-border relative overflow-hidden bg-card shadow-elevated">
           {/* Banner Container */}
           <div className="relative h-44 sm:h-56 md:h-64 w-full overflow-hidden bg-gradient-hero group">
-            {currentBannerKey ? (
+            {currentBannerUrl || currentBannerKey ? (
               <StorageImage
+                src={currentBannerUrl}
                 storageKey={currentBannerKey}
                 alt="Banner del entrenador"
                 className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
@@ -458,26 +487,31 @@ function Perfil() {
                 onClick={() => avatarInputRef.current?.click()}
                 title="Cambiar foto de perfil"
               >
-                <div className="h-24 w-24 sm:h-28 sm:w-28 rounded-2xl bg-gradient-primary flex items-center justify-center font-display text-5xl shadow-glow ring-4 ring-background shrink-0 overflow-hidden relative">
+                <div className="h-24 w-24 sm:h-28 sm:w-28 rounded-2xl bg-card/80 backdrop-blur-md border border-border/60 flex items-center justify-center font-display text-5xl shadow-elevated ring-4 ring-background shrink-0 overflow-hidden relative">
                   <StorageImage
+                    src={currentProfileUrl}
                     storageKey={currentProfileKey}
                     alt={userData?.firstName || "Coach"}
                     className="w-full h-full object-cover"
-                    containerClassName="w-full h-full"
+                    containerClassName="w-full h-full flex items-center justify-center bg-transparent"
                     fallback={
-                      <span className="text-primary-foreground font-display text-4xl sm:text-5xl">
-                        {userData?.firstName?.charAt(0) || "C"}
-                      </span>
+                      <div className="w-full h-full bg-gradient-primary flex items-center justify-center shadow-glow">
+                        <span className="text-primary-foreground font-display text-4xl sm:text-5xl">
+                          {userData?.firstName?.charAt(0) || "C"}
+                        </span>
+                      </div>
                     }
                   />
                   {/* Hover overlay with camera icon */}
                   <div className="absolute inset-0 bg-black/60 opacity-0 group-hover/avatar:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1 text-white z-10">
                     <Camera className="h-6 w-6 text-primary-glow" />
-                    <span className="text-[10px] uppercase tracking-wider font-semibold">Cambiar</span>
+                    <span className="text-[10px] uppercase tracking-wider font-semibold">
+                      Cambiar
+                    </span>
                   </div>
                 </div>
                 {/* Small camera badge */}
-                <div className="absolute -bottom-1.5 -right-1.5 h-7 w-7 rounded-xl bg-card border border-border flex items-center justify-center shadow-md group-hover/avatar:scale-110 transition-transform">
+                <div className="absolute -bottom-1.5 -right-1.5 h-7 w-7 rounded-xl bg-card border border-border flex items-center justify-center shadow-md group-hover/avatar:scale-110 transition-transform z-20">
                   <Camera className="h-3.5 w-3.5 text-primary-glow" />
                 </div>
               </div>
@@ -543,24 +577,29 @@ function Perfil() {
                 onClick={() => avatarInputRef.current?.click()}
                 title="Cambiar foto de perfil"
               >
-                <div className="h-28 w-28 rounded-full bg-gradient-primary mx-auto flex items-center justify-center font-display text-5xl shadow-glow overflow-hidden relative ring-4 ring-background">
+                <div className="h-28 w-28 rounded-full bg-card/80 backdrop-blur-md border border-border/60 mx-auto flex items-center justify-center font-display text-5xl shadow-elevated overflow-hidden relative ring-4 ring-background">
                   <StorageImage
+                    src={currentProfileUrl}
                     storageKey={currentProfileKey}
                     alt={userData?.firstName || "Usuario"}
                     className="w-full h-full object-cover"
-                    containerClassName="w-full h-full"
+                    containerClassName="w-full h-full flex items-center justify-center bg-transparent"
                     fallback={
-                      <span className="text-primary-foreground font-display text-5xl">
-                        {userData?.firstName?.charAt(0) || "U"}
-                      </span>
+                      <div className="w-full h-full bg-gradient-primary flex items-center justify-center shadow-glow">
+                        <span className="text-primary-foreground font-display text-5xl">
+                          {userData?.firstName?.charAt(0) || "U"}
+                        </span>
+                      </div>
                     }
                   />
-                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover/avatar:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1 text-white">
+                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover/avatar:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1 text-white z-10">
                     <Camera className="h-6 w-6 text-primary-glow" />
-                    <span className="text-[10px] uppercase tracking-wider font-semibold">Cambiar</span>
+                    <span className="text-[10px] uppercase tracking-wider font-semibold">
+                      Cambiar
+                    </span>
                   </div>
                 </div>
-                <div className="absolute bottom-0 right-0 h-8 w-8 rounded-full bg-card border border-border flex items-center justify-center shadow-md group-hover/avatar:scale-110 transition-transform">
+                <div className="absolute bottom-0 right-0 h-8 w-8 rounded-full bg-card border border-border flex items-center justify-center shadow-md group-hover/avatar:scale-110 transition-transform z-20">
                   <Camera className="h-4 w-4 text-primary-glow" />
                 </div>
               </div>

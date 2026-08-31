@@ -111,19 +111,51 @@ export const getPresignedVideoUrl = async (
 };
 
 /**
+ * Normaliza y obtiene el Content-Type adecuado para imágenes o videos (ej: image/png, image/jpeg, video/mp4)
+ */
+export const getFileContentType = (file: File): string => {
+  if (file.type) {
+    if (file.type === "image/jpg") return "image/jpeg";
+    return file.type;
+  }
+  const ext = file.name.split(".").pop()?.toLowerCase();
+  switch (ext) {
+    case "png":
+      return "image/png";
+    case "jpg":
+    case "jpeg":
+      return "image/jpeg";
+    case "webp":
+      return "image/webp";
+    case "gif":
+      return "image/gif";
+    case "mp4":
+      return "video/mp4";
+    case "mov":
+      return "video/quicktime";
+    case "webm":
+      return "video/webm";
+    default:
+      return "application/octet-stream";
+  }
+};
+
+/**
  * Realiza la subida binaria directa a Cloudflare R2 / AWS S3 usando la URL presignada
  * NOTA: No debe enviarse el header Authorization de PyrosFit para no invalidar la firma S3
  */
 export const uploadFileToPresignedUrl = async (
   uploadUrl: string,
   file: File | Blob,
+  contentType?: string,
   onProgress?: (percent: number) => void,
 ): Promise<void> => {
   try {
+    const finalContentType = contentType || (file instanceof File ? getFileContentType(file) : file.type) || "application/octet-stream";
     // Axios request limpio sin interceptores ni headers de auth
     await axios.put(uploadUrl, file, {
       headers: {
-        "Content-Type": file.type || "application/octet-stream",
+        "Content-Type": finalContentType,
       },
       onUploadProgress: (progressEvent) => {
         if (progressEvent.total && onProgress) {
@@ -191,14 +223,29 @@ export const getDownloadUrl = async (
 };
 
 /**
- * Helper para resolver una URL directa o Storage Key
+ * Retorna la URL directa del endpoint serve para una key de Storage
+ */
+export const getServeUrl = (keyOrUrl?: string | null): string => {
+  if (!keyOrUrl) return "";
+  if (
+    keyOrUrl.startsWith("http://") ||
+    keyOrUrl.startsWith("https://") ||
+    keyOrUrl.startsWith("data:") ||
+    keyOrUrl.startsWith("blob:")
+  ) {
+    return keyOrUrl;
+  }
+  return `${STORAGE_API_BASE}/serve?key=${encodeURIComponent(keyOrUrl)}`;
+};
+
+/**
+ * Helper para resolver una URL directa o Storage Key usando el endpoint serve
  */
 export const resolveMediaUrl = async (
   keyOrUrl?: string | null,
   expiresInSeconds: number = 3600,
 ): Promise<string> => {
   if (!keyOrUrl) return "";
-  // Si ya es una URL completa o data URL, retornarla directamente
   if (
     keyOrUrl.startsWith("http://") ||
     keyOrUrl.startsWith("https://") ||
@@ -208,6 +255,6 @@ export const resolveMediaUrl = async (
     return keyOrUrl;
   }
 
-  // Es una clave de storage, consultar endpoint download
-  return await getDownloadUrl(keyOrUrl, expiresInSeconds);
+  // Utilizar endpoint directo de serve
+  return getServeUrl(keyOrUrl);
 };
