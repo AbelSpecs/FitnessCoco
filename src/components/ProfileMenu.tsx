@@ -3,6 +3,7 @@ import { LogOut, User as UserIcon } from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/authStore";
+import StorageImage from "@/components/StorageImage";
 
 interface ProfileMenuProps {
   initial: string;
@@ -49,11 +50,21 @@ export function ProfileMenu({ initial, size = "md", align = "right" }: ProfileMe
         aria-expanded={open}
         aria-label="Menú de perfil"
         className={cn(
-          "rounded-full bg-gradient-primary flex items-center justify-center font-display shrink-0 ring-offset-2 ring-offset-background transition-all hover:shadow-glow focus:outline-none focus:ring-2 focus:ring-primary",
+          "rounded-full bg-gradient-primary flex items-center justify-center font-display shrink-0 ring-offset-2 ring-offset-background transition-all hover:shadow-glow focus:outline-none focus:ring-2 focus:ring-primary overflow-hidden",
           avatarSize,
         )}
       >
-        {initial}
+        {user?.profilePicture ? (
+          <StorageImage
+            storageKey={user.profilePicture}
+            alt={user?.firstName || "Avatar"}
+            className="w-full h-full object-cover"
+            containerClassName="w-full h-full"
+            fallback={<span>{initial}</span>}
+          />
+        ) : (
+          initial
+        )}
       </button>
 
       {open && (

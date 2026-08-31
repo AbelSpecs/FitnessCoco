@@ -25,12 +25,19 @@ import {
 } from "lucide-react";
 import { Goal, goalLabels } from "@/types/goals";
 import { User } from "@/types/user";
-import { getUserDetails } from "@/services/user.service";
+import { getUserDetails, updateProfilePictures } from "@/services/user.service";
 import { notify } from "@/components/NotificationCenter";
 import { SpinnerOverlay } from "@/components/Spinner";
 import { updateStudent } from "@/services/student.service";
+import { updateCoach } from "@/services/coach.service";
 import { getQr } from "@/services/general.service";
 import { userCoachMapper, userStudentMapper } from "@/mappers/user";
+import {
+  getPresignedBannerUrl,
+  getPresignedProfileUrl,
+  uploadFileToPresignedUrl,
+} from "@/services/storage.service";
+import StorageImage from "@/components/StorageImage";
 
 export const Route = createFileRoute("/perfil/$userId")({
   head: () => ({
@@ -42,20 +49,33 @@ export const Route = createFileRoute("/perfil/$userId")({
   loader: async ({ params }) => {
     try {
       const user = await getUserDetails(Number(params.userId));
-      const { student = {}, coach = {} } = user;
+      const { student = null, coach = null, profilePicture, bannerPicture } = user;
 
       if (student) {
         const userData: User = userStudentMapper(student);
+        if (profilePicture) userData.profilePicture = profilePicture;
+        if (bannerPicture) userData.bannerPicture = bannerPicture;
 
         return { userData };
       } else {
-        const coachQr = await getQr(coach.id);
+        const coachQr = await getQr(coach?.id || 1);
         const { base64 } = coachQr.data;
 
         const BASE_URL = typeof window !== "undefined" ? window.location.origin : "";
-        const urlToShare = `${BASE_URL}/register-info?coachId=${coach.id}`;
+        const urlToShare = `${BASE_URL}/register-info?coachId=${coach?.id || ""}`;
 
-        const userData: User = userCoachMapper(coach);
+        const userData: User = userCoachMapper(coach || {});
+        if (profilePicture) {
+          userData.profilePicture = profilePicture;
+          if (userData.coach) userData.coach.profilePicture = profilePicture;
+        }
+        if (bannerPicture) {
+          userData.bannerPicture = bannerPicture;
+          if (userData.coach) {
+            userData.coach.bannerPicture = bannerPicture;
+            userData.coach.bannerUrl = bannerPicture;
+          }
+        }
 
         return { userData, base64, urlToShare };
       }
@@ -83,6 +103,7 @@ export const Route = createFileRoute("/perfil/$userId")({
 
 function Perfil() {
   const { userData: userInfo, base64: QrBase64, urlToShare: url } = Route.useLoaderData();
+  const { userId } = useParams({ from: "/perfil/$userId" });
   const { isStudent } = userInfo;
   const [goal, setGoal] = useState<Goal | null>(null);
   const [edition, setEdition] = useState(true);
@@ -90,6 +111,9 @@ function Perfil() {
   const [userCompleteData, setUserCompleteData] = useState<User | null>(userInfo);
   const [isLoading, setIsLoading] = useState(false);
   const bannerInputRef = useRef<HTMLInputElement>(null);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+
+  const currentUserId = Number(userId) || userData?.id || 1;
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { value, name } = e.target;
@@ -109,7 +133,68 @@ function Perfil() {
     );
   };
 
-  const handleBannerUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      notify.error("Por favor selecciona un archivo de imagen válido (JPG, PNG, WEBP)");
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      notify.error("La imagen no debe superar los 5MB");
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      notify.info("Subiendo foto de perfil...");
+      // 1. Obtener URL presignada
+      const presign = await getPresignedProfileUrl({
+        userId: currentUserId,
+        fileName: file.name,
+        contentType: file.type,
+        expiresInSeconds: 300,
+      });
+
+      // 2. Subida binaria directa a Cloudflare R2 / S3
+      await uploadFileToPresignedUrl(presign.uploadUrl, file);
+
+      // 3. Persistir key en base de datos
+      await updateProfilePictures(currentUserId, {
+        profilePicture: presign.key,
+        bannerPicture: userData?.bannerPicture || userData?.coach?.bannerPicture || null,
+      });
+
+      // 4. Actualizar estado local
+      setUserData((prev) =>
+        prev
+          ? {
+              ...prev,
+              profilePicture: presign.key,
+              coach: prev.coach
+                ? {
+                    ...prev.coach,
+                    profilePicture: presign.key,
+                  }
+                : undefined,
+            }
+          : prev,
+      );
+
+      notify.success("¡Foto de perfil actualizada con éxito!");
+    } catch (error: any) {
+      console.error("Error al actualizar foto de perfil:", error);
+      notify.error("No se pudo actualizar la foto de perfil. Intenta nuevamente.");
+    } finally {
+      setIsLoading(false);
+      e.target.value = "";
+    }
+  };
+
+  const handleBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -123,42 +208,87 @@ function Perfil() {
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const base64 = event.target?.result as string;
+    const trainerId = userData?.coach?.id || 1;
+    setIsLoading(true);
+
+    try {
+      notify.info("Subiendo imagen de portada...");
+      // 1. Obtener URL presignada para banner
+      const presign = await getPresignedBannerUrl({
+        trainerId,
+        fileName: file.name,
+        contentType: file.type,
+        expiresInSeconds: 300,
+      });
+
+      // 2. Subida binaria directa a Cloudflare R2 / S3
+      await uploadFileToPresignedUrl(presign.uploadUrl, file);
+
+      // 3. Persistir key en base de datos
+      await updateProfilePictures(currentUserId, {
+        profilePicture: userData?.profilePicture || null,
+        bannerPicture: presign.key,
+      });
+
+      // 4. Actualizar estado local
       setUserData((prev) =>
         prev
           ? {
               ...prev,
-              coach: {
-                ...prev.coach,
-                bannerUrl: base64,
-              },
+              bannerPicture: presign.key,
+              coach: prev.coach
+                ? {
+                    ...prev.coach,
+                    bannerPicture: presign.key,
+                    bannerUrl: presign.key,
+                  }
+                : undefined,
             }
           : prev,
       );
-      setEdition(false);
-      notify.info("Banner cargado. Guarda los cambios para conservarlo.");
-    };
-    reader.readAsDataURL(file);
-    e.target.value = "";
+
+      notify.success("¡Banner actualizado con éxito!");
+    } catch (error: any) {
+      console.error("Error al subir el banner:", error);
+      notify.error("No se pudo actualizar el banner. Intenta nuevamente.");
+    } finally {
+      setIsLoading(false);
+      e.target.value = "";
+    }
   };
 
-  const handleRemoveBanner = (e: React.MouseEvent) => {
+  const handleRemoveBanner = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    setUserData((prev) =>
-      prev
-        ? {
-            ...prev,
-            coach: {
-              ...prev.coach,
-              bannerUrl: "",
-            },
-          }
-        : prev,
-    );
-    setEdition(false);
-    notify.info("Banner eliminado. Guarda los cambios para confirmar.");
+    setIsLoading(true);
+
+    try {
+      await updateProfilePictures(currentUserId, {
+        profilePicture: userData?.profilePicture || null,
+        bannerPicture: null,
+      });
+
+      setUserData((prev) =>
+        prev
+          ? {
+              ...prev,
+              bannerPicture: "",
+              coach: prev.coach
+                ? {
+                    ...prev.coach,
+                    bannerPicture: "",
+                    bannerUrl: "",
+                  }
+                : undefined,
+            }
+          : prev,
+      );
+      notify.info("Banner eliminado");
+    } catch (err) {
+      console.error("Error al eliminar banner:", err);
+      notify.error("No se pudo eliminar el banner");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleSaveUser = async () => {
@@ -172,7 +302,11 @@ function Perfil() {
         }
       } else {
         if (userData?.coach) {
-          // await updateCoach(userData.coach);
+          await updateCoach({
+            ...userData.coach,
+            profilePicture: userData.profilePicture || userData.coach.profilePicture,
+            bannerPicture: userData.bannerPicture || userData.coach.bannerPicture || userData.coach.bannerUrl,
+          });
           setUserCompleteData(userData);
           notify.success("Perfil de entrenador guardado");
         }
@@ -219,8 +353,20 @@ function Perfil() {
     }
   };
 
+  const currentBannerKey = userData?.coach?.bannerPicture || userData?.coach?.bannerUrl || userData?.bannerPicture;
+  const currentProfileKey = userData?.profilePicture || userData?.coach?.profilePicture;
+
   return (
     <AppShell>
+      {/* Hidden file input for Avatar */}
+      <input
+        type="file"
+        ref={avatarInputRef}
+        accept="image/*"
+        className="hidden"
+        onChange={handleAvatarUpload}
+      />
+
       <div className="mb-6 sm:mb-8">
         <p className="text-[10px] sm:text-xs uppercase tracking-[0.3em] text-primary-glow mb-2">
           Tu cuenta
@@ -232,11 +378,23 @@ function Perfil() {
         <Card className="mb-6 sm:mb-8 border-border relative overflow-hidden bg-card shadow-elevated">
           {/* Banner Container */}
           <div className="relative h-44 sm:h-56 md:h-64 w-full overflow-hidden bg-gradient-hero group">
-            {userData?.coach?.bannerUrl ? (
-              <img
-                src={userData.coach.bannerUrl}
+            {currentBannerKey ? (
+              <StorageImage
+                storageKey={currentBannerKey}
                 alt="Banner del entrenador"
                 className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                containerClassName="w-full h-full"
+                fallback={
+                  <div className="w-full h-full bg-gradient-to-r from-primary/20 via-background to-primary/10 flex items-center justify-center relative">
+                    <div className="absolute inset-0 bg-gradient-mesh opacity-60" />
+                    <div className="relative flex flex-col items-center gap-1.5 text-muted-foreground/70">
+                      <ImagePlus className="h-8 w-8 text-primary/60" />
+                      <span className="text-xs font-medium uppercase tracking-wider">
+                        Sin imagen de banner
+                      </span>
+                    </div>
+                  </div>
+                }
               />
             ) : (
               <div className="w-full h-full bg-gradient-to-r from-primary/20 via-background to-primary/10 flex items-center justify-center relative">
@@ -252,9 +410,9 @@ function Perfil() {
             )}
 
             {/* Dark overlay for contrast */}
-            <div className="absolute inset-0 bg-gradient-to-t from-background/95 via-background/40 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-background/95 via-background/40 to-transparent pointer-events-none" />
 
-            {/* Hidden file input */}
+            {/* Hidden file input for Banner */}
             <input
               type="file"
               ref={bannerInputRef}
@@ -265,13 +423,13 @@ function Perfil() {
 
             {/* Banner action buttons (top right) */}
             <div className="absolute top-4 right-4 flex items-center gap-2 z-10">
-              {userData?.coach?.bannerUrl && (
+              {currentBannerKey && (
                 <Button
                   type="button"
                   variant="glass"
                   size="sm"
                   onClick={handleRemoveBanner}
-                  className="h-8 px-2.5 bg-black/60 hover:bg-destructive/80 hover:text-destructive-foreground backdrop-blur-md border-white/10 text-xs gap-1.5 text-muted-foreground"
+                  className="h-8 px-2.5 bg-black/60 hover:bg-destructive/80 hover:text-destructive-foreground backdrop-blur-md border-white/10 text-xs gap-1.5 text-muted-foreground cursor-pointer"
                   title="Eliminar banner"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
@@ -283,10 +441,10 @@ function Perfil() {
                 variant="glass"
                 size="sm"
                 onClick={() => bannerInputRef.current?.click()}
-                className="h-8 px-3 bg-black/60 hover:bg-black/80 backdrop-blur-md border-white/10 text-xs gap-1.5 shadow-glow"
+                className="h-8 px-3 bg-black/60 hover:bg-black/80 backdrop-blur-md border-white/10 text-xs gap-1.5 shadow-glow cursor-pointer"
               >
                 <Camera className="h-3.5 w-3.5 text-primary-glow" />
-                <span>{userData?.coach?.bannerUrl ? "Cambiar banner" : "Subir banner"}</span>
+                <span>{currentBannerKey ? "Cambiar banner" : "Subir banner"}</span>
               </Button>
             </div>
           </div>
@@ -294,10 +452,33 @@ function Perfil() {
           {/* Profile Header Content (overlapping banner) */}
           <div className="relative px-6 pb-6 sm:px-10 sm:pb-8">
             <div className="flex flex-col sm:flex-row sm:items-end gap-5 sm:gap-8 -mt-14 sm:-mt-16">
-              {/* Avatar */}
-              <div className="relative">
-                <div className="h-24 w-24 sm:h-28 sm:w-28 rounded-2xl bg-gradient-primary flex items-center justify-center font-display text-5xl shadow-glow ring-4 ring-background shrink-0">
-                  {userData?.firstName?.charAt(0) || "C"}
+              {/* Avatar with Camera Overlay */}
+              <div
+                className="relative group/avatar cursor-pointer"
+                onClick={() => avatarInputRef.current?.click()}
+                title="Cambiar foto de perfil"
+              >
+                <div className="h-24 w-24 sm:h-28 sm:w-28 rounded-2xl bg-gradient-primary flex items-center justify-center font-display text-5xl shadow-glow ring-4 ring-background shrink-0 overflow-hidden relative">
+                  <StorageImage
+                    storageKey={currentProfileKey}
+                    alt={userData?.firstName || "Coach"}
+                    className="w-full h-full object-cover"
+                    containerClassName="w-full h-full"
+                    fallback={
+                      <span className="text-primary-foreground font-display text-4xl sm:text-5xl">
+                        {userData?.firstName?.charAt(0) || "C"}
+                      </span>
+                    }
+                  />
+                  {/* Hover overlay with camera icon */}
+                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover/avatar:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1 text-white z-10">
+                    <Camera className="h-6 w-6 text-primary-glow" />
+                    <span className="text-[10px] uppercase tracking-wider font-semibold">Cambiar</span>
+                  </div>
+                </div>
+                {/* Small camera badge */}
+                <div className="absolute -bottom-1.5 -right-1.5 h-7 w-7 rounded-xl bg-card border border-border flex items-center justify-center shadow-md group-hover/avatar:scale-110 transition-transform">
+                  <Camera className="h-3.5 w-3.5 text-primary-glow" />
                 </div>
               </div>
 
@@ -312,11 +493,6 @@ function Perfil() {
                       <BadgeCheck className="h-3 w-3" /> Verificado
                     </span>
                   )}
-                  {/* {!edition && (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-primary/15 text-primary border border-primary/30 px-2 py-0.5 text-[10px] font-medium animate-pulse">
-                      <Pencil className="h-3 w-3" /> Modo Edición
-                    </span>
-                  )} */}
                 </div>
                 <h2 className="font-display text-3xl sm:text-5xl leading-none truncate">
                   {userData?.firstName} {userData?.lastName}
@@ -361,9 +537,34 @@ function Perfil() {
           <Card className="lg:col-span-1 bg-gradient-hero border-border p-6 text-center relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-mesh opacity-50" />
             <div className="relative">
-              <div className="h-28 w-28 rounded-full bg-gradient-primary mx-auto flex items-center justify-center font-display text-5xl shadow-glow">
-                {userData?.firstName?.charAt(0) || "U"}
+              {/* Student Avatar with Camera Overlay */}
+              <div
+                className="relative group/avatar cursor-pointer mx-auto w-28 h-28"
+                onClick={() => avatarInputRef.current?.click()}
+                title="Cambiar foto de perfil"
+              >
+                <div className="h-28 w-28 rounded-full bg-gradient-primary mx-auto flex items-center justify-center font-display text-5xl shadow-glow overflow-hidden relative ring-4 ring-background">
+                  <StorageImage
+                    storageKey={currentProfileKey}
+                    alt={userData?.firstName || "Usuario"}
+                    className="w-full h-full object-cover"
+                    containerClassName="w-full h-full"
+                    fallback={
+                      <span className="text-primary-foreground font-display text-5xl">
+                        {userData?.firstName?.charAt(0) || "U"}
+                      </span>
+                    }
+                  />
+                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover/avatar:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1 text-white">
+                    <Camera className="h-6 w-6 text-primary-glow" />
+                    <span className="text-[10px] uppercase tracking-wider font-semibold">Cambiar</span>
+                  </div>
+                </div>
+                <div className="absolute bottom-0 right-0 h-8 w-8 rounded-full bg-card border border-border flex items-center justify-center shadow-md group-hover/avatar:scale-110 transition-transform">
+                  <Camera className="h-4 w-4 text-primary-glow" />
+                </div>
               </div>
+
               <h2 className="font-display text-3xl mt-4">{userData?.firstName}</h2>
 
               <div className="grid grid-cols-2 gap-2 mt-6 text-center">

@@ -19,6 +19,8 @@ export interface StudentDto {
   fitnessExperience?: string;
   generalNotes?: string;
   gymId?: number;
+  profilePicture?: string;
+  bannerPicture?: string;
 }
 
 export interface CoachDto {
@@ -30,6 +32,16 @@ export interface CoachDto {
   isVerified?: boolean;
   certifications?: string;
   bannerUrl?: string;
+  bannerPicture?: string;
+  profilePicture?: string;
+  yearsOfExperience?: number;
+  experienceYears?: number;
+  studentsCount?: number;
+  routinesCount?: number;
+  rating?: number;
+  sessionsPerWeek?: number;
+  retentionRate?: number;
+  averageStreak?: number;
 }
 
 export interface CoachStudentsDto {

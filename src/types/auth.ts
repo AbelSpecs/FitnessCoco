@@ -43,6 +43,7 @@ export interface UserAuth {
   myCoachId?: number;
   email?: string;
   firstName?: string;
+  profilePicture?: string;
   role?: Role;
 }
 

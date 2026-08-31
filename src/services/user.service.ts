@@ -38,3 +38,22 @@ export const getUser = async (id: number) => {
     throw error;
   }
 };
+
+export const updateProfilePictures = async (
+  userId: number,
+  payload: { profilePicture?: string | null; bannerPicture?: string | null },
+) => {
+  try {
+    const response = await api.put(`/Users/${userId}/profilePictures`, {
+      userId,
+      profilePicture: payload.profilePicture ?? null,
+      bannerPicture: payload.bannerPicture ?? null,
+    });
+
+    const { data } = response.data;
+    return data;
+  } catch (error) {
+    console.error("Error al actualizar fotos de perfil/banner del usuario", error);
+    throw error;
+  }
+};
