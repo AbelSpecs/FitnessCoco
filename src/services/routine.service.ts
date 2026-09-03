@@ -1,17 +1,36 @@
 import {
   DailyExerciseSetsDto,
   DailyStudentExerciseDto,
+  ExerciseCreateDto,
   ExerciseDto,
+  ExerciseUpdateDto,
+  GetExerciseDto,
+  GetMuscleGroupDto,
   UpdateCompleteDailyStudentExerciseDto,
   UpdateDailyStudentExerciseDto,
 } from "@/dtos/exerciseDto";
 
 import api from "./api";
 
-// Exercises
-export const postExercise = async (routineData: ExerciseDto) => {
+// MuscleGroups
+export const getMuscleGroups = async (): Promise<GetMuscleGroupDto[]> => {
   try {
-    const response = await api.post("/Exercises", routineData);
+    const response = await api.get("/MuscleGroups");
+    const { data } = response.data;
+    return data;
+  } catch (error) {
+    console.error("Error al obtener los grupos musculares", error);
+    throw error;
+  }
+};
+
+// Exercises
+export const postExercise = async (
+  routineData: ExerciseDto | ExerciseCreateDto,
+) => {
+  try {
+    const payload = "exercise" in routineData ? routineData : { exercise: routineData };
+    const response = await api.post("/Exercises", payload);
     const { data } = response.data;
 
     return data;
@@ -21,7 +40,7 @@ export const postExercise = async (routineData: ExerciseDto) => {
   }
 };
 
-export const getExercise = async (id: number) => {
+export const getExercise = async (id: number): Promise<GetExerciseDto> => {
   try {
     const response = await api.get(`/Exercises/${id}`);
     const { data } = response.data;
@@ -33,7 +52,7 @@ export const getExercise = async (id: number) => {
   }
 };
 
-export const getExerciseByMuscleGroupId = async (id: number) => {
+export const getExerciseByMuscleGroupId = async (id: number): Promise<GetExerciseDto[]> => {
   try {
     const response = await api.get(`/Exercises/muscle-group/${id}`);
     const { data } = response.data;
@@ -45,7 +64,7 @@ export const getExerciseByMuscleGroupId = async (id: number) => {
   }
 };
 
-export const getExerciseByMuscleGroupName = async (name: string) => {
+export const getExerciseByMuscleGroupName = async (name: string): Promise<GetExerciseDto[]> => {
   try {
     const response = await api.get(`/Exercises/by-muscle-name/${name}`);
     const { data } = response.data;
@@ -57,7 +76,7 @@ export const getExerciseByMuscleGroupName = async (name: string) => {
   }
 };
 
-export const getExerciseByCoachId = async (id: number) => {
+export const getExerciseByCoachId = async (id: number): Promise<GetExerciseDto[]> => {
   try {
     const response = await api.get(`/Exercises/coach/${id}`);
     const { data } = response.data;
@@ -69,9 +88,13 @@ export const getExerciseByCoachId = async (id: number) => {
   }
 };
 
-export const updateExercise = async (id: number, routineData: ExerciseDto) => {
+export const updateExercise = async (
+  id: number,
+  routineData: ExerciseDto | ExerciseUpdateDto,
+) => {
   try {
-    const response = await api.put(`/Exercises/${id}`, routineData);
+    const payload = "exercise" in routineData ? (routineData as ExerciseDto).exercise : routineData;
+    const response = await api.put(`/Exercises/${id}`, payload);
     const { data } = response.data;
 
     return data;
@@ -247,19 +270,6 @@ export const deleteDailyExercisesSets = async (id: number) => {
     return data;
   } catch (error) {
     console.error("Error al eliminar el set", error);
-    throw error;
-  }
-};
-
-// muscleGroup
-export const getMuscleGroups = async () => {
-  try {
-    const response = await api.get(`/MuscleGroups`);
-    const { data } = response.data;
-
-    return data;
-  } catch (error) {
-    console.error("Error al obtener los grupos musculares", error);
     throw error;
   }
 };

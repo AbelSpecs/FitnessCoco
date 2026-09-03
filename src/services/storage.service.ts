@@ -239,7 +239,60 @@ export const getServeUrl = (keyOrUrl?: string | null): string => {
 };
 
 /**
- * Helper para resolver una URL directa o Storage Key usando el endpoint serve
+ * Consulta el endpoint /api/Storage/serve para obtener el downloadUrl firmado directo de Cloudflare R2
+ */
+export const getServeDownloadUrl = async (
+  keyOrUrl?: string | null,
+  forceRefresh: boolean = false,
+): Promise<string> => {
+  if (!keyOrUrl) return "";
+  if (
+    keyOrUrl.startsWith("http://") ||
+    keyOrUrl.startsWith("https://") ||
+    keyOrUrl.startsWith("data:") ||
+    keyOrUrl.startsWith("blob:")
+  ) {
+    return keyOrUrl;
+  }
+
+  // Revisar caché en memoria si no se fuerza refresco
+  if (!forceRefresh) {
+    const cached = downloadUrlCache.get(keyOrUrl);
+    const now = Date.now();
+    if (cached && cached.expiresAt > now + 60000) {
+      return cached.url;
+    }
+  }
+
+  try {
+    const response = await axios.get(
+      `${STORAGE_API_BASE}/serve?key=${encodeURIComponent(keyOrUrl)}`,
+    );
+    const data = response.data;
+    const downloadUrl =
+      data?.downloadUrl ||
+      data?.url ||
+      data?.data?.downloadUrl ||
+      (typeof data === "string" ? data : "");
+
+    if (downloadUrl) {
+      downloadUrlCache.set(keyOrUrl, {
+        url: downloadUrl,
+        expiresAt: Date.now() + 500 * 1000,
+      });
+      return downloadUrl;
+    }
+  } catch (error) {
+    console.error("Error al obtener downloadUrl desde serve para key:", keyOrUrl, error);
+  }
+
+  return "";
+};
+
+/**
+ * Helper para resolver una URL directa o Storage Key usando el endpoint serve.
+ * Para imágenes (perfiles, banners), retorna la URL directa de /api/Storage/serve ya que el backend sirve el binario.
+ * Para videos, consulta el endpoint para obtener el downloadUrl firmado de R2.
  */
 export const resolveMediaUrl = async (
   keyOrUrl?: string | null,
@@ -255,6 +308,15 @@ export const resolveMediaUrl = async (
     return keyOrUrl;
   }
 
-  // Utilizar endpoint directo de serve
-  return getServeUrl(keyOrUrl);
+  const cleanKey = keyOrUrl.trim().toLowerCase();
+  const isImage =
+    cleanKey.includes("perfiles/") ||
+    cleanKey.includes("banners/") ||
+    /\.(jpg|jpeg|png|webp|gif|svg)(\?.*)?$/i.test(cleanKey);
+
+  if (isImage) {
+    return getServeUrl(keyOrUrl);
+  }
+
+  return getServeDownloadUrl(keyOrUrl);
 };

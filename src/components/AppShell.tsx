@@ -52,7 +52,13 @@ const nav = [
     roles: ["coach", "student"] as Role[],
     condition: false,
   },
-  // { to: "/progreso", label: "Progreso", icon: TrendingUp },
+  {
+    to: "/exercises",
+    label: "Ejercicios",
+    icon: Dumbbell,
+    roles: ["coach"] as Role[],
+    condition: false,
+  },
   {
     to: "/clients",
     label: "Clientes",
@@ -92,6 +98,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     Rutina: () => ({ studentId: user?.studentId?.toString() ?? "" }),
     Perfil: () => ({ userId: user?.id?.toString() ?? "" }),
     Clientes: () => ({}),
+    Ejercicios: () => ({}),
     Dashboard: () => ({}),
     Podio: () => ({}),
     Ranking: () => ({}),
