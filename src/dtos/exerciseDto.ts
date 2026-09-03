@@ -44,24 +44,37 @@ export interface GetDailyStudentExerciseDto {
 }
 
 // ExerciseDto
+export interface ExerciseCreateDto {
+  coachId?: number | null;
+  name: string;
+  description?: string | null;
+  muscleGroupId: number;
+  videoUrl?: string | null;
+  isCustom: boolean;
+}
+
 export interface ExerciseDto {
-  exercise: {
-    coachId: number;
-    name: string;
-    description: string;
-    muscleGroupId: number;
-    videoUrl?: string;
-    isCustom: boolean;
-  };
+  exercise: ExerciseCreateDto;
+}
+
+export interface ExerciseUpdateDto {
+  coachId?: number | null;
+  name: string;
+  description?: string | null;
+  muscleGroupId: number;
+  videoUrl?: string | null;
+  isCustom: boolean;
 }
 
 export interface GetExerciseDto {
   id: number;
-  coachId: number;
+  coachId?: number | null;
   name: string;
-  description: string;
+  description?: string | null;
+  muscleGroupId: number;
   muscleGroup: string;
-  videoUrl: string;
+  videoKey?: string | null;
+  videoUrl?: string | null;
   isCustom: boolean;
 }
 
