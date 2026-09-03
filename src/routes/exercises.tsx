@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -30,9 +30,11 @@ import {
   getFileContentType,
   getPresignedVideoUrl,
   getServeUrl,
+  getServeDownloadUrl,
   uploadFileToPresignedUrl,
 } from "@/services/storage.service";
 import { GetExerciseDto, GetMuscleGroupDto } from "@/dtos/exerciseDto";
+import { VideoThumbnail } from "@/components/VideoThumbnail";
 import {
   Dumbbell,
   Search,
@@ -183,6 +185,57 @@ function EjerciciosPage() {
   const [toDelete, setToDelete] = useState<GetExerciseDto | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [preview, setPreview] = useState<GetExerciseDto | null>(null);
+  const [activeVideoUrl, setActiveVideoUrl] = useState<string>("");
+  const [loadingVideo, setLoadingVideo] = useState<boolean>(false);
+  const [videoError, setVideoError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!preview) {
+      setActiveVideoUrl("");
+      setLoadingVideo(false);
+      setVideoError(null);
+      return;
+    }
+
+    const raw = preview.videoUrl || preview.videoKey;
+    if (!raw) {
+      setActiveVideoUrl("");
+      setVideoError(null);
+      return;
+    }
+
+    const ytId = youtubeId(raw);
+    if (ytId) {
+      setActiveVideoUrl(`https://www.youtube.com/embed/${ytId}?autoplay=1`);
+      setVideoError(null);
+      return;
+    }
+
+    if (raw.startsWith("http://") || raw.startsWith("https://")) {
+      setActiveVideoUrl(raw);
+      setVideoError(null);
+      return;
+    }
+
+    // Storage Key: solicitar la downloadUrl real firmada a /api/Storage/serve con forceRefresh
+    setLoadingVideo(true);
+    setVideoError(null);
+    getServeDownloadUrl(raw, true)
+      .then((url) => {
+        if (!url) {
+          setVideoError("No se pudo obtener el enlace de reproducción.");
+        } else {
+          setActiveVideoUrl(url);
+        }
+      })
+      .catch((err) => {
+        console.error("Error al cargar URL del video:", err);
+        setVideoError("Error al cargar el video desde almacenamiento.");
+      })
+      .finally(() => {
+        setLoadingVideo(false);
+      });
+  }, [preview]);
 
   // Filtered exercises
   const filtered = useMemo(() => {
@@ -314,6 +367,7 @@ function EjerciciosPage() {
           name: form.name.trim(),
           description: form.description.trim(),
           muscleGroupId: Number(form.muscleGroupId),
+          videoKey: finalVideoKey || null,
           videoUrl: finalVideoKey || null,
           isCustom: form.isCustom,
         });
@@ -371,6 +425,7 @@ function EjerciciosPage() {
           name: form.name.trim(),
           description: form.description.trim(),
           muscleGroupId: Number(form.muscleGroupId),
+          videoKey: finalVideoKey || null,
           videoUrl: finalVideoKey || null,
           isCustom: form.isCustom,
         });
@@ -559,8 +614,9 @@ function EjerciciosPage() {
         ) : view === "grid" ? (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {filtered.map((e) => {
-              const videoSrc = resolveVideoUrl(e.videoKey, e.videoUrl);
-              const ytThumb = thumbFor(videoSrc);
+              const rawVideo = e.videoUrl?.trim() || e.videoKey?.trim();
+              const hasVideo = !!rawVideo;
+              const ytThumb = thumbFor(rawVideo);
               const muscleName =
                 e.muscleGroup ||
                 muscleGroups.find((m) => m.id === e.muscleGroupId)?.name ||
@@ -573,42 +629,23 @@ function EjerciciosPage() {
                 >
                   <button
                     type="button"
-                    onClick={() => videoSrc && setPreview(e)}
-                    className="relative block w-full aspect-video bg-card/60 group overflow-hidden border-b border-border/50"
+                    onClick={() => hasVideo && setPreview(e)}
+                    className="relative block w-full aspect-video bg-card/60 group overflow-hidden border-b border-border/50 text-left cursor-pointer"
                   >
-                    {ytThumb ? (
-                      <img
-                        src={ytThumb}
+                    {hasVideo ? (
+                      <VideoThumbnail
+                        videoKey={e.videoKey}
+                        videoUrl={e.videoUrl}
                         alt={`Miniatura del video de ${e.name}`}
-                        loading="lazy"
-                        className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        hoverPlay={true}
+                        showPlayBadge={true}
+                        className="group-hover:scale-105"
                       />
-                    ) : videoSrc ? (
-                      <div className="h-full w-full relative flex items-center justify-center bg-zinc-950">
-                        <video
-                          src={videoSrc}
-                          className="h-full w-full object-cover opacity-85 group-hover:opacity-100 group-hover:scale-105 transition-all duration-300"
-                          muted
-                          preload="metadata"
-                        />
-                        <span className="absolute inset-0 bg-black/25" />
-                        <PlayCircle className="h-10 w-10 text-primary-glow absolute drop-shadow-md group-hover:scale-110 transition-transform" />
-                      </div>
                     ) : (
-                      <div className="h-full w-full flex flex-col items-center justify-center text-muted-foreground gap-1">
-                        <VideoOff className="h-6 w-6" />
-                        <span className="text-xs">Sin video</span>
+                      <div className="h-full w-full flex flex-col items-center justify-center text-muted-foreground gap-1 bg-zinc-950/60">
+                        <VideoOff className="h-6 w-6 text-muted-foreground/50" />
+                        <span className="text-xs text-muted-foreground/60">Sin video</span>
                       </div>
-                    )}
-                    {videoSrc && !ytThumb && (
-                      <span className="absolute bottom-2 right-2 bg-black/70 px-2 py-0.5 rounded text-[10px] text-white flex items-center gap-1">
-                        <Video className="h-3 w-3" /> Demo
-                      </span>
-                    )}
-                    {ytThumb && (
-                      <span className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <PlayCircle className="h-10 w-10 text-primary-glow" />
-                      </span>
                     )}
                   </button>
 
@@ -635,7 +672,7 @@ function EjerciciosPage() {
                       )}
 
                       <div className="flex gap-1">
-                        {videoSrc && (
+                        {hasVideo && (
                           <Button
                             variant="ghost"
                             size="icon"
@@ -684,8 +721,18 @@ function EjerciciosPage() {
 
               return (
                 <div key={e.id} className="flex items-center gap-3 p-3 sm:p-4">
-                  <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                    <Dumbbell className="h-4 w-4 text-primary-glow" />
+                  <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 overflow-hidden border border-border/40">
+                    {e.videoKey || e.videoUrl ? (
+                      <VideoThumbnail
+                        videoKey={e.videoKey}
+                        videoUrl={e.videoUrl}
+                        showPlayBadge={false}
+                        hoverPlay={false}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <Dumbbell className="h-4 w-4 text-primary-glow" />
+                    )}
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
@@ -1007,8 +1054,8 @@ function EjerciciosPage() {
             </div>
 
             {(() => {
-              const videoSrc = resolveVideoUrl(preview.videoKey, preview.videoUrl);
-              const ytId = youtubeId(videoSrc);
+              const raw = preview.videoUrl || preview.videoKey;
+              const ytId = youtubeId(raw);
 
               return (
                 <div className="aspect-video rounded-xl overflow-hidden border border-border bg-black flex items-center justify-center">
@@ -1020,13 +1067,46 @@ function EjerciciosPage() {
                       allow="accelerometer; autoplay; clipboard-write; encrypted-media; picture-in-picture"
                       allowFullScreen
                     />
-                  ) : videoSrc ? (
+                  ) : loadingVideo ? (
+                    <div className="flex flex-col items-center justify-center p-8 text-muted-foreground gap-3">
+                      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                      <p className="text-xs">Cargando video demostrativo...</p>
+                    </div>
+                  ) : videoError ? (
+                    <div className="flex flex-col items-center justify-center p-6 text-muted-foreground gap-2 text-center">
+                      <VideoOff className="h-8 w-8 text-destructive" />
+                      <p className="text-sm font-medium text-destructive">{videoError}</p>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setLoadingVideo(true);
+                          setVideoError(null);
+                          getServeDownloadUrl(raw, true)
+                            .then((url) => {
+                              if (url) setActiveVideoUrl(url);
+                              else setVideoError("No se pudo obtener el video.");
+                            })
+                            .finally(() => setLoadingVideo(false));
+                        }}
+                        className="mt-2"
+                      >
+                        Reintentar
+                      </Button>
+                    </div>
+                  ) : activeVideoUrl ? (
                     <video
-                      className="h-full w-full object-contain"
-                      src={videoSrc}
+                      key={activeVideoUrl}
+                      className="h-full w-full object-contain bg-black"
+                      src={activeVideoUrl}
                       controls
-                      autoPlay
                       playsInline
+                      preload="auto"
+                      onError={(e) => {
+                        const err = e.currentTarget.error;
+                        console.error("Error reproductor HTML5:", err?.code, err?.message);
+                        setVideoError("El formato del video no pudo ser reproducido por el navegador.");
+                      }}
                     />
                   ) : (
                     <div className="text-center text-muted-foreground p-6">

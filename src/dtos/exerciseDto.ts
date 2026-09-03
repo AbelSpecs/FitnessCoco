@@ -49,6 +49,7 @@ export interface ExerciseCreateDto {
   name: string;
   description?: string | null;
   muscleGroupId: number;
+  videoKey?: string | null;
   videoUrl?: string | null;
   isCustom: boolean;
 }
@@ -62,6 +63,7 @@ export interface ExerciseUpdateDto {
   name: string;
   description?: string | null;
   muscleGroupId: number;
+  videoKey?: string | null;
   videoUrl?: string | null;
   isCustom: boolean;
 }
