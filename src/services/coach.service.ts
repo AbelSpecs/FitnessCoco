@@ -26,6 +26,17 @@ export const getCoach = async (id: number) => {
   }
 };
 
+export const getCoachProfile = async (coachId: number) => {
+  try {
+    const response = await api.get(`/Coaches/profile/${coachId}`);
+    const { data } = response.data;
+    return data;
+  } catch (error) {
+    console.error("Error al traer el perfil y métricas del coach", error);
+    throw error;
+  }
+};
+
 export const getCoachStudents = async (coachId: number) => {
   try {
     const response = await api.get(`/Coaches/studentsList/${coachId}`);
