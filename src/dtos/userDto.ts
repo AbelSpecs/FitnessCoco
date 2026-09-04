@@ -36,6 +36,8 @@ export interface CoachDto {
   profilePictureKey?: string;
   profilePictureUrl?: string;
   bannerPictureUrl?: string;
+  profilePicture?: string;
+  bannerPicture?: string;
   yearsOfExperience?: number;
   experienceYears?: number;
   studentsCount?: number;
@@ -44,6 +46,12 @@ export interface CoachDto {
   sessionsPerWeek?: number;
   retentionRate?: number;
   averageStreak?: number;
+  totalStudents?: number;
+  activeStudents?: number;
+  inactiveStudents?: number;
+  totalRoutinesCreated?: number;
+  averageRating?: number;
+  totalRatingsCount?: number;
 }
 
 export interface CoachStudentsDto {
@@ -63,4 +71,34 @@ export interface UserDto {
 export interface GetUserDto {
   student?: StudentDto;
   coach?: CoachDto;
+}
+
+export interface CoachProfileDto {
+  id: number;
+  userId: number;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phoneNumber?: string;
+  bio?: string;
+  certifications?: string;
+  isVerified: boolean;
+  yearsOfExperience: number;
+  experienceYears?: number;
+  profilePicture?: string;
+  bannerPicture?: string;
+  profilePictureKey?: string;
+  bannerPictureKey?: string;
+  totalStudents: number;
+  activeStudents: number;
+  inactiveStudents: number;
+  totalRoutinesCreated: number;
+  averageRating: number;
+  totalRatingsCount: number;
+  studentsCount?: number;
+  routinesCount?: number;
+  rating?: number;
+  sessionsPerWeek?: number;
+  retentionRate?: number;
+  averageStreak?: number;
 }

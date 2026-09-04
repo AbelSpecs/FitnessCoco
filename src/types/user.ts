@@ -46,6 +46,11 @@ export interface Coach {
   sessionsPerWeek?: number;
   retentionRate?: number;
   averageStreak?: number;
+  activeStudents?: number;
+  totalStudents?: number;
+  totalRoutinesCreated?: number;
+  averageRating?: number;
+  totalRatingsCount?: number;
 }
 
 export interface User {

@@ -7,7 +7,7 @@ import { Stat } from "@/components/ui/stat";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { ChangeEvent, useRef, useState } from "react";
+import { ChangeEvent, useEffect, useRef, useState } from "react";
 import {
   Award,
   BadgeCheck,
@@ -29,7 +29,7 @@ import { getUserDetails, updateProfilePictures } from "@/services/user.service";
 import { notify } from "@/components/NotificationCenter";
 import { SpinnerOverlay } from "@/components/Spinner";
 import { updateStudent } from "@/services/student.service";
-import { updateCoach } from "@/services/coach.service";
+import { getCoachProfile, updateCoach } from "@/services/coach.service";
 import { getQr } from "@/services/general.service";
 import { userCoachMapper, userStudentMapper } from "@/mappers/user";
 import {
@@ -75,7 +75,19 @@ export const Route = createFileRoute("/perfil/$userId")({
         const BASE_URL = typeof window !== "undefined" ? window.location.origin : "";
         const urlToShare = `${BASE_URL}/register-info?coachId=${coach?.id || ""}`;
 
-        const userData: User = userCoachMapper(coach || {});
+        let coachData = coach;
+        if (coach?.id) {
+          try {
+            const profile = await getCoachProfile(coach.id);
+            if (profile) {
+              coachData = { ...coach, ...profile };
+            }
+          } catch (err) {
+            console.warn("No se pudieron cargar las métricas dinámicas del coach en el loader:", err);
+          }
+        }
+
+        const userData: User = userCoachMapper(coachData || {});
         userData.profilePictureKey = profileKey;
         userData.bannerPictureKey = bannerKey;
         userData.profilePictureUrl = profilePictureUrl;
@@ -118,6 +130,36 @@ function Perfil() {
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
   const currentUserId = Number(userId) || userData?.id || 1;
+
+  useEffect(() => {
+    // Si el usuario es entrenador, invocar asíncronamente las estadísticas del endpoint de Swagger
+    const coachId = userData?.coach?.id || userInfo?.coach?.id;
+    if (!isStudent && coachId) {
+      getCoachProfile(coachId)
+        .then((profile) => {
+          if (profile) {
+            setUserData((prev) => {
+              if (!prev || !prev.coach) return prev;
+              return {
+                ...prev,
+                coach: {
+                  ...prev.coach,
+                  activeStudents: profile.activeStudents,
+                  totalStudents: profile.totalStudents,
+                  totalRoutinesCreated: profile.totalRoutinesCreated,
+                  averageRating: profile.averageRating,
+                  totalRatingsCount: profile.totalRatingsCount,
+                  experienceYears: profile.yearsOfExperience ?? prev.coach.experienceYears ?? 0,
+                },
+              };
+            });
+          }
+        })
+        .catch((err) => {
+          console.warn("Error al cargar estadísticas asíncronas del entrenador:", err);
+        });
+    }
+  }, [isStudent]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { value, name } = e.target;
@@ -563,10 +605,30 @@ function Perfil() {
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mt-8">
-              <Stat label="Alumnos" value="24" />
-              <Stat label="Rutinas" value="86" />
-              <Stat label="Valoración" value="4.9" />
-              <Stat label="Experiencia" value="6 años" />
+              <Stat
+                label="Alumnos"
+                value={`${userData?.coach?.activeStudents ?? userData?.coach?.totalStudents ?? userData?.coach?.studentsCount ?? 0}`}
+              />
+              <Stat
+                label="Rutinas"
+                value={`${userData?.coach?.totalRoutinesCreated ?? userData?.coach?.routinesCount ?? 0}`}
+              />
+              <Stat
+                label="Valoración"
+                value={
+                  typeof userData?.coach?.averageRating === "number" && userData.coach.averageRating > 0
+                    ? userData.coach.averageRating.toFixed(1)
+                    : typeof userData?.coach?.rating === "number" && userData.coach.rating > 0
+                      ? userData.coach.rating.toFixed(1)
+                      : "N/A"
+                }
+              />
+              <Stat
+                label="Experiencia"
+                value={`${userData?.coach?.experienceYears ?? 0} ${
+                  (userData?.coach?.experienceYears ?? 0) === 1 ? "año" : "años"
+                }`}
+              />
             </div>
           </div>
         </Card>
@@ -842,6 +904,38 @@ function Perfil() {
                       </div>
                     </div>
                   )}
+                </div>
+
+                <div>
+                  <label className="text-xs uppercase tracking-widest text-muted-foreground font-semibold block mb-1.5">
+                    Años de experiencia
+                  </label>
+                  <Input
+                    type="number"
+                    min="0"
+                    max="60"
+                    name="experienceYears"
+                    value={userData?.coach?.experienceYears ?? 0}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value, 10);
+                      setUserData((prev) =>
+                        prev
+                          ? {
+                              ...prev,
+                              coach: {
+                                ...prev.coach,
+                                experienceYears: isNaN(val) ? 0 : val,
+                              },
+                            }
+                          : prev,
+                      );
+                    }}
+                    placeholder="Ej: 5"
+                    className="bg-background/50 border-border focus:border-primary w-full sm:w-36"
+                  />
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    Años de trayectoria ejerciendo como entrenador.
+                  </p>
                 </div>
               </div>
             )}

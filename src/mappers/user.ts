@@ -1,4 +1,4 @@
-import { CoachDto, GetUserDto, StudentDto, UserDto } from "@/dtos/userDto";
+import { CoachDto, CoachProfileDto, GetUserDto, StudentDto, UserDto } from "@/dtos/userDto";
 import { Goal } from "@/types/goals";
 import { User } from "@/types/user";
 import { age } from "@/utils/age";
@@ -34,28 +34,30 @@ export const userStudentMapper = (apiUser: StudentDto) => {
   return userMapped;
 };
 
-export const userCoachMapper = (apiUser: CoachDto) => {
-  const userToMap = apiUser;
+export const userCoachMapper = (apiUser: CoachDto | CoachProfileDto | Record<string, any>) => {
+  const userToMap: any = apiUser;
 
   const userMapped: User = {
     id: userToMap.userId || userToMap.id,
     firstName: userToMap.firstName,
     lastName: userToMap.lastName,
-    profilePictureKey: userToMap.profilePictureKey,
-    bannerPictureKey: userToMap.bannerPictureKey,
+    profilePictureKey: userToMap.profilePictureKey || (userToMap.profilePicture && !userToMap.profilePicture.startsWith("http") ? userToMap.profilePicture : undefined),
+    bannerPictureKey: userToMap.bannerPictureKey || (userToMap.bannerPicture && !userToMap.bannerPicture.startsWith("http") ? userToMap.bannerPicture : undefined),
     coach: {
       id: userToMap.id,
       userId: userToMap.userId,
       bio: userToMap.bio,
       certifications: userToMap.certifications,
       isVerified: userToMap.isVerified,
-      // bannerUrl: userToMap.bannerPicture || userToMap.bannerUrl,
-      // bannerPictureKey: userToMap.bannerPictureKey,
-      // profilePictureKey: userToMap.profilePictureKey,
-      experienceYears: userToMap.experienceYears ?? userToMap.yearsOfExperience ?? 0,
-      studentsCount: userToMap.studentsCount,
-      routinesCount: userToMap.routinesCount,
-      rating: userToMap.rating,
+      experienceYears: userToMap.yearsOfExperience ?? userToMap.experienceYears ?? 0,
+      studentsCount: userToMap.activeStudents ?? userToMap.totalStudents ?? userToMap.studentsCount ?? 0,
+      activeStudents: userToMap.activeStudents,
+      totalStudents: userToMap.totalStudents,
+      routinesCount: userToMap.totalRoutinesCreated ?? userToMap.routinesCount ?? 0,
+      totalRoutinesCreated: userToMap.totalRoutinesCreated,
+      rating: userToMap.averageRating ?? userToMap.rating ?? 0,
+      averageRating: userToMap.averageRating,
+      totalRatingsCount: userToMap.totalRatingsCount,
       sessionsPerWeek: userToMap.sessionsPerWeek,
       retentionRate: userToMap.retentionRate,
       averageStreak: userToMap.averageStreak,
