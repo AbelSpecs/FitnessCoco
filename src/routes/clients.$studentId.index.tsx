@@ -43,6 +43,7 @@ import { notify } from "@/components/NotificationCenter";
 import { AppShell } from "@/components/AppShell";
 import { getStudentById } from "@/services/student.service";
 import { getUser } from "@/services/user.service";
+import { StorageImage } from "@/components/StorageImage";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -123,6 +124,13 @@ export const Route = createFileRoute("/clients/$studentId/")({
         name: `${userResponse.firstName} ${userResponse.lastName}`,
         goal: studentResponse.fitnessGoal || "—",
         plan: userResponse.planType || "basic",
+        userId: studentResponse.userId,
+        profilePictureKey: userResponse.profilePictureKey || null,
+        avatarUrl:
+          userResponse.profilePictureUrl ||
+          (studentResponse.userId
+            ? `https://api.pyrosfit.com/api/Storage/users/${studentResponse.userId}/profile`
+            : null),
       };
 
       const muscleGroupsMapped: MuscleGroupSelect[] = muscleGroups.map((m: GetMuscleGroupDto) => ({
@@ -590,9 +598,18 @@ function ClientRoutinesPage() {
           </Link>
           <div className="flex items-start justify-between gap-4 flex-wrap mb-8">
             <div className="flex items-center gap-4">
-              <div className="h-14 w-14 sm:h-16 sm:w-16 rounded-2xl bg-gradient-primary flex items-center justify-center font-display text-2xl text-primary-foreground shrink-0 shadow-glow">
-                {client.name.charAt(0)}
-              </div>
+              <StorageImage
+                src={client.avatarUrl}
+                storageKey={client.profilePictureKey}
+                alt={client.name}
+                className="h-14 w-14 sm:h-16 sm:w-16 rounded-2xl object-cover"
+                containerClassName="h-14 w-14 sm:h-16 sm:w-16 rounded-2xl shrink-0 shadow-glow"
+                fallback={
+                  <div className="h-14 w-14 sm:h-16 sm:w-16 rounded-2xl bg-gradient-primary flex items-center justify-center font-display text-2xl text-primary-foreground shrink-0 shadow-glow">
+                    {client.name.charAt(0)}
+                  </div>
+                }
+              />
               <div>
                 <p className="text-[10px] sm:text-xs uppercase tracking-[0.3em] text-primary-glow mb-1">
                   Cliente

@@ -7,6 +7,8 @@ import { ArrowLeft, ChevronRight, Search, Users } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { StudentInfo } from "@/types/user";
 import { getCoachStudents } from "@/services/coach.service";
+import { getStudents } from "@/services/student.service";
+import { StorageImage } from "@/components/StorageImage";
 import { SpinnerOverlay } from "@/components/Spinner";
 import { Goal, goalLabels } from "@/types/goals";
 
@@ -24,18 +26,45 @@ export const Route = createFileRoute("/clients/")({
       user = JSON.parse(localStorage.getItem("pyrosfit_user") || "null");
     }
     try {
-      const studentsData = await getCoachStudents(Number(user?.coachId)).catch((err) => {
-        console.warn("No se pudieron cargar los alumnos del coach:", err);
-        return [];
-      });
+      const coachId = Number(user?.coachId);
+      const [studentsData, allStudents] = await Promise.all([
+        coachId
+          ? getCoachStudents(coachId).catch((err) => {
+              console.warn("No se pudieron cargar los alumnos del coach:", err);
+              return [];
+            })
+          : Promise.resolve([]),
+        getStudents().catch((err) => {
+          console.warn("No se pudieron cargar detalles de estudiantes:", err);
+          return [];
+        }),
+      ]);
 
-      const studentListMapped: StudentInfo[] = (studentsData || []).map((item: StudentInfo) => {
+      const userIdMap = new Map<number, number>();
+      if (Array.isArray(allStudents)) {
+        for (const s of allStudents) {
+          if (s?.id && s?.userId) {
+            userIdMap.set(Number(s.id), Number(s.userId));
+          }
+        }
+      }
+
+      const studentListMapped: StudentInfo[] = (studentsData || []).map((item: any) => {
+        const sId = Number(item.studentId);
+        const resolvedUserId = item.userId || userIdMap.get(sId);
+        const avatarUrl =
+          item.avatarUrl ||
+          item.profilePicture ||
+          (resolvedUserId ? `https://api.pyrosfit.com/api/Storage/users/${resolvedUserId}/profile` : null);
+
         const clientList: StudentInfo = {
           studentId: item.studentId,
           name: item.name!,
           fitnessGoal: item.fitnessGoal!,
           plan: "basic",
           streak: 2,
+          userId: resolvedUserId,
+          avatarUrl,
         };
 
         return clientList;
@@ -132,9 +161,17 @@ function ClientesPage() {
                 >
                   <Card className="bg-gradient-card border-border p-4 sm:p-5 hover:border-primary/50 hover:shadow-card transition-all duration-300 hover:-translate-y-0.5">
                     <div className="flex items-center gap-4">
-                      <div className="h-12 w-12 sm:h-14 sm:w-14 rounded-xl bg-gradient-primary flex items-center justify-center font-display text-xl text-primary-foreground shrink-0">
-                        {client.name.charAt(0)}
-                      </div>
+                      <StorageImage
+                        src={client.avatarUrl}
+                        alt={client.name}
+                        className="h-12 w-12 sm:h-14 sm:w-14 rounded-xl object-cover"
+                        containerClassName="h-12 w-12 sm:h-14 sm:w-14 rounded-xl shrink-0"
+                        fallback={
+                          <div className="h-12 w-12 sm:h-14 sm:w-14 rounded-xl bg-gradient-primary flex items-center justify-center font-display text-xl text-primary-foreground shrink-0 shadow-glow">
+                            {client.name.charAt(0)}
+                          </div>
+                        }
+                      />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <h3 className="font-display text-xl sm:text-2xl leading-tight truncate">

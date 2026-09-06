@@ -18,6 +18,7 @@ import {
   Check,
 } from "lucide-react";
 import { resetPassword } from "@/services/auth.service";
+import { PyrosLogo } from "@/components/brand/PyrosLogo";
 import { notify } from "@/components/NotificationCenter";
 import { SpinnerOverlay } from "@/components/Spinner";
 
@@ -124,9 +125,7 @@ function ResetPasswordPage() {
         {/* Brand Header */}
         <div className="flex flex-col items-center gap-3">
           <Link to="/" className="flex flex-col items-center gap-3 group">
-            <div className="h-16 w-16 rounded-2xl bg-gradient-primary flex items-center justify-center shadow-glow group-hover:scale-105 transition-transform">
-              <Dumbbell className="h-8 w-8 text-primary-foreground" />
-            </div>
+            <PyrosLogo variant="icon" size="xl" iconClassName="h-16 w-16 group-hover:scale-105 transition-transform" />
             <div className="text-center">
               <h1 className="font-display text-4xl sm:text-5xl tracking-wider text-foreground">
                 PyrosFit

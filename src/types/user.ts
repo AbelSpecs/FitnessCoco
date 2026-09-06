@@ -24,6 +24,8 @@ export interface StudentInfo {
   lastWorkout?: string;
   inactivity?: number;
   risk?: "high" | "medium" | "low";
+  userId?: number;
+  avatarUrl?: string | null;
 }
 
 export interface Coach {
