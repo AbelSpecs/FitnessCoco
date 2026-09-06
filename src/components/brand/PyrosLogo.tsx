@@ -45,13 +45,13 @@ export const PyrosLogo: React.FC<PyrosLogoProps> = ({
       <img
         src={imageSrc}
         alt="PyrosFit Logo"
-        className="w-full h-full object-contain select-none"
+        className="max-h-full max-w-full w-auto h-auto object-contain select-none mx-auto my-auto"
       />
     </div>
   );
 
   if (variant === "icon" || variant === "square" || variant === "circle") {
-    return <div className={cn("inline-flex items-center", className)}>{iconElement}</div>;
+    return <div className={cn("inline-flex items-center justify-center", className)}>{iconElement}</div>;
   }
 
   return (
