@@ -24,6 +24,8 @@ import {
   getCoachStreakLeaderboard,
   getGlobalStreakLeaderboard,
 } from "@/services/streak.service";
+import { getStudents } from "@/services/student.service";
+import { StorageImage } from "@/components/StorageImage";
 import { StreakLeaderboardItemDto } from "@/dtos/streakDto";
 
 export const Route = createFileRoute("/ranking")({
@@ -54,7 +56,7 @@ export const Route = createFileRoute("/ranking")({
     const coachId = Number(auth.myCoachId) || Number(auth.coachId) || 1;
 
     try {
-      const [globalLeaderboard, coachLeaderboard] = await Promise.all([
+      const [globalLeaderboard, coachLeaderboard, allStudents] = await Promise.all([
         getGlobalStreakLeaderboard(50).catch((err) => {
           console.warn("Error al cargar ranking global:", err);
           return [] as StreakLeaderboardItemDto[];
@@ -65,7 +67,20 @@ export const Route = createFileRoute("/ranking")({
               return [] as StreakLeaderboardItemDto[];
             })
           : Promise.resolve([] as StreakLeaderboardItemDto[]),
+        getStudents().catch((err) => {
+          console.warn("Error al cargar lista de estudiantes:", err);
+          return [];
+        }),
       ]);
+
+      const userIdMap: Record<number, number> = {};
+      if (Array.isArray(allStudents)) {
+        for (const s of allStudents) {
+          if (s?.id && s?.userId) {
+            userIdMap[Number(s.id)] = Number(s.userId);
+          }
+        }
+      }
 
       return {
         globalLeaderboard,
@@ -73,6 +88,7 @@ export const Route = createFileRoute("/ranking")({
         currentStudentId,
         coachId,
         role: auth.role || "student",
+        userIdMap,
       };
     } catch (error) {
       console.error("Error en loader de ranking:", error);
@@ -82,6 +98,7 @@ export const Route = createFileRoute("/ranking")({
         currentStudentId,
         coachId,
         role: auth.role || "student",
+        userIdMap: {},
       };
     }
   },
@@ -101,6 +118,8 @@ type Athlete = {
   delta: number;
   title: string;
   me?: boolean;
+  userId?: number;
+  avatarUrl?: string | null;
 };
 
 const FIRE_TIERS = [
@@ -119,6 +138,7 @@ function mapLeaderboardToAthletes(
   items: StreakLeaderboardItemDto[] = [],
   currentStudentId: number,
   coachLabel: string = "PyrosFit",
+  userIdMap: Record<number, number> = {},
 ): Athlete[] {
   return items.map((item) => {
     const studentName = item.studentName || `Alumno #${item.studentId}`;
@@ -132,6 +152,10 @@ function mapLeaderboardToAthletes(
     const longestStreak = item.longestStreak ?? 0;
     const points = streak * 100 + longestStreak * 25 + (item.freezeShieldsAvailable ?? 0) * 10;
     const title = getTitleForStreak(streak);
+    const resolvedUserId = (item as any).userId || userIdMap[item.studentId];
+    const avatarUrl =
+      (item as any).avatarUrl ||
+      (resolvedUserId ? `https://api.pyrosfit.com/api/Storage/users/${resolvedUserId}/profile` : null);
 
     return {
       id: item.studentId.toString(),
@@ -146,6 +170,8 @@ function mapLeaderboardToAthletes(
       delta: 0,
       title,
       me: item.studentId === currentStudentId,
+      userId: resolvedUserId,
+      avatarUrl,
     };
   });
 }
@@ -164,16 +190,46 @@ function fmt(value: number, metric: Metric) {
   return value.toString();
 }
 
-function Avatar({ initials, size = "md" }: { initials: string; size?: "md" | "lg" }) {
-  return (
+function Avatar({
+  initials,
+  src,
+  storageKey,
+  alt,
+  size = "md",
+}: {
+  initials: string;
+  src?: string | null;
+  storageKey?: string | null;
+  alt?: string;
+  size?: "md" | "lg";
+}) {
+  const sizeClasses = size === "lg" ? "h-16 w-16 text-lg" : "h-10 w-10 text-sm";
+
+  const fallback = (
     <div
       className={cn(
-        "rounded-full bg-gradient-primary flex items-center justify-center font-semibold text-primary-foreground shrink-0",
-        size === "lg" ? "h-16 w-16 text-lg shadow-glow" : "h-10 w-10 text-sm",
+        "rounded-full bg-gradient-primary flex items-center justify-center font-semibold text-primary-foreground shrink-0 select-none",
+        sizeClasses,
+        size === "lg" && "shadow-glow",
       )}
     >
       {initials}
     </div>
+  );
+
+  if (!src && !storageKey) {
+    return fallback;
+  }
+
+  return (
+    <StorageImage
+      src={src}
+      storageKey={storageKey}
+      alt={alt || initials}
+      className={cn("rounded-full object-cover shrink-0", sizeClasses)}
+      containerClassName={cn("rounded-full shrink-0", sizeClasses)}
+      fallback={fallback}
+    />
   );
 }
 
@@ -223,7 +279,12 @@ function Podium({ top, metric }: { top: Athlete[]; metric: Metric }) {
                 meta[i].ring,
               )}
             >
-              <Avatar initials={a.initials} size={isFirst ? "lg" : "md"} />
+              <Avatar
+                initials={a.initials}
+                src={a.avatarUrl}
+                alt={a.name}
+                size={isFirst ? "lg" : "md"}
+              />
             </div>
             <p className="text-xs sm:text-sm font-medium text-center truncate max-w-full px-1">
               {a.name.split(" ")[0]}
@@ -279,7 +340,7 @@ function RankRow({
         {position}
       </span>
       <div className="relative">
-        <Avatar initials={athlete.initials} />
+        <Avatar initials={athlete.initials} src={athlete.avatarUrl} alt={athlete.name} />
       </div>
       <div className="relative min-w-0 flex-1">
         <div className="flex items-center gap-2 min-w-0">
@@ -306,7 +367,7 @@ function RankRow({
 }
 
 function RankingPage() {
-  const { globalLeaderboard, coachLeaderboard, currentStudentId } = Route.useLoaderData();
+  const { globalLeaderboard, coachLeaderboard, currentStudentId, userIdMap } = Route.useLoaderData();
   const [scope, setScope] = useState<"coach" | "global">("coach");
   const [metric, setMetric] = useState<Metric>("streak");
   const [period, setPeriod] = useState<(typeof PERIODS)[number]>("Mes");
@@ -320,8 +381,8 @@ function RankingPage() {
       return [];
     }
 
-    return mapLeaderboardToAthletes(rawList, currentStudentId, coachLabel);
-  }, [scope, coachLeaderboard, globalLeaderboard, currentStudentId]);
+    return mapLeaderboardToAthletes(rawList, currentStudentId, coachLabel, userIdMap);
+  }, [scope, coachLeaderboard, globalLeaderboard, currentStudentId, userIdMap]);
 
   const ranked = useMemo(() => {
     return [...athletesData].sort((a, b) => b[metric] - a[metric]);

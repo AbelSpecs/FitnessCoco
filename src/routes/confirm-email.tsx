@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Dumbbell, CheckCircle2, AlertTriangle, ArrowRight, RefreshCw, Flame, Sparkles } from "lucide-react";
 import { confirmEmail } from "@/services/auth.service";
 import { notify } from "@/components/NotificationCenter";
+import { PyrosLogo } from "@/components/brand/PyrosLogo";
 
 interface ConfirmEmailSearch {
   userId?: string;
@@ -93,12 +94,7 @@ function ConfirmEmailPage() {
         {/* Brand Header */}
         <div className="text-center mb-6 sm:mb-8">
           <Link to="/" className="inline-flex items-center gap-2 mb-3 group">
-            <div className="h-11 w-11 rounded-xl bg-gradient-primary flex items-center justify-center shadow-glow group-hover:scale-105 transition-transform">
-              <Dumbbell className="h-6 w-6 text-primary-foreground" />
-            </div>
-            <span className="font-display text-2xl sm:text-3xl tracking-wider text-foreground">
-              PYROSFIT
-            </span>
+            <PyrosLogo variant="full" size="md" />
           </Link>
           <p className="text-[10px] sm:text-xs uppercase tracking-[0.3em] text-primary-glow font-medium">
             Activación de Cuenta

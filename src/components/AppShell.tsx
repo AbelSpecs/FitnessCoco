@@ -22,6 +22,7 @@ import { useEffect, useState } from "react";
 import { useAuthStore } from "@/store/authStore";
 import { ProfileMenu } from "@/components/ProfileMenu";
 import { Role } from "@/types/auth";
+import { PyrosLogo } from "@/components/brand/PyrosLogo";
 
 const nav = [
   {
@@ -136,17 +137,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         )}
       >
         <div className={cn("p-4 flex items-center gap-2", collapsed && "justify-center px-2")}>
-          <div className="h-10 w-10 rounded-xl bg-gradient-primary flex items-center justify-center shadow-glow shrink-0">
-            <Dumbbell className="h-5 w-5 text-primary-foreground" />
-          </div>
-          {!collapsed && (
-            <div className="min-w-0">
-              <p className="font-display text-2xl leading-none tracking-wider">PYROSFIT</p>
-              <p className="text-[10px] text-muted-foreground uppercase tracking-[0.2em]">
-                by GeekSolutions
-              </p>
-            </div>
-          )}
+          <PyrosLogo
+            variant={collapsed ? "icon" : "full"}
+            size="md"
+            iconClassName="h-10 w-10"
+          />
         </div>
 
         <nav className="flex-1 px-3 py-4 space-y-1">
@@ -231,17 +226,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           />
           <aside className="absolute left-0 top-0 bottom-0 w-72 max-w-[85vw] bg-gradient-card border-r border-sidebar-border flex flex-col animate-in slide-in-from-left duration-200">
             <div className="p-4 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="h-10 w-10 rounded-xl bg-gradient-primary flex items-center justify-center shadow-glow">
-                  <Dumbbell className="h-5 w-5 text-primary-foreground" />
-                </div>
-                <div>
-                  <p className="font-display text-2xl leading-none tracking-wider">PYROSFIT</p>
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-[0.2em]">
-                    by GeekSolutions
-                  </p>
-                </div>
-              </div>
+              <PyrosLogo variant="full" size="md" />
               <Button
                 variant="ghost"
                 size="icon"
@@ -313,9 +298,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               >
                 <Menu className="h-5 w-5" />
               </Button>
-              <div className="h-9 w-9 rounded-xl bg-gradient-primary flex items-center justify-center shadow-glow shrink-0">
-                <Dumbbell className="h-4 w-4 text-primary-foreground" />
-              </div>
+              <PyrosLogo variant="icon" size="sm" iconClassName="h-8 w-8" />
               <p className="font-display text-xl sm:text-2xl tracking-wider truncate">PYROSFIT</p>
             </div>
 

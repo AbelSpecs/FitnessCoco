@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dumbbell } from "lucide-react";
+import { PyrosLogo } from "@/components/brand/PyrosLogo";
 import { City, PhoneCode } from "@/types/general";
 import { getCities } from "@/services/general.service";
 import { RegisterCredentials } from "@/types/auth";
@@ -188,9 +189,7 @@ export function RegistrationForm({
       >
         <div className="w-full max-w-md">
           <div className="rounded-2xl border border-border bg-card/80 backdrop-blur-md p-8 shadow-elevated text-center space-y-4">
-            <div className="h-16 w-16 rounded-2xl bg-gradient-primary flex items-center justify-center shadow-glow mx-auto">
-              <Dumbbell className="h-8 w-8 text-primary-foreground" />
-            </div>
+            <PyrosLogo variant="icon" size="xl" iconClassName="h-16 w-16 mx-auto" />
             <h2 className="text-xl font-semibold">{successTitle}</h2>
             <p className="text-sm text-muted-foreground">{successMessage(registerForm)}</p>
             <Link to="/login" className="text-primary font-medium hover:underline text-sm">
@@ -209,12 +208,10 @@ export function RegistrationForm({
     >
       <div className="w-full max-w-md space-y-8">
         <div className="flex flex-col items-center gap-3">
-          <div className="h-16 w-16 rounded-2xl bg-gradient-primary flex items-center justify-center shadow-glow">
-            <Dumbbell className="h-8 w-8 text-primary-foreground" />
-          </div>
+          <PyrosLogo variant="icon" size="xl" iconClassName="h-16 w-16" />
           <div className="text-center">
             <h1 className="font-display text-5xl tracking-wider">PYROSFIT</h1>
-            <p className="text-xs text-muted-foreground uppercase tracking-[0.25em]">
+            <p className="text-xs text-muted-foreground uppercase tracking-[0.25em] mt-1">
               by GeekSolutions
             </p>
           </div>

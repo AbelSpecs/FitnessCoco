@@ -8,6 +8,7 @@ import { Dumbbell, Mail, ArrowLeft, MailCheck, RefreshCw, Sparkles, Send } from 
 import { forgotPassword } from "@/services/auth.service";
 import { notify } from "@/components/NotificationCenter";
 import { SpinnerOverlay } from "@/components/Spinner";
+import { PyrosLogo } from "@/components/brand/PyrosLogo";
 
 export const Route = createFileRoute("/forgot-password")({
   head: () => ({
@@ -106,9 +107,7 @@ function ForgotPasswordPage() {
         {/* Brand Header */}
         <div className="flex flex-col items-center gap-3">
           <Link to="/" className="flex flex-col items-center gap-3 group">
-            <div className="h-16 w-16 rounded-2xl bg-gradient-primary flex items-center justify-center shadow-glow group-hover:scale-105 transition-transform">
-              <Dumbbell className="h-8 w-8 text-primary-foreground" />
-            </div>
+            <PyrosLogo variant="icon" size="xl" iconClassName="h-16 w-16 group-hover:scale-105 transition-transform" />
             <div className="text-center">
               <h1 className="font-display text-4xl sm:text-5xl tracking-wider text-foreground">
                 PyrosFit

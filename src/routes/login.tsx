@@ -13,6 +13,7 @@ import Spinner, { SpinnerOverlay } from "@/components/Spinner";
 import { getStudent } from "@/services/student.service";
 import { getCoach } from "@/services/coach.service";
 import { preview } from "vite";
+import { PyrosLogo } from "@/components/brand/PyrosLogo";
 
 export const Route = createFileRoute("/login")({
   head: () => ({
@@ -116,14 +117,12 @@ function LoginPage() {
       <div className="w-full max-w-md space-y-8">
         {/* Logo */}
         <div className="flex flex-col items-center gap-3">
-          <div className="h-16 w-16 rounded-2xl bg-gradient-primary flex items-center justify-center shadow-glow">
-            <Dumbbell className="h-8 w-8 text-primary-foreground" />
-          </div>
+          <PyrosLogo variant="icon" size="xl" iconClassName="h-16 w-16" />
           <div className="text-center">
             <h1 className="font-display text-5xl tracking-wider">PyrosFit</h1>
-            {/* <p className="text-xs text-muted-foreground uppercase tracking-[0.25em]">
-              training co.
-            </p> */}
+            <p className="text-xs text-muted-foreground uppercase tracking-[0.25em] mt-1">
+              by GeekSolutions
+            </p>
           </div>
         </div>
 
