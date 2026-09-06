@@ -30,6 +30,7 @@ import { notify } from "@/components/NotificationCenter";
 import { SpinnerOverlay } from "@/components/Spinner";
 import { updateStudent } from "@/services/student.service";
 import { getCoachProfile, updateCoach } from "@/services/coach.service";
+import { getCoachAverageStreak } from "@/services/streak.service";
 import { getQr } from "@/services/general.service";
 import { userCoachMapper, userStudentMapper } from "@/mappers/user";
 import {
@@ -78,9 +79,29 @@ export const Route = createFileRoute("/perfil/$userId")({
         let coachData = coach;
         if (coach?.id) {
           try {
-            const profile = await getCoachProfile(coach.id);
+            const [profile, avgStreak] = await Promise.all([
+              getCoachProfile(coach.id).catch((err) => {
+                console.warn("No se pudieron cargar las métricas del coach:", err);
+                return null;
+              }),
+              getCoachAverageStreak(coach.id).catch((err) => {
+                console.warn("No se pudo calcular la racha media del coach:", err);
+                return 0;
+              }),
+            ]);
+
             if (profile) {
-              coachData = { ...coach, ...profile };
+              const activeCount = profile.activeStudents ?? 0;
+              const totalCount = profile.totalStudents ?? 0;
+              const retention = totalCount > 0 ? Math.round((activeCount / totalCount) * 100) : 100;
+
+              coachData = {
+                ...coach,
+                ...profile,
+                averageStreak: avgStreak,
+                retentionRate: retention,
+                sessionsPerWeek: profile.totalRoutinesCreated ?? 0,
+              };
             }
           } catch (err) {
             console.warn("No se pudieron cargar las métricas dinámicas del coach en el loader:", err);
@@ -135,9 +156,16 @@ function Perfil() {
     // Si el usuario es entrenador, invocar asíncronamente las estadísticas del endpoint de Swagger
     const coachId = userData?.coach?.id || userInfo?.coach?.id;
     if (!isStudent && coachId) {
-      getCoachProfile(coachId)
-        .then((profile) => {
+      Promise.all([
+        getCoachProfile(coachId).catch(() => null),
+        getCoachAverageStreak(coachId).catch(() => 0),
+      ])
+        .then(([profile, avgStreak]) => {
           if (profile) {
+            const activeCount = profile.activeStudents ?? 0;
+            const totalCount = profile.totalStudents ?? 0;
+            const retention = totalCount > 0 ? Math.round((activeCount / totalCount) * 100) : 100;
+
             setUserData((prev) => {
               if (!prev || !prev.coach) return prev;
               return {
@@ -150,6 +178,11 @@ function Perfil() {
                   averageRating: profile.averageRating,
                   totalRatingsCount: profile.totalRatingsCount,
                   experienceYears: profile.yearsOfExperience ?? prev.coach.experienceYears ?? 0,
+                  bio: profile.bio || prev.coach.bio,
+                  certifications: profile.certifications || prev.coach.certifications,
+                  averageStreak: avgStreak,
+                  retentionRate: retention,
+                  sessionsPerWeek: profile.totalRoutinesCreated ?? prev.coach.sessionsPerWeek ?? 0,
                 },
               };
             });
@@ -822,7 +855,13 @@ function Perfil() {
                     Eslogan / Biografía
                   </p>
                   <p className="text-lg font-display text-foreground/90">
-                    {userData?.coach?.bio || "Entrena con propósito. Progresa sin excusas."}
+                    {userData?.coach?.bio ? (
+                      `“${userData.coach.bio}”`
+                    ) : (
+                      <span className="text-muted-foreground italic text-sm">
+                        Sin eslogan o biografía registrada.
+                      </span>
+                    )}
                   </p>
                 </div>
                 <div>
@@ -830,23 +869,56 @@ function Perfil() {
                     Certificaciones
                   </p>
                   <div className="flex flex-wrap gap-2">
-                    {(userData?.coach?.certifications
-                      ? userData.coach.certifications.split(",").filter((c) => c.trim().length > 0)
-                      : ["Personal Trainer", "Nutrición deportiva"]
-                    ).map((c) => (
-                      <span
-                        key={c}
-                        className="rounded-full border border-border bg-background/50 px-3.5 py-1 text-xs text-foreground/80 shadow-sm"
-                      >
-                        {c.trim()}
-                      </span>
-                    ))}
+                    {(() => {
+                      const certs = userData?.coach?.certifications
+                        ? userData.coach.certifications
+                            .split(",")
+                            .map((c) => c.trim())
+                            .filter((c) => c.length > 0)
+                        : [];
+
+                      if (certs.length === 0) {
+                        return (
+                          <span className="text-xs text-muted-foreground italic">
+                            Sin certificaciones registradas.
+                          </span>
+                        );
+                      }
+
+                      return certs.map((c, idx) => (
+                        <span
+                          key={`${c}-${idx}`}
+                          className="rounded-full border border-border bg-background/50 px-3.5 py-1 text-xs text-foreground/80 shadow-sm"
+                        >
+                          {c}
+                        </span>
+                      ));
+                    })()}
                   </div>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
-                  <Stat label="Sesiones/semana" value="32" />
-                  <Stat label="Retención" value="92%" />
-                  <Stat label="Racha media" value="11d" />
+                  <Stat
+                    label="Sesiones/semana"
+                    value={`${userData?.coach?.sessionsPerWeek ?? userData?.coach?.totalRoutinesCreated ?? 0}`}
+                  />
+                  <Stat
+                    label="Retención"
+                    value={`${
+                      typeof userData?.coach?.retentionRate === "number"
+                        ? userData.coach.retentionRate
+                        : userData?.coach?.totalStudents && userData.coach.totalStudents > 0
+                          ? Math.round(
+                              ((userData.coach.activeStudents ?? userData.coach.totalStudents) /
+                                userData.coach.totalStudents) *
+                                100,
+                            )
+                          : 100
+                    }%`}
+                  />
+                  <Stat
+                    label="Racha media"
+                    value={`${userData?.coach?.averageStreak ?? 0}d`}
+                  />
                 </div>
               </div>
             ) : (

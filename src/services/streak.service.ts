@@ -167,6 +167,25 @@ export const getCoachStreakLeaderboard = async (
 };
 
 /**
+ * Calcula y retorna el promedio de días de racha activa de los alumnos de un coach.
+ * Endpoint: GET /api/v1/Streaks/coach/{coachId}/leaderboard
+ *
+ * @param coachId - ID del coach
+ * @returns Promedio numérico de racha activa
+ */
+export const getCoachAverageStreak = async (coachId: number | string): Promise<number> => {
+  try {
+    const list = await getCoachStreakLeaderboard(coachId);
+    if (!list || !Array.isArray(list) || list.length === 0) return 0;
+    const sum = list.reduce((acc, item) => acc + (item.currentStreak || 0), 0);
+    return Math.round(sum / list.length);
+  } catch (error) {
+    console.warn(`No se pudo calcular la racha media del coach ${coachId}:`, error);
+    return 0;
+  }
+};
+
+/**
  * Permite ajustar manualmente la racha y escudos de un alumno (uso por Coach o Administrador).
  * Endpoint: POST /api/v1/Streaks/student/{studentId}/adjust
  *
