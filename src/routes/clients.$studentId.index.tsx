@@ -44,6 +44,8 @@ import { AppShell } from "@/components/AppShell";
 import { getStudentById } from "@/services/student.service";
 import { getUser } from "@/services/user.service";
 import { StorageImage } from "@/components/StorageImage";
+import { StudentClinicalOverview } from "@/components/students/StudentClinicalOverview";
+import { Student } from "@/types/user";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -146,6 +148,7 @@ export const Route = createFileRoute("/clients/$studentId/")({
       return {
         studentId: params.studentId,
         client,
+        student: studentResponse as Student,
         completeExercisesMapped,
         muscleGroupsMapped,
       };
@@ -176,6 +179,7 @@ function ClientRoutinesPage() {
   const {
     studentId,
     client,
+    student,
     completeExercisesMapped,
     muscleGroupsMapped: muscleGroups,
   } = Route.useLoaderData();
@@ -646,6 +650,9 @@ function ClientRoutinesPage() {
               </Button>
             </div>
           </div>
+
+          {/* Ficha Antropométrica y Clínica (Actividad T-19 / SCRUM-14) */}
+          <StudentClinicalOverview student={student} className="mb-6" />
 
           {showForm && (
             <Card className="relative z-20 bg-popover/95 backdrop-blur-xl border-primary/40 shadow-elevated p-5 sm:p-6 mb-6 animate-in fade-in slide-in-from-top-4 duration-300">
