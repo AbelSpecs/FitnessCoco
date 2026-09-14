@@ -15,6 +15,8 @@ import {
   Timer,
   ChevronDown,
   ChevronUp,
+  PlayCircle,
+  Video,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useAuthStore } from "@/store/authStore";
@@ -23,6 +25,7 @@ import {
   getDailyStudentExercisesByStudentIdAndDate,
   updateDailyExercisesSets,
   updateCompleteDailyStudentExercises,
+  getExercise,
 } from "@/services/routine.service";
 import { postWorkoutCompleted } from "@/services/streak.service";
 import {
@@ -33,6 +36,8 @@ import {
 import { determineDate } from "@/utils/determineDate";
 import { format } from "date-fns";
 import { notify } from "@/components/NotificationCenter";
+import { VideoThumbnail } from "@/components/VideoThumbnail";
+import { ExerciseVideoModal } from "@/components/exercises/ExerciseVideoModal";
 
 export const Route = createFileRoute("/routine/$studentId/$dayId")({
   head: () => ({
@@ -52,24 +57,43 @@ export const Route = createFileRoute("/routine/$studentId/$dayId")({
           return [];
         });
 
-      const mappedExercises: Exercise[] = (exercisesData || []).map((e) => {
-        const completeDate: CompleteDate = determineDate(e.scheduledDate);
-        return {
-          dailyExerciseId: e.id,
-          coachId: e.coachId,
-          exerciseId: e.exerciseId,
-          studentId: e.studentId,
-          exerciseName: e.exerciseName,
-          muscleGroupName: e.muscleGroupName,
-          coachNotes: e.coachNotes,
-          studentNotes: e.studentNotes,
-          isCompleted: e.isCompleted,
-          scheduledDate: e.scheduledDate ? e.scheduledDate.split("T")[0] : "",
-          day: completeDate.day,
-          short: completeDate.short,
-          dailyExerciseSets: (e.dailyExerciseSets as DailyExerciseSets[]) || [],
-        };
-      });
+      const mappedExercises: Exercise[] = await Promise.all(
+        (exercisesData || []).map(async (e) => {
+          const completeDate: CompleteDate = determineDate(e.scheduledDate);
+          let videoKey = e.videoKey || e.exercise?.videoKey || null;
+          let videoUrl = e.videoUrl || e.exercise?.videoUrl || null;
+
+          if (!videoKey && !videoUrl && e.exerciseId) {
+            try {
+              const exData = await getExercise(e.exerciseId);
+              if (exData) {
+                videoKey = exData.videoKey || null;
+                videoUrl = exData.videoUrl || null;
+              }
+            } catch (err) {
+              console.warn(`No se pudo obtener detalles del ejercicio ${e.exerciseId}:`, err);
+            }
+          }
+
+          return {
+            dailyExerciseId: e.id,
+            coachId: e.coachId,
+            exerciseId: e.exerciseId,
+            studentId: e.studentId,
+            exerciseName: e.exerciseName,
+            muscleGroupName: e.muscleGroupName,
+            coachNotes: e.coachNotes,
+            studentNotes: e.studentNotes,
+            isCompleted: e.isCompleted,
+            scheduledDate: e.scheduledDate ? e.scheduledDate.split("T")[0] : "",
+            day: completeDate.day,
+            short: completeDate.short,
+            dailyExerciseSets: (e.dailyExerciseSets as DailyExerciseSets[]) || [],
+            videoKey,
+            videoUrl,
+          };
+        }),
+      );
 
       return { dayExercises: mappedExercises };
     } catch (error) {
@@ -107,6 +131,7 @@ function DayDetail() {
   const { dayExercises } = Route.useLoaderData();
   const { user } = useAuthStore();
   const [exercisesList, setExercisesList] = useState<Exercise[]>(dayExercises || []);
+  const [selectedVideoExercise, setSelectedVideoExercise] = useState<Exercise | null>(null);
 
   useEffect(() => {
     setExercisesList(dayExercises || []);
@@ -224,11 +249,19 @@ function DayDetail() {
                 ex={ex}
                 index={i + 1}
                 onComplete={handleExerciseComplete}
+                onOpenVideo={(exercise) => setSelectedVideoExercise(exercise)}
               />
             );
           })}
         </div>
       )}
+
+      {/* Modal reproductor de video demostrativo */}
+      <ExerciseVideoModal
+        exercise={selectedVideoExercise}
+        isOpen={!!selectedVideoExercise}
+        onClose={() => setSelectedVideoExercise(null)}
+      />
     </AppShell>
   );
 }
@@ -237,14 +270,17 @@ function ExerciseRow({
   ex,
   index,
   onComplete,
+  onOpenVideo,
 }: {
   ex: Exercise;
   index: number;
   onComplete: (ex: Exercise, notes?: string) => Promise<void>;
+  onOpenVideo: (ex: Exercise) => void;
 }) {
   const [loading, setLoading] = useState(false);
   const [notes, setNotes] = useState(ex.studentNotes || "");
   const [showSets, setShowSets] = useState(false);
+  const hasVideo = !!(ex.videoKey?.trim() || ex.videoUrl?.trim());
 
   const handleFinish = async () => {
     if (ex.isCompleted || loading) return;
@@ -279,7 +315,20 @@ function ExerciseRow({
               </h3>
             </div>
 
-            <div className="flex gap-2 shrink-0">
+            <div className="flex items-center gap-2 shrink-0">
+              {hasVideo && (
+                <Button
+                  variant="glass"
+                  size="sm"
+                  onClick={() => onOpenVideo(ex)}
+                  className="gap-1.5 text-primary border-primary/30 hover:bg-primary/10 hover:text-primary transition-all shadow-sm"
+                  title="Reproducir video demostrativo"
+                >
+                  <PlayCircle className="h-4 w-4 text-primary" />
+                  <span className="hidden sm:inline">Ver video</span>
+                  <span className="sm:hidden">Video</span>
+                </Button>
+              )}
               <Button
                 variant="glass"
                 size="sm"
@@ -292,6 +341,35 @@ function ExerciseRow({
               </Button>
             </div>
           </div>
+
+          {/* Miniatura de video si está disponible */}
+          {hasVideo && (
+            <div className="mt-2.5 mb-3">
+              <button
+                type="button"
+                onClick={() => onOpenVideo(ex)}
+                className="group relative block w-full sm:max-w-xs aspect-video rounded-xl overflow-hidden border border-border/70 hover:border-primary/60 bg-black/60 shadow-md text-left transition-all hover:shadow-glow cursor-pointer"
+                title={`Ver técnica de ${ex.exerciseName}`}
+              >
+                <VideoThumbnail
+                  videoKey={ex.videoKey}
+                  videoUrl={ex.videoUrl}
+                  alt={`Video demostrativo de ${ex.exerciseName}`}
+                  showPlayBadge={true}
+                  hoverPlay={true}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                />
+                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent p-2.5 flex items-center justify-between">
+                  <span className="text-xs font-medium text-white flex items-center gap-1.5 drop-shadow">
+                    <PlayCircle className="h-4 w-4 text-primary" /> Ver movimiento
+                  </span>
+                  <Badge className="bg-primary/80 hover:bg-primary text-primary-foreground text-[10px] px-1.5 py-0 h-5 border-0">
+                    Reproducir
+                  </Badge>
+                </div>
+              </button>
+            </div>
+          )}
 
           {showSets && (
             <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">

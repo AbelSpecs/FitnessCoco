@@ -27,6 +27,8 @@ export interface Exercise {
   day: string;
   short: string;
   dailyExerciseSets: DailyExerciseSets[];
+  videoKey?: string | null;
+  videoUrl?: string | null;
 }
 
 export interface DailyExerciseSetsForm {
