@@ -2,7 +2,7 @@ import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, ChevronRight, Dumbbell } from "lucide-react";
+import { CheckCircle2, ChevronRight, Dumbbell, Video } from "lucide-react";
 import { useState } from "react";
 import { CompleteDate, DailyExerciseSets, DayRoutine, Exercise } from "@/types/exercises";
 import { determineDate } from "@/utils/determineDate";
@@ -55,6 +55,8 @@ export const Route = createFileRoute("/routine/$studentId/")({
           day: completeDate.day,
           short: completeDate.short,
           dailyExerciseSets: (e.dailyExerciseSets as DailyExerciseSets[]) || [],
+          videoKey: e.videoKey || e.exercise?.videoKey || null,
+          videoUrl: e.videoUrl || e.exercise?.videoUrl || null,
         };
       });
 
@@ -147,6 +149,8 @@ function RutinaPage() {
           day: completeDate.day,
           short: completeDate.short,
           dailyExerciseSets: (e.dailyExerciseSets as DailyExerciseSets[]) || [],
+          videoKey: e.videoKey || e.exercise?.videoKey || null,
+          videoUrl: e.videoUrl || e.exercise?.videoUrl || null,
         };
       });
 
@@ -247,6 +251,11 @@ function RutinaPage() {
                         <Dumbbell className="h-3 w-3" />
                         {day.exercises?.length || 0} ej.
                       </span>
+                      {day.exercises?.some((ex) => !!(ex.videoKey || ex.videoUrl)) && (
+                        <span className="flex items-center gap-1 text-primary-glow font-medium" title="Videos demostrativos disponibles">
+                          <Video className="h-3 w-3 text-primary" /> Videos
+                        </span>
+                      )}
                     </div>
                     {day.exercises &&
                       day.exercises.length > 0 &&

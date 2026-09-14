@@ -41,6 +41,9 @@ export interface GetDailyStudentExerciseDto {
   coachNotes: string;
   studentNotes: string;
   isCompleted: boolean;
+  videoKey?: string | null;
+  videoUrl?: string | null;
+  exercise?: GetExerciseDto;
 }
 
 // ExerciseDto
