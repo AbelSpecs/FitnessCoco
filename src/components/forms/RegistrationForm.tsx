@@ -211,9 +211,14 @@ export function RegistrationForm({
           <PyrosLogo variant="icon" size="xl" iconClassName="h-16 w-16" />
           <div className="text-center">
             <h1 className="font-display text-5xl tracking-wider">PYROSFIT</h1>
-            <p className="text-xs text-muted-foreground uppercase tracking-[0.25em] mt-1">
+            <a
+              href="https://geek-solutions-landing-page-front.vercel.app/#inicio"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block text-xs text-muted-foreground uppercase tracking-[0.25em] mt-1 hover:text-primary transition-colors cursor-pointer"
+            >
               by GeekSolutions
-            </p>
+            </a>
           </div>
         </div>
 
@@ -518,6 +523,18 @@ export function RegistrationForm({
               </>
             )}
           </form>
+
+          <p className="text-center text-xs text-muted-foreground/80 px-2">
+            Al registrarte aceptas nuestros{" "}
+            <Link to="/terms" target="_blank" className="text-primary hover:underline font-medium">
+              Términos y Condiciones
+            </Link>{" "}
+            y{" "}
+            <Link to="/terms" target="_blank" className="text-primary hover:underline font-medium">
+              Política de Privacidad
+            </Link>
+            .
+          </p>
 
           <p className="text-center text-sm text-muted-foreground">
             ¿Ya tienes cuenta?{" "}
