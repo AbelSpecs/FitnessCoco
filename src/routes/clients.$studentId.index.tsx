@@ -38,6 +38,7 @@ import {
   Sparkles,
   CheckCircle2,
   UserCog,
+  Loader2,
 } from "lucide-react";
 import { notify } from "@/components/NotificationCenter";
 import { AppShell } from "@/components/AppShell";
@@ -45,6 +46,12 @@ import { getStudentById } from "@/services/student.service";
 import { getUser } from "@/services/user.service";
 import { StorageImage } from "@/components/StorageImage";
 import { StudentClinicalOverview } from "@/components/students/StudentClinicalOverview";
+import { ExerciseVideoSelector } from "@/components/exercises/ExerciseVideoSelector";
+import {
+  getPresignedVideoUrl,
+  uploadFileToPresignedUrl,
+  getFileContentType,
+} from "@/services/storage.service";
 import { Student } from "@/types/user";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -201,7 +208,12 @@ function ClientRoutinesPage() {
   const [newExerciseForm, setNewExerciseForm] = useState<NewExercise>({
     name: "",
     muscleGroupId: 0,
+    videoUrl: "",
   });
+  const [newExerciseVideoMode, setNewExerciseVideoMode] = useState<"url" | "upload">("url");
+  const [selectedExerciseVideoFile, setSelectedExerciseVideoFile] = useState<File | null>(null);
+  const [videoUploadProgress, setVideoUploadProgress] = useState<number>(0);
+  const [isUploadingVideo, setIsUploadingVideo] = useState<boolean>(false);
 
   // show form states
   const [showForm, setShowForm] = useState<boolean>(false);
@@ -242,7 +254,12 @@ function ClientRoutinesPage() {
     setNewExerciseForm({
       name: "",
       muscleGroupId: 0,
+      videoUrl: "",
     });
+    setSelectedExerciseVideoFile(null);
+    setNewExerciseVideoMode("url");
+    setVideoUploadProgress(0);
+    setIsUploadingVideo(false);
   };
 
   const handleAdd = () => {
@@ -351,47 +368,85 @@ function ClientRoutinesPage() {
     const name = newExerciseForm.name.trim();
     if (!name) {
       notify.error("Falta el nombre", "Escribe el nombre del ejercicio");
+      setSaved(false);
+      return;
+    }
+    if (!newExerciseForm.muscleGroupId) {
+      notify.error("Falta el grupo muscular", "Selecciona el grupo muscular para el ejercicio");
+      setSaved(false);
       return;
     }
     //@TODO @abel esto debe a;adirsele una comparacion con el coachID
     //esperar que @keiver haga el endpoint
     if (exercises.some((e) => e.name.toLowerCase() === name.toLowerCase())) {
       notify.error("Ya existe", "Ese ejercicio ya está en la lista");
+      setSaved(false);
       return;
     }
 
-    const newExercise: ExerciseDto = {
-      exercise: {
-        coachId: user!.coachId!,
-        name: newExerciseForm.name,
-        description: "",
-        muscleGroupId: newExerciseForm.muscleGroupId!,
-        videoUrl: "",
-        isCustom: true,
-      },
-    };
-
     try {
-      const newExerciseResponse = await postExercise(newExercise);
+      let finalVideoKey = "";
+
+      // 1. Si se seleccionó subir un archivo a Cloudflare R2
+      if (newExerciseVideoMode === "upload" && selectedExerciseVideoFile) {
+        setIsUploadingVideo(true);
+        setVideoUploadProgress(0);
+
+        const tempExerciseId = Math.floor(Date.now() % 100000000);
+        const contentType = getFileContentType(selectedExerciseVideoFile);
+        const presign = await getPresignedVideoUrl({
+          trainerId: user?.coachId || 0,
+          exerciseId: tempExerciseId,
+          fileName: selectedExerciseVideoFile.name,
+          contentType,
+          expiresInSeconds: 600,
+        });
+
+        await uploadFileToPresignedUrl(
+          presign.uploadUrl,
+          selectedExerciseVideoFile,
+          contentType,
+          (percent) => setVideoUploadProgress(percent),
+        );
+
+        finalVideoKey = presign.key;
+      } else if (newExerciseVideoMode === "url") {
+        finalVideoKey = newExerciseForm.videoUrl?.trim() || "";
+      }
+
+      // 2. Persistir en backend
+      const newExercise: ExerciseDto = {
+        exercise: {
+          coachId: user?.coachId || null,
+          name: name,
+          description: "",
+          muscleGroupId: newExerciseForm.muscleGroupId!,
+          videoKey: finalVideoKey || null,
+          videoUrl: finalVideoKey || null,
+          isCustom: true,
+        },
+      };
+
+      await postExercise(newExercise);
       setPendingExercises([
         ...pendingExercises,
         {
-          name: newExerciseForm.name,
+          name: name,
           muscleGroupId: newExerciseForm.muscleGroupId!,
+          videoUrl: finalVideoKey,
+          videoKey: finalVideoKey,
         } as NewExercise,
       ]);
 
-      setNewExerciseForm({
-        name: "",
-        muscleGroupId: 0,
-      });
-      notify.created("Ejercicio guardado", `Pulsa el botón de refrescar para verlo en la lista`);
+      newExerciseFormReset();
+      notify.created("Ejercicio guardado", "Pulsa el botón de refrescar para verlo en la lista");
+      setShowNewExerciseDialog(false);
     } catch (error) {
       console.error("Error al crear el ejercicio:", error);
       notify.error("Error al crear", "Ocurrió un error al crear el ejercicio. Intenta de nuevo.");
     } finally {
       setSaved(false);
-      setShowNewExerciseDialog(false);
+      setIsUploadingVideo(false);
     }
   };
 
@@ -1285,23 +1340,49 @@ function ClientRoutinesPage() {
                   maxLength={80}
                   autoFocus
                   className="mt-1.5 bg-background/60 border-border focus-visible:ring-primary/40"
+                  disabled={saved || isUploadingVideo}
                 />
               </div>
+
+              {/* Selector de Video Demostrativo (Actividad T-20 / SCRUM-15) */}
+              <ExerciseVideoSelector
+                videoMode={newExerciseVideoMode}
+                onVideoModeChange={setNewExerciseVideoMode}
+                videoUrl={newExerciseForm.videoUrl || ""}
+                onVideoUrlChange={(url) =>
+                  setNewExerciseForm((prev) => ({ ...prev, videoUrl: url }))
+                }
+                selectedFile={selectedExerciseVideoFile}
+                onFileSelected={setSelectedExerciseVideoFile}
+                uploading={isUploadingVideo}
+                uploadProgress={videoUploadProgress}
+                disabled={saved}
+              />
             </div>
             <DialogFooter>
               <Button
                 variant="outline"
                 className="border-border"
                 onClick={() => setShowNewExerciseDialog(false)}
+                disabled={saved || isUploadingVideo}
               >
                 Cancelar
               </Button>
               <Button
                 onClick={handleSaveNewExercise}
                 className="bg-gradient-primary hover:opacity-90 shadow-glow"
-                disabled={saved}
+                disabled={saved || isUploadingVideo}
               >
-                <Save className="h-4 w-4 mr-1" /> Guardar
+                {saved || isUploadingVideo ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+                    {isUploadingVideo ? "Subiendo video..." : "Guardando..."}
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4 mr-1" /> Guardar
+                  </>
+                )}
               </Button>
             </DialogFooter>
           </DialogContent>

@@ -73,6 +73,8 @@ export interface CompleteDate {
 export interface NewExercise {
   name: string;
   muscleGroupId: number;
+  videoUrl?: string;
+  videoKey?: string;
 }
 
 // (Client)
