@@ -1,6 +1,7 @@
 import {
   AdjustStreakDto,
   RiskRadarStudentDto,
+  SendMotivationEmailRequest,
   StreakHistoryLogDto,
   StreakLeaderboardItemDto,
   StudentStreakDto,
@@ -204,6 +205,29 @@ export const adjustStudentStreak = async (
     return data?.data ?? data ?? response.data;
   } catch (error) {
     console.error(`Error al ajustar la racha del estudiante ${studentId}`, error);
+    throw error;
+  }
+};
+
+/**
+ * Envía una notificación / mensaje de motivación a un alumno desde el Radar de Riesgo de Abandono.
+ * Endpoint: POST /api/v1/Streaks/student/{studentId}/send-motivation
+ *
+ * @param studentId - ID del estudiante
+ * @param payload - Datos del mensaje (mensaje, nombre del coach, email opcional)
+ * @returns Respuesta del servidor con confirmación
+ */
+export const sendStudentMotivation = async (
+  studentId: number | string,
+  payload: SendMotivationEmailRequest,
+) => {
+  try {
+    const response = await api.post(`/Streaks/student/${studentId}/send-motivation`, payload);
+    const { data } = response;
+
+    return data?.data ?? data ?? response.data;
+  } catch (error) {
+    console.error(`Error al enviar mensaje motivacional al estudiante ${studentId}:`, error);
     throw error;
   }
 };

@@ -26,6 +26,7 @@ import {
   Search,
   MessageCircle,
   Send,
+  Loader2,
   Trophy,
   PartyPopper,
   CalendarDays,
@@ -74,6 +75,7 @@ import {
   getCoachRiskRadar,
   getStudentStreak,
   getStudentStreakHistory,
+  sendStudentMotivation,
   useFreezeShield,
 } from "@/services/streak.service";
 import { Tier } from "@/types";
@@ -425,7 +427,35 @@ function Dashboard() {
   const [filter, setFilter] = useState<"all" | StudentInfo["risk"]>("all");
   const [target, setTarget] = useState<StudentInfo | null>(null);
   const [message, setMessage] = useState("");
-  const [sent, setSent] = useState(false);
+  const [isSendingMotivation, setIsSendingMotivation] = useState<boolean>(false);
+
+  const handleSendMotivation = async () => {
+    if (!target || !message.trim() || isSendingMotivation) return;
+    try {
+      setIsSendingMotivation(true);
+      const coachFullName = user?.firstName?.trim() || "Tu Coach";
+
+      await sendStudentMotivation(Number(target.studentId), {
+        message: message.trim(),
+        coachName: coachFullName,
+      });
+
+      notify.created(
+        "Mensaje enviado",
+        `Notificación motivacional enviada a ${target.name} exitosamente.`,
+      );
+      setMessage("");
+      setTarget(null);
+    } catch (error) {
+      console.error("Error al enviar mensaje motivacional:", error);
+      notify.error(
+        "Error al enviar",
+        "No se pudo transmitir el mensaje motivacional. Intenta nuevamente.",
+      );
+    } finally {
+      setIsSendingMotivation(false);
+    }
+  };
 
   const handleUseShield = async () => {
     if (!user?.studentId || shields <= 0 || usingShield) return;
@@ -561,7 +591,6 @@ function Dashboard() {
 
   const openContact = (s: StudentInfo) => {
     setTarget(s);
-    setSent(false);
     setMessage(
       `¡Hola ${s.name.split(" ")[0]}! Notamos que hace ${s.inactivity} días que no entrenás. ¿Coordinamos tu próxima sesión? 💪🔥`,
     );
@@ -1100,7 +1129,15 @@ function Dashboard() {
             </div>
           </Card>
 
-          <Dialog open={!!target} onOpenChange={(o) => !o && setTarget(null)}>
+          <Dialog
+            open={!!target}
+            onOpenChange={(o) => {
+              if (!o && !isSendingMotivation) {
+                setTarget(null);
+                setMessage("");
+              }
+            }}
+          >
             <DialogContent className="border-border bg-gradient-card sm:max-w-md">
               <DialogHeader>
                 <DialogTitle className="font-display text-2xl tracking-wide">
@@ -1113,38 +1150,40 @@ function Dashboard() {
                 </DialogDescription>
               </DialogHeader>
 
-              {sent ? (
-                <div className="py-6 text-center">
-                  <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-success/15 ring-1 ring-success/40">
-                    <Send className="h-6 w-6 text-success" />
-                  </div>
-                  <p className="font-display text-2xl">¡Mensaje enviado!</p>
-                  <p className="text-sm text-muted-foreground">
-                    Notificación enviada al alumno exitosamente.
-                  </p>
-                </div>
-              ) : (
-                <>
-                  <Textarea
-                    value={message}
-                    onChange={(e) => setMessage(e.target.value)}
-                    rows={4}
-                    className="resize-none"
-                  />
-                  <DialogFooter className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
-                    <Button variant="outline" onClick={() => setTarget(null)}>
-                      Cancelar
-                    </Button>
-                    <Button
-                      onClick={() => setSent(true)}
-                      disabled={!message.trim()}
-                      className="bg-gradient-primary text-primary-foreground shadow-glow hover:brightness-110 cursor-pointer"
-                    >
+              <Textarea
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                rows={4}
+                disabled={isSendingMotivation}
+                className="resize-none"
+              />
+              <DialogFooter className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setTarget(null);
+                    setMessage("");
+                  }}
+                  disabled={isSendingMotivation}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={handleSendMotivation}
+                  disabled={isSendingMotivation || !message.trim()}
+                  className="bg-gradient-primary text-primary-foreground shadow-glow hover:brightness-110 cursor-pointer"
+                >
+                  {isSendingMotivation ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> Enviando...
+                    </>
+                  ) : (
+                    <>
                       <Send className="h-4 w-4 mr-1.5" aria-hidden="true" /> Enviar
-                    </Button>
-                  </DialogFooter>
-                </>
-              )}
+                    </>
+                  )}
+                </Button>
+              </DialogFooter>
             </DialogContent>
           </Dialog>
         </div>
