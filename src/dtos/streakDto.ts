@@ -54,3 +54,9 @@ export interface AdjustStreakDto {
   freezeShields?: number;
   reason?: string;
 }
+
+export interface SendMotivationEmailRequest {
+  studentEmail?: string | null;
+  message: string;
+  coachName?: string | null;
+}
