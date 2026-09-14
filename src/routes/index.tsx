@@ -143,14 +143,20 @@ export const Route = createFileRoute("/")({
           console.warn("No se pudieron cargar ejercicios diarios:", err);
           return [];
         }),
-        getDailyStudentExercisesByStudentIdAndDates(studentId, dateStringStart, sixDaysLaterStr).catch((err) => {
+        getDailyStudentExercisesByStudentIdAndDates(
+          studentId,
+          dateStringStart,
+          sixDaysLaterStr,
+        ).catch((err) => {
           console.warn("No se pudieron cargar ejercicios semanales:", err);
           return [];
         }),
-        getDailyStudentExercisesByStudentIdAndDates(studentId, threeDaysAgoStr, yesterdayStr).catch((err) => {
-          console.warn("No se pudieron cargar ejercicios anteriores:", err);
-          return [];
-        }),
+        getDailyStudentExercisesByStudentIdAndDates(studentId, threeDaysAgoStr, yesterdayStr).catch(
+          (err) => {
+            console.warn("No se pudieron cargar ejercicios anteriores:", err);
+            return [];
+          },
+        ),
         getStudentStreak(studentId).catch((error) => {
           console.warn("No se pudo cargar la racha del alumno:", error);
           return undefined;
@@ -933,10 +939,12 @@ function Dashboard() {
       ) : (
         <div className="space-y-6">
           <div>
-            <p className="text-xs uppercase tracking-[0.3em] text-primary-glow">Coach Panel</p>
-            <h1 className="font-display text-4xl tracking-wide sm:text-5xl">Churn Risk Radar</h1>
+            <p className="text-xs uppercase tracking-[0.3em] text-primary-glow">Panel del Coach</p>
+            <h1 className="font-display text-4xl tracking-wide sm:text-5xl">
+              Radar de Riesgo de Abandono
+            </h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              Detectá alumnos en riesgo de abandono antes de perderlos.
+              Detecta alumnos en riesgo de abandono antes de perderlos.
             </p>
           </div>
 
@@ -1112,7 +1120,7 @@ function Dashboard() {
                   </div>
                   <p className="font-display text-2xl">¡Mensaje enviado!</p>
                   <p className="text-sm text-muted-foreground">
-                    Le llegará por WhatsApp y notificación en la app.
+                    Notificación enviada al alumno exitosamente.
                   </p>
                 </div>
               ) : (
@@ -1123,15 +1131,16 @@ function Dashboard() {
                     rows={4}
                     className="resize-none"
                   />
-                  <DialogFooter className="gap-2 sm:gap-2">
+                  <DialogFooter className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
                     <Button variant="outline" onClick={() => setTarget(null)}>
                       Cancelar
                     </Button>
                     <Button
                       onClick={() => setSent(true)}
-                      className="bg-gradient-primary text-primary-foreground shadow-glow hover:brightness-110"
+                      disabled={!message.trim()}
+                      className="bg-gradient-primary text-primary-foreground shadow-glow hover:brightness-110 cursor-pointer"
                     >
-                      <Send className="h-4 w-4" /> Enviar por WhatsApp
+                      <Send className="h-4 w-4 mr-1.5" aria-hidden="true" /> Enviar
                     </Button>
                   </DialogFooter>
                 </>
