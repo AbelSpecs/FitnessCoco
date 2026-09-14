@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { LogOut } from "lucide-react";
-import { useNavigate } from "@tanstack/react-router";
+import { LogOut, FileText } from "lucide-react";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/authStore";
 import StorageImage from "@/components/StorageImage";
@@ -166,12 +166,21 @@ export function ProfileMenu({ initial, size = "md", align = "right" }: ProfileMe
               <p className="text-sm font-medium truncate">{user?.firstName || "Usuario"}</p>
             </div>
           </div>
-          <div className="p-1">
+          <div className="p-1 space-y-0.5">
+            <Link
+              to="/terms"
+              onClick={() => setOpen(false)}
+              role="menuitem"
+              className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg text-foreground hover:bg-card transition-colors"
+            >
+              <FileText className="h-4 w-4 text-muted-foreground" />
+              <span className="font-medium">Términos & Privacidad</span>
+            </Link>
             <button
               type="button"
               role="menuitem"
               onClick={handleLogout}
-              className="w-full flex items-center gap-2 px-3 py-2.5 text-sm rounded-lg text-foreground hover:bg-destructive/15 hover:text-destructive transition-colors"
+              className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg text-foreground hover:bg-destructive/15 hover:text-destructive transition-colors"
             >
               <LogOut className="h-4 w-4" />
               <span className="font-medium">Cerrar sesión</span>

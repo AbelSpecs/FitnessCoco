@@ -14,6 +14,8 @@ import { getStudent } from "@/services/student.service";
 import { getCoach } from "@/services/coach.service";
 import { preview } from "vite";
 import { PyrosLogo } from "@/components/brand/PyrosLogo";
+import { Checkbox } from "@/components/ui/checkbox";
+import { TermsDialog } from "@/components/legal/TermsDialog";
 
 export const Route = createFileRoute("/login")({
   head: () => ({
@@ -33,6 +35,14 @@ function LoginPage() {
     userName: "",
     password: "",
   });
+  const [acceptedTerms, setAcceptedTerms] = useState<boolean>(false);
+  const [termsDialogOpen, setTermsDialogOpen] = useState<boolean>(false);
+  const [initialTermsTab, setInitialTermsTab] = useState<"terms" | "privacy">("terms");
+
+  const openTerms = (tab: "terms" | "privacy" = "terms") => {
+    setInitialTermsTab(tab);
+    setTermsDialogOpen(true);
+  };
   //@TODO probablemente sea buena idea en el futuro ver si es posible hacer un helper
   // de los onChange
   const handleInputChange = (e: ChangeEvent<HTMLInputElement, HTMLInputElement>) => {
@@ -54,6 +64,14 @@ function LoginPage() {
 
     if (!loginForm.password.trim()) {
       notify.error("Error", `La constraseña es obligatoria`);
+      return;
+    }
+
+    if (!acceptedTerms) {
+      notify.error(
+        "Aceptación requerida",
+        "Debes aceptar los Términos y Condiciones y la Política de Privacidad para iniciar sesión.",
+      );
       return;
     }
 
@@ -120,9 +138,14 @@ function LoginPage() {
           <PyrosLogo variant="icon" size="xl" iconClassName="h-16 w-16" />
           <div className="text-center">
             <h1 className="font-display text-5xl tracking-wider">PyrosFit</h1>
-            <p className="text-xs text-muted-foreground uppercase tracking-[0.25em] mt-1">
+            <a
+              href="https://geek-solutions-landing-page-front.vercel.app/#inicio"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block text-xs text-muted-foreground uppercase tracking-[0.25em] mt-1 hover:text-primary transition-colors cursor-pointer"
+            >
               by GeekSolutions
-            </p>
+            </a>
           </div>
         </div>
 
@@ -172,7 +195,46 @@ function LoginPage() {
                 className="bg-input/60"
               />
             </div>
-            <Button type="submit" variant="hero" size="lg" className="w-full" disabled={isLoading}>
+
+            {/* Checkbox Términos y Condiciones */}
+            <div className="flex items-start space-x-2.5 pt-1">
+              <Checkbox
+                id="terms"
+                checked={acceptedTerms}
+                onCheckedChange={(checked) => setAcceptedTerms(checked === true)}
+                className="mt-0.5"
+              />
+              <label
+                htmlFor="terms"
+                className="text-xs text-muted-foreground leading-snug cursor-pointer select-none"
+              >
+                He leído y acepto los{" "}
+                <button
+                  type="button"
+                  onClick={() => openTerms("terms")}
+                  className="text-primary hover:underline font-medium focus:outline-none inline"
+                >
+                  Términos y Condiciones
+                </button>{" "}
+                y la{" "}
+                <button
+                  type="button"
+                  onClick={() => openTerms("privacy")}
+                  className="text-primary hover:underline font-medium focus:outline-none inline"
+                >
+                  Política de Privacidad
+                </button>
+                .
+              </label>
+            </div>
+
+            <Button
+              type="submit"
+              variant="hero"
+              size="lg"
+              className="w-full"
+              disabled={isLoading || !acceptedTerms}
+            >
               {isLoading ? "Ingresando" : "Ingresar"}
             </Button>
           </form>
@@ -192,12 +254,30 @@ function LoginPage() {
               Crea tu cuenta Aquí
             </Link>
           </p>
-          <p className="text-center text-xs text-muted-foreground/75 pt-2 border-t border-border/40 leading-relaxed">
-            * Si eres cliente, pídele a tu entrenador que te comparta el link de registro.
-          </p>
+          <div className="pt-2 border-t border-border/40 text-center space-y-1.5">
+            <p className="text-xs text-muted-foreground/75 leading-relaxed">
+              * Si eres cliente, pídele a tu entrenador que te comparta el link de registro.
+            </p>
+            <div>
+              <Link
+                to="/terms"
+                className="text-[11px] text-muted-foreground/80 hover:text-primary transition-colors underline-offset-4 hover:underline"
+              >
+                Consultar Términos y Condiciones completos
+              </Link>
+            </div>
+          </div>
           {isLoading && <SpinnerOverlay label="Iniciando" />}
         </div>
       </div>
+
+      {/* Modal interactivo de lectura in situ */}
+      <TermsDialog
+        open={termsDialogOpen}
+        onOpenChange={setTermsDialogOpen}
+        initialTab={initialTermsTab}
+        onAccept={() => setAcceptedTerms(true)}
+      />
     </div>
   );
 }

@@ -62,14 +62,17 @@ export const PyrosLogo: React.FC<PyrosLogoProps> = ({
           PYROSFIT
         </span>
         {showSubtitle && (
-          <span
+          <a
+            href="https://geek-solutions-landing-page-front.vercel.app/#inicio"
+            target="_blank"
+            rel="noopener noreferrer"
             className={cn(
-              "text-muted-foreground uppercase tracking-[0.2em] font-medium mt-0.5",
+              "text-muted-foreground uppercase tracking-[0.2em] font-medium mt-0.5 hover:text-primary transition-colors cursor-pointer",
               currentSize.sub,
             )}
           >
             by GeekSolutions
-          </span>
+          </a>
         )}
       </div>
     </div>
