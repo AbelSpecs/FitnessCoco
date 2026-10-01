@@ -66,9 +66,7 @@ export const Route = createFileRoute("/routine/$studentId/")({
         const dayName = format(currentDayDate, "EEEE", { locale: es });
         const dayShort = format(currentDayDate, "eeeeee", { locale: es });
 
-        const dayExercises = mappedExercises.filter(
-          (ex) => ex.scheduledDate === dateString,
-        );
+        const dayExercises = mappedExercises.filter((ex) => ex.scheduledDate === dateString);
 
         const day: DayRoutine = {
           id: i,
@@ -160,9 +158,7 @@ function RutinaPage() {
         const dayName = format(currentDayDate, "EEEE", { locale: es });
         const dayShort = format(currentDayDate, "eeeeee", { locale: es });
 
-        const dayExercises = mappedExercises.filter(
-          (ex) => ex.scheduledDate === dateString,
-        );
+        const dayExercises = mappedExercises.filter((ex) => ex.scheduledDate === dateString);
 
         const day: DayRoutine = {
           id: i,
@@ -252,7 +248,10 @@ function RutinaPage() {
                         {day.exercises?.length || 0} ej.
                       </span>
                       {day.exercises?.some((ex) => !!(ex.videoKey || ex.videoUrl)) && (
-                        <span className="flex items-center gap-1 text-primary-glow font-medium" title="Videos demostrativos disponibles">
+                        <span
+                          className="flex items-center gap-1 text-primary-glow font-medium"
+                          title="Videos demostrativos disponibles"
+                        >
                           <Video className="h-3 w-3 text-primary" /> Videos
                         </span>
                       )}

@@ -27,6 +27,12 @@ import {
   deleteExercise,
 } from "@/services/routine.service";
 import {
+  cleanExerciseDescription,
+  filterExercisesForUser,
+  formatExerciseDescriptionWithStudentId,
+  isUserIndependent,
+} from "@/utils/exerciseFilter";
+import {
   getFileContentType,
   getPresignedVideoUrl,
   getServeUrl,
@@ -239,22 +245,24 @@ function EjerciciosPage() {
 
   // Filtered exercises
   const filtered = useMemo(() => {
+    const visibleItems = filterExercisesForUser(items, user);
     const q = query.trim().toLowerCase();
-    return items.filter((e) => {
+    return visibleItems.filter((e) => {
       const muscleName =
         e.muscleGroup || muscleGroups.find((m) => m.id === e.muscleGroupId)?.name || "";
       const matchesGroup = group === "Todos" || muscleName === group;
       const hasVideo = !!(e.videoKey?.trim() || e.videoUrl?.trim());
       const matchesVideo = !onlyVideo || hasVideo;
+      const cleanDesc = cleanExerciseDescription(e.description);
       const matchesQuery =
         !q ||
         e.name.toLowerCase().includes(q) ||
         muscleName.toLowerCase().includes(q) ||
-        (e.description && e.description.toLowerCase().includes(q));
+        (cleanDesc && cleanDesc.toLowerCase().includes(q));
 
       return matchesGroup && matchesVideo && matchesQuery;
     });
-  }, [items, query, group, onlyVideo, muscleGroups]);
+  }, [items, query, group, onlyVideo, muscleGroups, user]);
 
   const withVideoCount = useMemo(() => {
     return items.filter((e) => !!(e.videoKey?.trim() || e.videoUrl?.trim())).length;
@@ -285,7 +293,7 @@ function EjerciciosPage() {
     setForm({
       name: item.name,
       muscleGroupId: item.muscleGroupId || muscleGroups[0]?.id || 1,
-      description: item.description || "",
+      description: cleanExerciseDescription(item.description) || "",
       videoUrl: item.videoUrl || (hasExternalUrl ? item.videoKey || "" : ""),
       videoKey: item.videoKey || "",
       isCustom: item.isCustom,
@@ -361,11 +369,18 @@ function EjerciciosPage() {
           finalVideoKey = form.videoUrl.trim();
         }
 
+        const independent = isUserIndependent(user);
+        const effectiveStudentId = user?.studentId ? Number(user.studentId) : undefined;
+        let finalDescription = form.description.trim();
+        if (independent && effectiveStudentId) {
+          finalDescription = formatExerciseDescriptionWithStudentId(finalDescription, effectiveStudentId);
+        }
+
         // 2. Actualizar ejercicio en BD
         await updateExercise(editing.id, {
-          coachId: currentCoachId,
+          coachId: independent ? null : currentCoachId,
           name: form.name.trim(),
-          description: form.description.trim(),
+          description: finalDescription,
           muscleGroupId: Number(form.muscleGroupId),
           videoKey: finalVideoKey || null,
           videoUrl: finalVideoKey || null,
@@ -378,7 +393,7 @@ function EjerciciosPage() {
               ? {
                   ...e,
                   name: form.name.trim(),
-                  description: form.description.trim(),
+                  description: finalDescription,
                   muscleGroupId: Number(form.muscleGroupId),
                   muscleGroup: muscleName,
                   videoKey: finalVideoKey,
@@ -420,10 +435,17 @@ function EjerciciosPage() {
           finalVideoKey = form.videoUrl.trim();
         }
 
+        const independent = isUserIndependent(user);
+        const effectiveStudentId = user?.studentId ? Number(user.studentId) : undefined;
+        let finalDescription = form.description.trim();
+        if (independent && effectiveStudentId) {
+          finalDescription = formatExerciseDescriptionWithStudentId(finalDescription, effectiveStudentId);
+        }
+
         const responseData = await postExercise({
-          coachId: currentCoachId,
+          coachId: independent ? null : currentCoachId,
           name: form.name.trim(),
-          description: form.description.trim(),
+          description: finalDescription,
           muscleGroupId: Number(form.muscleGroupId),
           videoKey: finalVideoKey || null,
           videoUrl: finalVideoKey || null,
@@ -434,9 +456,9 @@ function EjerciciosPage() {
 
         const createdItem: GetExerciseDto = {
           id: newId,
-          coachId: currentCoachId,
+          coachId: independent ? null : currentCoachId,
           name: form.name.trim(),
-          description: form.description.trim(),
+          description: finalDescription,
           muscleGroupId: Number(form.muscleGroupId),
           muscleGroup: muscleName,
           videoKey: finalVideoKey,
@@ -658,7 +680,7 @@ function EjerciciosPage() {
                         </Badge>
                       </div>
                       <p className="text-xs text-muted-foreground line-clamp-2">
-                        {e.description || "Sin descripción técnica agregada."}
+                        {cleanExerciseDescription(e.description) || "Sin descripción técnica agregada."}
                       </p>
                     </div>
 
@@ -745,7 +767,7 @@ function EjerciciosPage() {
                     </div>
                     <p className="text-xs text-muted-foreground truncate">
                       {muscleName} • {videoSrc ? "Con video" : "Sin video"}
-                      {e.description ? ` — ${e.description}` : ""}
+                      {cleanExerciseDescription(e.description) ? ` — ${cleanExerciseDescription(e.description)}` : ""}
                     </p>
                   </div>
                   {videoSrc && (
@@ -1118,9 +1140,9 @@ function EjerciciosPage() {
               );
             })()}
 
-            {preview.description && (
+            {cleanExerciseDescription(preview.description) && (
               <p className="text-xs text-muted-foreground bg-card/60 p-3 rounded-lg border border-border/40">
-                {preview.description}
+                {cleanExerciseDescription(preview.description)}
               </p>
             )}
           </div>

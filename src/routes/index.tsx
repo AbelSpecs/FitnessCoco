@@ -82,6 +82,7 @@ import { Tier } from "@/types";
 import { Student, StudentInfo } from "@/types/user";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
+import { isUserIndependent } from "@/utils/exerciseFilter";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -94,11 +95,12 @@ export const Route = createFileRoute("/")({
     ],
   }),
   loader: async () => {
-    const auth = JSON.parse(localStorage.getItem("pyrosfit_user")!);
+    const auth = JSON.parse(localStorage.getItem("pyrosfit_user") || "{}");
     const { role, coachId, studentId } = auth;
+    const isCoach = role === "coach" && Number(coachId) > 0 && !isUserIndependent(auth);
 
     try {
-      if (role === "coach") {
+      if (isCoach) {
         const [completeStudentsList, studentListData, riskRadarStudents] = await Promise.all([
           getStudents().catch((err) => {
             console.warn("Error al cargar lista completa de alumnos:", err);
@@ -399,6 +401,7 @@ function Dashboard() {
   const todayIndex = today === 0 ? 6 : today - 1;
   const todayPlan = weekPlan[todayIndex];
   const { user } = useAuthStore();
+  const isStudentView = user?.role === "student" || isUserIndependent(user);
   const {
     completeStudentsList,
     studentListData,
@@ -612,7 +615,7 @@ function Dashboard() {
       </div> */}
 
       {/* Card streak */}
-      {user!.role === "student" ? (
+      {isStudentView ? (
         <div className="w-full">
           {/* header */}
           <div className="flex items-start gap-3">
@@ -1204,20 +1207,20 @@ function Dashboard() {
             <h1 className="font-display text-3xl sm:text-4xl lg:text-6xl mb-3 leading-none">
               Hola, {user!.firstName!.split(" ")[0]}.
               <br />
-              {user?.role === "student" ? (
+              {isStudentView ? (
                 <span className="text-gradient">Es hora de entrenar.</span>
               ) : (
                 <span className="text-gradient">Tienes clientes que atender.</span>
               )}
             </h1>
-            {user?.role === "student" && (
+            {isStudentView && (
               <p className="text-sm sm:text-base text-muted-foreground max-w-md mb-5 sm:mb-6">
                 Hoy te toca <strong className="text-foreground">{dailyFocus}</strong> ·{" "}
                 {dailyDuration} min · {dailyExercisesNum} ejercicios.
               </p>
             )}
             <div className="flex flex-col sm:flex-row gap-3">
-              {user?.role === "student" && (
+              {isStudentView && (
                 <Button variant="hero" size="lg" asChild className="w-full sm:w-auto">
                   <Link
                     to="/routine/$studentId"

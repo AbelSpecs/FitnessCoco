@@ -1,5 +1,5 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -20,13 +20,12 @@ import {
   Users,
   Sparkles,
 } from "lucide-react";
-import {
-  getCoachStreakLeaderboard,
-  getGlobalStreakLeaderboard,
-} from "@/services/streak.service";
+import { getCoachStreakLeaderboard, getGlobalStreakLeaderboard } from "@/services/streak.service";
 import { getStudents } from "@/services/student.service";
 import { StorageImage } from "@/components/StorageImage";
 import { StreakLeaderboardItemDto } from "@/dtos/streakDto";
+import { useAuthStore } from "@/store/authStore";
+import { isUserIndependent } from "@/utils/exerciseFilter";
 
 export const Route = createFileRoute("/ranking")({
   head: () => ({
@@ -155,7 +154,9 @@ function mapLeaderboardToAthletes(
     const resolvedUserId = (item as any).userId || userIdMap[item.studentId];
     const avatarUrl =
       (item as any).avatarUrl ||
-      (resolvedUserId ? `https://api.pyrosfit.com/api/Storage/users/${resolvedUserId}/profile` : null);
+      (resolvedUserId
+        ? `https://api.pyrosfit.com/api/Storage/users/${resolvedUserId}/profile`
+        : null);
 
     return {
       id: item.studentId.toString(),
@@ -367,22 +368,32 @@ function RankRow({
 }
 
 function RankingPage() {
-  const { globalLeaderboard, coachLeaderboard, currentStudentId, userIdMap } = Route.useLoaderData();
-  const [scope, setScope] = useState<"coach" | "global">("coach");
+  const { globalLeaderboard, coachLeaderboard, currentStudentId, userIdMap } =
+    Route.useLoaderData();
+  const { user } = useAuthStore();
+  const isIndependent = isUserIndependent(user);
+  const [scope, setScope] = useState<"coach" | "global">(isIndependent ? "global" : "coach");
   const [metric, setMetric] = useState<Metric>("streak");
   const [period, setPeriod] = useState<(typeof PERIODS)[number]>("Mes");
   const [query, setQuery] = useState("");
 
+  useEffect(() => {
+    if (isIndependent && scope !== "global") {
+      setScope("global");
+    }
+  }, [isIndependent, scope]);
+
   const athletesData = useMemo(() => {
-    const rawList = scope === "coach" ? coachLeaderboard : globalLeaderboard;
-    const coachLabel = scope === "coach" ? "Tu Equipo" : "Global";
+    const activeScope = isIndependent ? "global" : scope;
+    const rawList = activeScope === "coach" ? coachLeaderboard : globalLeaderboard;
+    const coachLabel = activeScope === "coach" ? "Tu Equipo" : "Global";
 
     if (!rawList || rawList.length === 0) {
       return [];
     }
 
     return mapLeaderboardToAthletes(rawList, currentStudentId, coachLabel, userIdMap);
-  }, [scope, coachLeaderboard, globalLeaderboard, currentStudentId, userIdMap]);
+  }, [scope, isIndependent, coachLeaderboard, globalLeaderboard, currentStudentId, userIdMap]);
 
   const ranked = useMemo(() => {
     return [...athletesData].sort((a, b) => b[metric] - a[metric]);
@@ -409,33 +420,47 @@ function RankingPage() {
             <h1 className="font-display text-3xl tracking-wider">PODIO & RANKING</h1>
           </div>
           <p className="text-sm text-muted-foreground">
-            Compite con tu equipo y escala en la clasificación global de PyrosFit.
+            {isIndependent
+              ? "Escala posiciones en la clasificación global de atletas PyrosFit."
+              : "Compite con tu equipo y escala en la clasificación global de PyrosFit."}
           </p>
         </header>
 
         {/* Scope switch */}
-        <div className="grid grid-cols-2 gap-2 p-1 rounded-xl bg-gradient-card border border-border">
-          {(
-            [
-              { key: "coach", label: "Tu Coach / Equipo", icon: Users },
-              { key: "global", label: "Global PyrosFit", icon: Globe2 },
-            ] as const
-          ).map(({ key, label, icon: Icon }) => (
+        <div
+          className={cn(
+            "grid gap-2 p-1 rounded-xl bg-gradient-card border border-border",
+            isIndependent ? "grid-cols-1" : "grid-cols-2",
+          )}
+        >
+          {!isIndependent && (
             <button
-              key={key}
               type="button"
-              onClick={() => setScope(key)}
+              onClick={() => setScope("coach")}
               className={cn(
                 "flex items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-medium transition-all cursor-pointer",
-                scope === key
+                scope === "coach"
                   ? "bg-gradient-primary text-primary-foreground shadow-glow"
                   : "text-muted-foreground hover:bg-sidebar-accent",
               )}
             >
-              <Icon className="h-4 w-4" />
-              <span className="truncate">{label}</span>
+              <Users className="h-4 w-4" />
+              <span className="truncate">Tu Coach / Equipo</span>
             </button>
-          ))}
+          )}
+          <button
+            type="button"
+            onClick={() => setScope("global")}
+            className={cn(
+              "flex items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-medium transition-all cursor-pointer",
+              scope === "global" || isIndependent
+                ? "bg-gradient-primary text-primary-foreground shadow-glow"
+                : "text-muted-foreground hover:bg-sidebar-accent",
+            )}
+          >
+            <Globe2 className="h-4 w-4" />
+            <span className="truncate">Global PyrosFit</span>
+          </button>
         </div>
 
         {/* Metric + period */}
@@ -548,7 +573,9 @@ function RankingPage() {
           ))}
           {filtered.length === 0 && (
             <Card className="p-8 text-center bg-gradient-card border-border">
-              <p className="text-sm text-muted-foreground">No se encontraron alumnos en esta clasificación.</p>
+              <p className="text-sm text-muted-foreground">
+                No se encontraron alumnos en esta clasificación.
+              </p>
             </Card>
           )}
         </div>
