@@ -9,7 +9,6 @@ import { createStudent } from "@/services/user.service";
 import { SpinnerOverlay } from "@/components/Spinner";
 import { CountryDto } from "@/dtos/countryDto";
 import { RegistrationForm } from "@/components/forms/RegistrationForm";
-import { createCoach } from "@/services/coach.service";
 
 type RegisterSearch = {
   coachId?: string;
@@ -68,11 +67,14 @@ function RegisterInfoPage() {
 
       const clientData = await createStudent(studentData);
 
-      await associateCoach({
-        coachId: Number(coachId),
-        studentId: Number(clientData.id),
-        status: true,
-      });
+      const numericCoachId = coachId ? Number(coachId) : null;
+      if (numericCoachId && !isNaN(numericCoachId) && numericCoachId !== 0) {
+        await associateCoach({
+          coachId: numericCoachId,
+          studentId: Number(clientData.id),
+          status: true,
+        });
+      }
 
       notify.created("Usuario registrado!");
     } catch (error) {

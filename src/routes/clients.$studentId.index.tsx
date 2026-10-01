@@ -100,6 +100,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { exercisesMapper } from "@/mappers/exercises";
 import { Goal, goalLabels } from "@/types/goals";
 import { addDays, format, isAfter, isEqual } from "date-fns";
+import {
+  filterExercisesForUser,
+  formatExerciseDescriptionWithStudentId,
+  isUserIndependent,
+} from "@/utils/exerciseFilter";
 
 const emptySet = (): DailyExerciseSetsForm => ({
   id: `ex-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
@@ -205,10 +210,11 @@ function ClientRoutinesPage() {
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [saved, setSaved] = useState<boolean>(false);
   const [showNewExerciseDialog, setShowNewExerciseDialog] = useState<boolean>(false);
-  const [newExerciseForm, setNewExerciseForm] = useState<NewExercise>({
+  const [newExerciseForm, setNewExerciseForm] = useState<NewExercise & { description?: string }>({
     name: "",
     muscleGroupId: 0,
     videoUrl: "",
+    description: "",
   });
   const [newExerciseVideoMode, setNewExerciseVideoMode] = useState<"url" | "upload">("url");
   const [selectedExerciseVideoFile, setSelectedExerciseVideoFile] = useState<File | null>(null);
@@ -255,6 +261,7 @@ function ClientRoutinesPage() {
       name: "",
       muscleGroupId: 0,
       videoUrl: "",
+      description: "",
     });
     setSelectedExerciseVideoFile(null);
     setNewExerciseVideoMode("url");
@@ -334,11 +341,9 @@ function ClientRoutinesPage() {
 
     setRoutineForm((prev) => ({ ...prev, muscleGroupId: muscleGroupId }));
     try {
-      //@TODO @abel estos ejercicios deberian venir por coach
-      //aunque esto se puede hablar
-      const exercises = await getExerciseByMuscleGroupId(muscleGroupId);
-
-      setExercises(exercises);
+      const rawExercises = await getExerciseByMuscleGroupId(muscleGroupId);
+      const visibleExercises = filterExercisesForUser(rawExercises, user, Number(studentId));
+      setExercises(visibleExercises);
     } catch (error) {
       console.error("Error al obtener los ejercicios:", error);
       notify.error("error", "Error al obtener los ejercicios");
@@ -415,11 +420,20 @@ function ClientRoutinesPage() {
       }
 
       // 2. Persistir en backend
+      const independent = isUserIndependent(user);
+      const effectiveStudentId = user?.studentId ? Number(user.studentId) : Number(studentId);
+
+      const userDesc = newExerciseForm.description?.trim() || "";
+      let finalDescription = userDesc;
+      if (independent && effectiveStudentId) {
+        finalDescription = formatExerciseDescriptionWithStudentId(userDesc, effectiveStudentId);
+      }
+
       const newExercise: ExerciseDto = {
         exercise: {
-          coachId: user?.coachId || null,
+          coachId: independent ? null : user?.coachId || null,
           name: name,
-          description: "",
+          description: finalDescription,
           muscleGroupId: newExerciseForm.muscleGroupId!,
           videoKey: finalVideoKey || null,
           videoUrl: finalVideoKey || null,
@@ -455,8 +469,9 @@ function ClientRoutinesPage() {
     setRefreshing(true);
 
     try {
-      const exercises = await getExerciseByMuscleGroupId(routineForm.muscleGroupId);
-      setExercises(exercises);
+      const rawExercises = await getExerciseByMuscleGroupId(routineForm.muscleGroupId);
+      const visibleExercises = filterExercisesForUser(rawExercises, user, Number(studentId));
+      setExercises(visibleExercises);
     } catch (error) {
       console.error("Error al refrescar:", error);
       notify.error("error", "Error al refrescar, Intente de nuevo");
@@ -1339,6 +1354,20 @@ function ClientRoutinesPage() {
                   placeholder="Press inclinado con mancuernas"
                   maxLength={80}
                   autoFocus
+                  className="mt-1.5 bg-background/60 border-border focus-visible:ring-primary/40"
+                  disabled={saved || isUploadingVideo}
+                />
+              </div>
+              <div>
+                <Label className="text-[11px] uppercase tracking-widest text-muted-foreground">
+                  Descripción (opcional)
+                </Label>
+                <Input
+                  value={newExerciseForm.description || ""}
+                  name="description"
+                  onChange={(e) => handleInputChange(e, true)}
+                  placeholder="Instrucciones o notas del ejercicio"
+                  maxLength={150}
                   className="mt-1.5 bg-background/60 border-border focus-visible:ring-primary/40"
                   disabled={saved || isUploadingVideo}
                 />

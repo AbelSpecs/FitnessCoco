@@ -17,6 +17,7 @@ import {
   ChevronUp,
   PlayCircle,
   Video,
+  Plus,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useAuthStore } from "@/store/authStore";
@@ -38,6 +39,8 @@ import { format } from "date-fns";
 import { notify } from "@/components/NotificationCenter";
 import { VideoThumbnail } from "@/components/VideoThumbnail";
 import { ExerciseVideoModal } from "@/components/exercises/ExerciseVideoModal";
+import { isUserIndependent } from "@/utils/exerciseFilter";
+import { AddDailyExerciseDialog } from "@/components/exercises/AddDailyExerciseDialog";
 
 export const Route = createFileRoute("/routine/$studentId/$dayId")({
   head: () => ({
@@ -132,6 +135,7 @@ function DayDetail() {
   const { user } = useAuthStore();
   const [exercisesList, setExercisesList] = useState<Exercise[]>(dayExercises || []);
   const [selectedVideoExercise, setSelectedVideoExercise] = useState<Exercise | null>(null);
+  const [showAddExerciseModal, setShowAddExerciseModal] = useState<boolean>(false);
 
   useEffect(() => {
     setExercisesList(dayExercises || []);
@@ -206,6 +210,10 @@ function DayDetail() {
     }
   };
 
+  const handleExerciseAdded = (newEx: Exercise) => {
+    setExercisesList((prev) => [...prev, newEx]);
+  };
+
   return (
     <AppShell>
       <Button variant="ghost" size="sm" asChild className="mb-4 -ml-2 hover:text-white">
@@ -216,17 +224,28 @@ function DayDetail() {
 
       <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl border border-border p-5 sm:p-6 lg:p-10 mb-5 sm:mb-6">
         <div className="absolute inset-0 bg-gradient-mesh opacity-60 pointer-events-none" />
-        <div className="relative">
-          <p className="text-[10px] sm:text-xs uppercase tracking-[0.3em] text-primary-glow mb-2">
-            {actualDay?.name}
-          </p>
-          <h1 className="font-display text-4xl sm:text-5xl lg:text-7xl leading-none">
-            {actualDay?.muscleGroupName}
-          </h1>
-          {!actualDay?.rest && (
-            <div className="flex flex-wrap items-center gap-3 sm:gap-4 mt-4 sm:mt-5 text-xs sm:text-sm">
-              <Badge variant="secondary">{actualDay?.exercises.length} ejercicios</Badge>
-            </div>
+        <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <p className="text-[10px] sm:text-xs uppercase tracking-[0.3em] text-primary-glow mb-2">
+              {actualDay?.name}
+            </p>
+            <h1 className="font-display text-4xl sm:text-5xl lg:text-7xl leading-none">
+              {actualDay?.muscleGroupName}
+            </h1>
+            {!actualDay?.rest && (
+              <div className="flex flex-wrap items-center gap-3 sm:gap-4 mt-4 sm:mt-5 text-xs sm:text-sm">
+                <Badge variant="secondary">{actualDay?.exercises.length} ejercicios</Badge>
+              </div>
+            )}
+          </div>
+          {isUserIndependent(user) && (
+            <Button
+              onClick={() => setShowAddExerciseModal(true)}
+              className="bg-gradient-primary hover:opacity-90 shadow-glow self-start sm:self-auto shrink-0 cursor-pointer"
+              size="lg"
+            >
+              <Plus className="h-4 w-4 mr-1.5" /> Agregar ejercicio
+            </Button>
           )}
         </div>
       </div>
@@ -235,10 +254,18 @@ function DayDetail() {
         <Card className="bg-gradient-card border-border p-12 text-center">
           <div className="text-7xl mb-4">🌿</div>
           <h2 className="font-display text-4xl mb-2">Descanso</h2>
-          <p className="text-muted-foreground max-w-md mx-auto">
+          <p className="text-muted-foreground max-w-md mx-auto mb-6">
             Recuperarse es parte del entrenamiento. Hidrátate, duerme bien y mueve el cuerpo con
             calma.
           </p>
+          {isUserIndependent(user) && (
+            <Button
+              onClick={() => setShowAddExerciseModal(true)}
+              className="bg-gradient-primary hover:opacity-90 shadow-glow cursor-pointer"
+            >
+              <Plus className="h-4 w-4 mr-1.5" /> Agregar ejercicio a este día
+            </Button>
+          )}
         </Card>
       ) : (
         <div className="space-y-3">
@@ -262,6 +289,17 @@ function DayDetail() {
         isOpen={!!selectedVideoExercise}
         onClose={() => setSelectedVideoExercise(null)}
       />
+
+      {/* Modal para agregar ejercicios de forma rápida (independientes) */}
+      {isUserIndependent(user) && (
+        <AddDailyExerciseDialog
+          isOpen={showAddExerciseModal}
+          onClose={() => setShowAddExerciseModal(false)}
+          studentId={Number(user?.studentId || 0)}
+          scheduledDate={dayId || format(new Date(), "yyyy-MM-dd")}
+          onExerciseAdded={handleExerciseAdded}
+        />
+      )}
     </AppShell>
   );
 }

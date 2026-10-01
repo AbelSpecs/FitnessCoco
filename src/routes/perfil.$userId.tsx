@@ -25,11 +25,11 @@ import {
 } from "lucide-react";
 import { Goal, goalLabels } from "@/types/goals";
 import { User } from "@/types/user";
-import { getUserDetails, updateProfilePictures } from "@/services/user.service";
+import { getUser, getUserDetails, updateProfilePictures } from "@/services/user.service";
 import { notify } from "@/components/NotificationCenter";
 import { SpinnerOverlay } from "@/components/Spinner";
-import { updateStudent } from "@/services/student.service";
-import { getCoachProfile, updateCoach } from "@/services/coach.service";
+import { getStudent, updateStudent } from "@/services/student.service";
+import { getCoach, getCoachProfile, updateCoach } from "@/services/coach.service";
 import { getCoachAverageStreak } from "@/services/streak.service";
 import { getQr } from "@/services/general.service";
 import { userCoachMapper, userStudentMapper } from "@/mappers/user";
@@ -51,7 +51,30 @@ export const Route = createFileRoute("/perfil/$userId")({
   }),
   loader: async ({ params }) => {
     try {
-      const user = await getUserDetails(Number(params.userId));
+      const userId = Number(params.userId);
+      let user = await getUserDetails(userId).catch(() => null);
+
+      if (!user) {
+        const [baseUser, studentData, coachData] = await Promise.all([
+          getUser(userId).catch(() => null),
+          getStudent(userId).catch(() => null),
+          getCoach(userId).catch(() => null),
+        ]);
+
+        if (baseUser) {
+          user = {
+            student: studentData,
+            coach: coachData,
+            profilePictureKey: baseUser.profilePictureKey,
+            bannerPictureKey: baseUser.bannerPictureKey,
+          };
+        }
+      }
+
+      if (!user) {
+        throw new Error("Usuario no encontrado.");
+      }
+
       const { student = null, coach = null, profilePictureKey, bannerPictureKey } = user;
 
       const profileKey =

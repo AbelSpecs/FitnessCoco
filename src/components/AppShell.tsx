@@ -23,6 +23,7 @@ import { useAuthStore } from "@/store/authStore";
 import { ProfileMenu } from "@/components/ProfileMenu";
 import { Role } from "@/types/auth";
 import { PyrosLogo } from "@/components/brand/PyrosLogo";
+import { isUserIndependent } from "@/utils/exerciseFilter";
 
 const nav = [
   {
@@ -31,13 +32,6 @@ const nav = [
     icon: LayoutDashboard,
     roles: ["coach", "student"] as Role[],
     condition: false,
-  },
-  {
-    to: "/clients/$studentId",
-    label: "Crear Rutina",
-    icon: Dumbbell,
-    roles: ["student"] as Role[],
-    condition: true,
   },
   {
     to: "/routine/$studentId",
@@ -83,16 +77,30 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const { user } = useAuthStore();
 
+  // Rol efectivo: si no tiene un coachId real (> 0), es un cliente/estudiante
+  const effectiveRole: Role =
+    user?.role === "coach" && Number(user?.coachId) > 0 ? "coach" : "student";
+
+  // Auto-sanitizar sesión guardada desactualizada en localStorage
+  useEffect(() => {
+    if (user && user.role === "coach" && (!user.coachId || Number(user.coachId) === 0)) {
+      const correctedUser = {
+        ...user,
+        role: "student" as Role,
+      };
+      useAuthStore.getState().setAuth(correctedUser, useAuthStore.getState().token || "");
+    }
+  }, [user]);
+
   const visibleItems = nav.filter((item) => {
     if (!item.roles) return true;
     if (!user?.role) return false;
 
     if (item.condition) {
-      if (Number(user?.myCoachId) === 9) return true;
-      else return false;
+      return isUserIndependent(user);
     }
 
-    return item.roles.includes(user.role as Role);
+    return item.roles.includes(effectiveRole);
   });
 
   const paramMappers: Record<string, () => Record<string, string>> = {
@@ -103,7 +111,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     Dashboard: () => ({}),
     Podio: () => ({}),
     Ranking: () => ({}),
-    "Crear Rutina": () => ({ studentId: user?.studentId?.toString() ?? "" }),
   };
 
   useEffect(() => {
@@ -137,11 +144,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         )}
       >
         <div className={cn("p-4 flex items-center gap-2", collapsed && "justify-center px-2")}>
-          <PyrosLogo
-            variant={collapsed ? "icon" : "full"}
-            size="md"
-            iconClassName="h-10 w-10"
-          />
+          <PyrosLogo variant={collapsed ? "icon" : "full"} size="md" iconClassName="h-10 w-10" />
         </div>
 
         <nav className="flex-1 px-3 py-4 space-y-1">

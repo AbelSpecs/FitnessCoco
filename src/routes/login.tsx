@@ -105,13 +105,15 @@ function LoginPage() {
 
       const firstName = userData?.firstName || "Usuario";
 
+      const isRealCoach = coachData !== null && Number(coachData?.id) > 0;
+
       const user: UserAuth = {
         id,
         firstName,
         studentId: studentData?.id ?? (studentData ? Number(studentData) : 0),
-        myCoachId: studentData === null ? 0 : myCoachId,
+        myCoachId: isRealCoach ? 0 : myCoachId,
         coachId: coachData?.id ?? 0,
-        role: studentData === null ? "coach" : "student",
+        role: isRealCoach ? "coach" : "student",
       };
 
       if (token) {
@@ -119,9 +121,13 @@ function LoginPage() {
       }
       notify.success("Logueado con exito!");
       navigate({ to: "/perfil/$userId", params: { userId: id } });
-    } catch (error) {
+    } catch (error: any) {
       console.error("error al iniciar sesion", error);
-      notify.error("error", "Error al iniciar Sesión");
+      const backendMessage =
+        error?.response?.data?.message ||
+        error?.response?.data?.title ||
+        "Error al iniciar Sesión. Verifica tus credenciales.";
+      notify.error("Error", backendMessage);
     } finally {
       setLoading(false);
     }
@@ -248,7 +254,6 @@ function LoginPage() {
             ¿Quieres entrenar?{" "}
             <Link
               to="/register-info"
-              search={{ coachId: "9" }}
               className="text-primary font-medium hover:underline"
             >
               Crea tu cuenta Aquí
