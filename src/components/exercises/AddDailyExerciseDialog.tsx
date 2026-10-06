@@ -19,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { RestTimeInput } from "@/components/exercises/RestTimeInput";
 import {
   Dumbbell,
   Plus,
@@ -518,16 +519,13 @@ export function AddDailyExerciseDialog({
                       </div>
                       <div>
                         <Label className="text-[10px] uppercase tracking-widest text-muted-foreground flex items-center gap-1">
-                          <Repeat className="h-3 w-3" /> Desc. (s)
+                          <Repeat className="h-3 w-3" /> Descanso
                         </Label>
-                        <Input
-                          type="number"
-                          min={0}
-                          max={1200}
+                        <RestTimeInput
                           value={set.restTime}
-                          onChange={(e) => updateSet(set.id, { restTime: e.target.value })}
-                          className="h-8 mt-1 bg-background/60 text-xs"
-                          placeholder="90"
+                          onChange={(val) => updateSet(set.id, { restTime: val })}
+                          compact
+                          className="mt-1"
                         />
                       </div>
                     </div>

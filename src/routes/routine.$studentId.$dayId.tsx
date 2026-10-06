@@ -41,6 +41,7 @@ import { VideoThumbnail } from "@/components/VideoThumbnail";
 import { ExerciseVideoModal } from "@/components/exercises/ExerciseVideoModal";
 import { isUserIndependent } from "@/utils/exerciseFilter";
 import { AddDailyExerciseDialog } from "@/components/exercises/AddDailyExerciseDialog";
+import { formatRestTimeDisplay, parseRestTimeToSeconds } from "@/utils/timeFormat";
 
 export const Route = createFileRoute("/routine/$studentId/$dayId")({
   head: () => ({
@@ -521,7 +522,9 @@ function DetailsSetsRow({
           <p className="text-[10px] uppercase tracking-wider text-muted-foreground flex items-center justify-center gap-1 mb-0.5">
             <Timer className="h-3 w-3" /> Descanso
           </p>
-          <p className="text-sm sm:text-base font-medium text-muted-foreground">{set.restTime}s</p>
+          <p className="text-sm sm:text-base font-medium text-muted-foreground">
+            {formatRestTimeDisplay(set.restTime)}
+          </p>
         </div>
       </div>
 
@@ -569,7 +572,7 @@ function DetailsSetsRow({
       {timerOn && (
         <RestTimer
           key={timerKey}
-          seconds={Number(set.restTime)}
+          seconds={parseRestTimeToSeconds(set.restTime)}
           onClose={() => setTimerOn(false)}
         />
       )}

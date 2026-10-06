@@ -47,6 +47,7 @@ import { getUser } from "@/services/user.service";
 import { StorageImage } from "@/components/StorageImage";
 import { StudentClinicalOverview } from "@/components/students/StudentClinicalOverview";
 import { ExerciseVideoSelector } from "@/components/exercises/ExerciseVideoSelector";
+import { RestTimeInput } from "@/components/exercises/RestTimeInput";
 import {
   getPresignedVideoUrl,
   uploadFileToPresignedUrl,
@@ -918,19 +919,14 @@ function ClientRoutinesPage() {
                       </div>
                       <div>
                         <Label className="text-[10px] uppercase tracking-widest text-muted-foreground flex items-center gap-1">
-                          <Repeat className="h-3 w-3" /> Descanso (s)
+                          <Repeat className="h-3 w-3" /> Descanso
                         </Label>
-                        <Input
+                        <RestTimeInput
                           value={set.restTime}
-                          name="restTime"
-                          onChange={(e) =>
-                            updateSet(set.id.toString(), { restTime: e.target.value })
+                          onChange={(val) =>
+                            updateSet(set.id.toString(), { restTime: val })
                           }
-                          placeholder="90"
-                          type="number"
-                          min={0}
-                          max={1200}
-                          className="mt-1.5 bg-background/60 border-border focus-visible:ring-primary/40"
+                          className="mt-1.5"
                         />
                       </div>
                     </div>
@@ -1175,17 +1171,16 @@ function ClientRoutinesPage() {
                               </div>
                               <div>
                                 <Label className="text-[10px] uppercase tracking-widest text-muted-foreground flex items-center gap-1">
-                                  <Repeat className="h-3 w-3" /> Descanso (s)
+                                  <Repeat className="h-3 w-3" /> Descanso
                                 </Label>
-                                <Input
+                                <RestTimeInput
                                   value={exerciseSet.restTime || ""}
-                                  onChange={(e) =>
+                                  onChange={(val) =>
                                     updateSet(exerciseSet.id.toString(), {
-                                      restTime: e.target.value,
+                                      restTime: val,
                                     })
                                   }
-                                  placeholder="90 s"
-                                  className="mt-1.5 bg-background/60 border-border focus-visible:ring-primary/40"
+                                  className="mt-1.5"
                                   disabled
                                 />
                               </div>
