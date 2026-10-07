@@ -51,6 +51,8 @@ import { StorageImage } from "@/components/StorageImage";
 import { StudentClinicalOverview } from "@/components/students/StudentClinicalOverview";
 import { ExerciseVideoSelector } from "@/components/exercises/ExerciseVideoSelector";
 import { RestTimeInput } from "@/components/exercises/RestTimeInput";
+import { WeightInput } from "@/components/exercises/WeightInput";
+import { formatWeightWithEquivalent } from "@/utils/weightFormat";
 import {
   getPresignedVideoUrl,
   uploadFileToPresignedUrl,
@@ -305,7 +307,7 @@ function ClientRoutinesPage() {
     });
     notify.success(
       "Serie copiada",
-      `${set.targetReps || "0"} reps • ${set.targetWeight || "0"} kg`,
+      `${set.targetReps || "0"} reps • ${formatWeightWithEquivalent(set.targetWeight)}`,
     );
   };
 
@@ -979,19 +981,14 @@ function ClientRoutinesPage() {
                       </div>
                       <div>
                         <Label className="text-[10px] uppercase tracking-widest text-muted-foreground flex items-center gap-1">
-                          <Layers className="h-3 w-3" /> Peso (kg)
+                          <Layers className="h-3 w-3" /> Peso
                         </Label>
-                        <Input
-                          type="number"
-                          name="targetWeight"
-                          min={1}
-                          max={500}
+                        <WeightInput
                           value={set.targetWeight}
-                          onChange={(e) =>
-                            updateSet(set.id.toString(), { targetWeight: e.target.value })
+                          onChange={(val) =>
+                            updateSet(set.id.toString(), { targetWeight: val })
                           }
-                          placeholder="100"
-                          className="mt-1.5 bg-background/60 border-border focus-visible:ring-primary/40"
+                          className="mt-1.5"
                         />
                       </div>
                       <div>
@@ -1027,7 +1024,7 @@ function ClientRoutinesPage() {
                     className="w-full sm:w-auto border-primary/60 bg-primary/10 hover:bg-primary/20 text-primary-glow"
                     title="Pegar la serie copiada arriba"
                   >
-                    <ClipboardPaste className="h-4 w-4 mr-1.5" /> Pegar serie ({copiedSet.targetReps} reps • {copiedSet.targetWeight} kg)
+                    <ClipboardPaste className="h-4 w-4 mr-1.5" /> Pegar serie ({copiedSet.targetReps} reps • {formatWeightWithEquivalent(copiedSet.targetWeight)})
                   </Button>
                 )}
               </div>
@@ -1245,17 +1242,16 @@ function ClientRoutinesPage() {
                             <div className="grid grid-cols-3 gap-2 sm:gap-3">
                               <div>
                                 <Label className="text-[10px] uppercase tracking-widest text-muted-foreground flex items-center gap-1">
-                                  <Layers className="h-3 w-3" /> Peso (kg)
+                                  <Layers className="h-3 w-3" /> Peso
                                 </Label>
-                                <Input
+                                <WeightInput
                                   value={exerciseSet.targetWeight || ""}
-                                  onChange={(e) =>
-                                    updateSet(exerciseSet.targetWeight.toString(), {
-                                      targetWeight: e.target.value,
+                                  onChange={(val) =>
+                                    updateSet(exerciseSet.id.toString(), {
+                                      targetWeight: val,
                                     })
                                   }
-                                  placeholder="10 kg"
-                                  className="mt-1.5 bg-background/60 border-border focus-visible:ring-primary/40"
+                                  className="mt-1.5"
                                   disabled
                                 />
                               </div>

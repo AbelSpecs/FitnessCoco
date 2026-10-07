@@ -42,6 +42,8 @@ import { ExerciseVideoModal } from "@/components/exercises/ExerciseVideoModal";
 import { isUserIndependent } from "@/utils/exerciseFilter";
 import { AddDailyExerciseDialog } from "@/components/exercises/AddDailyExerciseDialog";
 import { formatRestTimeDisplay, parseRestTimeToSeconds } from "@/utils/timeFormat";
+import { formatWeightWithEquivalent } from "@/utils/weightFormat";
+import { WeightInput } from "@/components/exercises/WeightInput";
 
 export const Route = createFileRoute("/routine/$studentId/$dayId")({
   head: () => ({
@@ -512,9 +514,11 @@ function DetailsSetsRow({
 
         <div className="bg-background/40 rounded-lg py-2 px-1">
           <p className="text-[10px] uppercase tracking-wider text-muted-foreground flex items-center justify-center gap-1 mb-0.5">
-            <Layers className="h-3 w-3" /> Peso (kg)
+            <Layers className="h-3 w-3" /> Peso
           </p>
-          <p className="text-sm sm:text-base font-semibold text-foreground">{set.targetWeight}</p>
+          <p className="text-sm sm:text-base font-semibold text-foreground">
+            {formatWeightWithEquivalent(set.targetWeight)}
+          </p>
         </div>
 
         {/* Bloque de Descanso */}
@@ -534,14 +538,12 @@ function DetailsSetsRow({
           <Label className="text-[10px] uppercase tracking-widest text-muted-foreground flex items-center gap-1">
             <Layers className="h-3 w-3" /> Peso Logrado
           </Label>
-          <Input
-            placeholder="Peso (kg)"
+          <WeightInput
             value={set.actualWeight || weight}
-            onChange={(e) => setWeight(e.target.value)}
-            type="number"
-            inputMode="decimal"
+            onChange={(val) => setWeight(val)}
             disabled={set.actualWeight ? true : false}
-            className="bg-background/50 h-9 text-sm focus-visible:ring-primary-glow w-full"
+            compact
+            className="mt-1"
           />
         </div>
         <div>

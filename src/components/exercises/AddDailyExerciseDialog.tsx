@@ -20,6 +20,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { RestTimeInput } from "@/components/exercises/RestTimeInput";
+import { WeightInput } from "@/components/exercises/WeightInput";
+import { formatWeightWithEquivalent } from "@/utils/weightFormat";
 import {
   Dumbbell,
   Plus,
@@ -176,7 +178,7 @@ export function AddDailyExerciseDialog({
     setCopiedSet({ ...set });
     notify.success(
       "Serie copiada",
-      `${set.targetReps || "0"} reps • ${set.targetWeight || "0"} kg`,
+      `${set.targetReps || "0"} reps • ${formatWeightWithEquivalent(set.targetWeight)}`,
     );
   };
 
@@ -560,16 +562,13 @@ export function AddDailyExerciseDialog({
                       </div>
                       <div>
                         <Label className="text-[10px] uppercase tracking-widest text-muted-foreground flex items-center gap-1">
-                          <Layers className="h-3 w-3" /> Peso (kg)
+                          <Layers className="h-3 w-3" /> Peso
                         </Label>
-                        <Input
-                          type="number"
-                          min={0}
-                          max={500}
+                        <WeightInput
                           value={set.targetWeight}
-                          onChange={(e) => updateSet(set.id, { targetWeight: e.target.value })}
-                          className="h-8 mt-1 bg-background/60 text-xs"
-                          placeholder="20"
+                          onChange={(val) => updateSet(set.id, { targetWeight: val })}
+                          compact
+                          className="mt-1"
                         />
                       </div>
                       <div>
@@ -607,7 +606,7 @@ export function AddDailyExerciseDialog({
                     className="w-full sm:w-auto border-primary/60 bg-primary/10 hover:bg-primary/20 text-primary-glow text-xs"
                     title="Pegar la serie copiada arriba"
                   >
-                    <ClipboardPaste className="h-3.5 w-3.5 mr-1" /> Pegar serie ({copiedSet.targetReps} reps • {copiedSet.targetWeight} kg)
+                    <ClipboardPaste className="h-3.5 w-3.5 mr-1" /> Pegar serie ({copiedSet.targetReps} reps • {formatWeightWithEquivalent(copiedSet.targetWeight)})
                   </Button>
                 )}
               </div>
