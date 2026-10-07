@@ -32,6 +32,9 @@ import {
   Save,
   Calendar,
   Loader2,
+  Copy,
+  CopyPlus,
+  ClipboardPaste,
 } from "lucide-react";
 import { notify } from "@/components/NotificationCenter";
 import { useAuthStore } from "@/store/authStore";
@@ -101,6 +104,7 @@ export function AddDailyExerciseDialog({
   const [selectedExerciseId, setSelectedExerciseId] = useState<number | null>(null);
   const [notes, setNotes] = useState<string>("");
   const [sets, setSets] = useState<DailyExerciseSetsForm[]>([createEmptySet()]);
+  const [copiedSet, setCopiedSet] = useState<DailyExerciseSetsForm | null>(null);
   const [saving, setSaving] = useState<boolean>(false);
   const [refreshing, setRefreshing] = useState<boolean>(false);
 
@@ -165,7 +169,34 @@ export function AddDailyExerciseDialog({
 
   // Set management
   const addSet = () => {
-    setSets((prev) => [...prev, createEmptySet()]);
+    setSets((prev) => [createEmptySet(), ...prev]);
+  };
+
+  const copySet = (set: DailyExerciseSetsForm) => {
+    setCopiedSet({ ...set });
+    notify.success(
+      "Serie copiada",
+      `${set.targetReps || "0"} reps • ${set.targetWeight || "0"} kg`,
+    );
+  };
+
+  const duplicateSet = (set: DailyExerciseSetsForm) => {
+    const newSet: DailyExerciseSetsForm = {
+      ...set,
+      id: `set-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    };
+    setSets((prev) => [newSet, ...prev]);
+    notify.created("Serie duplicada", "Se añadió una copia arriba");
+  };
+
+  const pasteSet = () => {
+    if (!copiedSet) return;
+    const newSet: DailyExerciseSetsForm = {
+      ...copiedSet,
+      id: `set-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    };
+    setSets((prev) => [newSet, ...prev]);
+    notify.created("Serie pegada", "Se añadió la serie copiada arriba");
   };
 
   const removeSet = (id: string | number) => {
@@ -185,6 +216,7 @@ export function AddDailyExerciseDialog({
     setExercises([]);
     setNotes("");
     setSets([createEmptySet()]);
+    setCopiedSet(null);
   };
 
   const handleClose = () => {
@@ -476,16 +508,39 @@ export function AddDailyExerciseDialog({
                           Serie {idx + 1}
                         </span>
                       </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        disabled={sets.length === 1}
-                        onClick={() => removeSet(set.id)}
-                        className="h-7 w-7 p-0 text-destructive hover:bg-destructive/10"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => copySet(set)}
+                          className="h-7 px-2 text-[11px] text-muted-foreground hover:text-primary-glow hover:bg-primary/10"
+                          title="Copiar valores de esta serie para pegar"
+                        >
+                          <Copy className="h-3.5 w-3.5 mr-1" /> Copiar
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => duplicateSet(set)}
+                          className="h-7 px-2 text-[11px] text-muted-foreground hover:text-primary-glow hover:bg-primary/10"
+                          title="Duplicar esta serie inmediatamente arriba"
+                        >
+                          <CopyPlus className="h-3.5 w-3.5 mr-1" /> Duplicar
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          disabled={sets.length === 1}
+                          onClick={() => removeSet(set.id)}
+                          className="h-7 w-7 p-0 text-destructive hover:bg-destructive/10"
+                          title="Eliminar serie"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
                     </div>
 
                     <div className="grid grid-cols-3 gap-2">
@@ -533,15 +588,29 @@ export function AddDailyExerciseDialog({
                 ))}
               </div>
 
-              <Button
-                type="button"
-                onClick={addSet}
-                variant="outline"
-                size="sm"
-                className="w-full mt-2 border-dashed border-primary/40 hover:bg-primary/10 text-xs"
-              >
-                <Plus className="h-3.5 w-3.5 mr-1 text-primary-glow" /> Añadir otro set
-              </Button>
+              <div className="flex flex-col sm:flex-row items-center gap-2 mt-2">
+                <Button
+                  type="button"
+                  onClick={addSet}
+                  variant="outline"
+                  size="sm"
+                  className="w-full flex-1 border-dashed border-primary/40 hover:bg-primary/10 text-xs"
+                >
+                  <Plus className="h-3.5 w-3.5 mr-1 text-primary-glow" /> Añadir nueva serie (arriba)
+                </Button>
+                {copiedSet && (
+                  <Button
+                    type="button"
+                    onClick={pasteSet}
+                    variant="outline"
+                    size="sm"
+                    className="w-full sm:w-auto border-primary/60 bg-primary/10 hover:bg-primary/20 text-primary-glow text-xs"
+                    title="Pegar la serie copiada arriba"
+                  >
+                    <ClipboardPaste className="h-3.5 w-3.5 mr-1" /> Pegar serie ({copiedSet.targetReps} reps • {copiedSet.targetWeight} kg)
+                  </Button>
+                )}
+              </div>
             </div>
 
             {/* Notes */}

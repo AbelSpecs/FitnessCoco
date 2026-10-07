@@ -39,6 +39,9 @@ import {
   CheckCircle2,
   UserCog,
   Loader2,
+  Copy,
+  CopyPlus,
+  ClipboardPaste,
 } from "lucide-react";
 import { notify } from "@/components/NotificationCenter";
 import { AppShell } from "@/components/AppShell";
@@ -241,6 +244,7 @@ function ClientRoutinesPage() {
   // update state
   const [isUpdating, setIsUpdating] = useState<boolean>(false);
   const [setsLength, setSetsLength] = useState<number>(0);
+  const [copiedSet, setCopiedSet] = useState<DailyExerciseSetsForm | null>(null);
 
   const resetForm = () => {
     setRoutineForm({
@@ -255,6 +259,7 @@ function ClientRoutinesPage() {
       dailyExerciseSets: [emptySet()],
     });
     setSelectedDate(new Date());
+    setCopiedSet(null);
   };
 
   const newExerciseFormReset = () => {
@@ -286,8 +291,56 @@ function ClientRoutinesPage() {
   const addSet = () =>
     setRoutineForm((prev) => ({
       ...prev,
-      dailyExerciseSets: [...prev.dailyExerciseSets, emptySet()],
+      dailyExerciseSets: [emptySet(), ...prev.dailyExerciseSets],
     }));
+
+  const copySet = (set: DailyExerciseSetsForm | DailyExerciseSets) => {
+    setCopiedSet({
+      id: `copy-${Date.now()}`,
+      setNumber: "",
+      targetReps: String(set.targetReps || ""),
+      targetWeight: String(set.targetWeight || ""),
+      restTime: String(set.restTime || ""),
+      isAchieved: false,
+    });
+    notify.success(
+      "Serie copiada",
+      `${set.targetReps || "0"} reps • ${set.targetWeight || "0"} kg`,
+    );
+  };
+
+  const duplicateSet = (set: DailyExerciseSetsForm | DailyExerciseSets) => {
+    const newSet: DailyExerciseSetsForm = {
+      id: `ex-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      setNumber: "",
+      targetReps: String(set.targetReps || ""),
+      targetWeight: String(set.targetWeight || ""),
+      restTime: String(set.restTime || ""),
+      isAchieved: false,
+    };
+    setRoutineForm((prev) => ({
+      ...prev,
+      dailyExerciseSets: [newSet, ...prev.dailyExerciseSets],
+    }));
+    notify.created("Serie duplicada", "Se añadió una copia arriba");
+  };
+
+  const pasteSet = () => {
+    if (!copiedSet) return;
+    const newSet: DailyExerciseSetsForm = {
+      id: `ex-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      setNumber: "",
+      targetReps: copiedSet.targetReps,
+      targetWeight: copiedSet.targetWeight,
+      restTime: copiedSet.restTime,
+      isAchieved: false,
+    };
+    setRoutineForm((prev) => ({
+      ...prev,
+      dailyExerciseSets: [newSet, ...prev.dailyExerciseSets],
+    }));
+    notify.created("Serie pegada", "Se añadió la serie copiada arriba");
+  };
 
   const removeSet = (id: string) =>
     setRoutineForm((prev) => ({
@@ -872,15 +925,39 @@ function ClientRoutinesPage() {
                           Serie
                         </span>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-destructive hover:bg-destructive/10 hover:text-destructive disabled:opacity-30"
-                        onClick={() => removeSet(set.id.toString())}
-                        disabled={routineForm.dailyExerciseSets.length === 1}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => copySet(set)}
+                          className="h-7 px-2 text-xs text-muted-foreground hover:text-primary-glow hover:bg-primary/10"
+                          title="Copiar valores de esta serie para pegar"
+                        >
+                          <Copy className="h-3.5 w-3.5 mr-1" /> Copiar
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => duplicateSet(set)}
+                          className="h-7 px-2 text-xs text-muted-foreground hover:text-primary-glow hover:bg-primary/10"
+                          title="Duplicar esta serie inmediatamente arriba"
+                        >
+                          <CopyPlus className="h-3.5 w-3.5 mr-1" /> Duplicar
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive hover:bg-destructive/10 hover:text-destructive disabled:opacity-30 h-7 w-7 p-0"
+                          onClick={() => removeSet(set.id.toString())}
+                          disabled={routineForm.dailyExerciseSets.length === 1}
+                          title="Eliminar serie"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                     <div className="grid sm:grid-cols-3 gap-3 mb-3">
                       <div>
@@ -933,14 +1010,27 @@ function ClientRoutinesPage() {
                   </div>
                 ))}
               </div>
-              <Button
-                onClick={addSet}
-                variant="outline"
-                className="w-full border-dashed border-primary/40 hover:bg-primary/10 hover:border-primary/60 mb-5"
-              >
-                <Plus className="h-4 w-4 mr-1 text-white" />{" "}
-                <span className="text-white">Añadir otro set</span>
-              </Button>
+              <div className="flex flex-col sm:flex-row items-center gap-2 mb-5">
+                <Button
+                  onClick={addSet}
+                  variant="outline"
+                  className="w-full flex-1 border-dashed border-primary/40 hover:bg-primary/10 hover:border-primary/60"
+                >
+                  <Plus className="h-4 w-4 mr-1 text-white" />{" "}
+                  <span className="text-white">Añadir otro set (arriba)</span>
+                </Button>
+                {copiedSet && (
+                  <Button
+                    type="button"
+                    onClick={pasteSet}
+                    variant="outline"
+                    className="w-full sm:w-auto border-primary/60 bg-primary/10 hover:bg-primary/20 text-primary-glow"
+                    title="Pegar la serie copiada arriba"
+                  >
+                    <ClipboardPaste className="h-4 w-4 mr-1.5" /> Pegar serie ({copiedSet.targetReps} reps • {copiedSet.targetWeight} kg)
+                  </Button>
+                )}
+              </div>
               <div className="flex items-center gap-3 justify-end flex-wrap">
                 <Button
                   variant="outline"
