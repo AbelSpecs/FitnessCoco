@@ -19,7 +19,8 @@ import {
   Video,
   Plus,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, createContext, useContext } from "react";
+import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/authStore";
 import { CompleteDate, DailyExerciseSets, DayRoutine, Exercise } from "@/types/exercises";
 import {
@@ -132,6 +133,20 @@ export const Route = createFileRoute("/routine/$studentId/$dayId")({
   },
 });
 
+interface RoutineTimerContextType {
+  isRestTimerRunning: boolean;
+  activeSetId: number | string | null;
+  startRestTimer: (seconds: number, label: string, setId: number | string) => void;
+  closeRestTimer: () => void;
+}
+
+const RoutineTimerContext = createContext<RoutineTimerContextType>({
+  isRestTimerRunning: false,
+  activeSetId: null,
+  startRestTimer: () => {},
+  closeRestTimer: () => {},
+});
+
 function DayDetail() {
   const { dayId } = useParams({ from: "/routine/$studentId/$dayId" });
   const { dayExercises } = Route.useLoaderData();
@@ -139,6 +154,36 @@ function DayDetail() {
   const [exercisesList, setExercisesList] = useState<Exercise[]>(dayExercises || []);
   const [selectedVideoExercise, setSelectedVideoExercise] = useState<Exercise | null>(null);
   const [showAddExerciseModal, setShowAddExerciseModal] = useState<boolean>(false);
+  const [activeTimer, setActiveTimer] = useState<{
+    seconds: number;
+    label: string;
+    setId: number | string;
+    isRunning: boolean;
+    key: number;
+  } | null>(null);
+
+  const startRestTimer = (seconds: number, label: string, setId: number | string) => {
+    setActiveTimer({
+      seconds,
+      label,
+      setId,
+      isRunning: true,
+      key: Date.now(),
+    });
+  };
+
+  const handleTimerFinish = () => {
+    setActiveTimer((prev) => (prev ? { ...prev, isRunning: false } : null));
+    notify.success("¡Descanso completado!", "Listo para continuar con tu siguiente serie 🔥");
+  };
+
+  const handleTimerRestart = () => {
+    setActiveTimer((prev) => (prev ? { ...prev, isRunning: true } : null));
+  };
+
+  const closeRestTimer = () => {
+    setActiveTimer(null);
+  };
 
   useEffect(() => {
     setExercisesList(dayExercises || []);
@@ -218,7 +263,15 @@ function DayDetail() {
   };
 
   return (
-    <AppShell>
+    <RoutineTimerContext.Provider
+      value={{
+        isRestTimerRunning: !!activeTimer?.isRunning,
+        activeSetId: activeTimer?.setId ?? null,
+        startRestTimer,
+        closeRestTimer,
+      }}
+    >
+      <AppShell>
       <Button variant="ghost" size="sm" asChild className="mb-4 -ml-2 hover:text-white">
         <Link to="/routine/$studentId" params={{ studentId: user?.studentId?.toString() ?? "" }}>
           <ArrowLeft className="h-4 w-4" /> Volver a la semana
@@ -303,7 +356,20 @@ function DayDetail() {
           onExerciseAdded={handleExerciseAdded}
         />
       )}
+
+      {/* Temporizador de descanso flotante único */}
+      {activeTimer && (
+        <RestTimer
+          key={activeTimer.key}
+          seconds={activeTimer.seconds}
+          label={activeTimer.label}
+          onClose={closeRestTimer}
+          onFinish={handleTimerFinish}
+          onRestart={handleTimerRestart}
+        />
+      )}
     </AppShell>
+  </RoutineTimerContext.Provider>
   );
 }
 
@@ -318,13 +384,14 @@ function ExerciseRow({
   onComplete: (ex: Exercise, notes?: string) => Promise<void>;
   onOpenVideo: (ex: Exercise) => void;
 }) {
+  const { isRestTimerRunning } = useContext(RoutineTimerContext);
   const [loading, setLoading] = useState(false);
   const [notes, setNotes] = useState(ex.studentNotes || "");
   const [showSets, setShowSets] = useState(false);
   const hasVideo = !!(ex.videoKey?.trim() || ex.videoUrl?.trim());
 
   const handleFinish = async () => {
-    if (ex.isCompleted || loading) return;
+    if (ex.isCompleted || loading || isRestTimerRunning) return;
     setLoading(true);
     try {
       await onComplete(ex, notes);
@@ -431,10 +498,24 @@ function ExerciseRow({
           <Button
             variant={ex.isCompleted ? "secondary" : "hero"}
             onClick={handleFinish}
-            className="h-9 text-xs font-medium uppercase tracking-wider truncate"
-            disabled={ex.isCompleted || loading}
+            className={cn(
+              "h-9 text-xs font-medium uppercase tracking-wider truncate transition-all",
+              !ex.isCompleted && isRestTimerRunning && "opacity-50 cursor-not-allowed",
+            )}
+            disabled={ex.isCompleted || loading || isRestTimerRunning}
+            title={
+              !ex.isCompleted && isRestTimerRunning
+                ? "No puedes terminar el ejercicio mientras el descanso está en curso"
+                : undefined
+            }
           >
-            {ex.isCompleted ? "Completado" : loading ? "Guardando..." : "Terminar Ejercicio"}
+            {ex.isCompleted
+              ? "Completado"
+              : loading
+              ? "Guardando..."
+              : isRestTimerRunning
+              ? "Descanso en curso..."
+              : "Terminar Ejercicio"}
           </Button>
         </div>
       </div>
@@ -451,13 +532,13 @@ function DetailsSetsRow({
   set: DailyExerciseSets;
   index: number;
 }) {
+  const { isRestTimerRunning, startRestTimer } = useContext(RoutineTimerContext);
   const [weight, setWeight] = useState(set.actualWeight?.toString() || "");
   const [reps, setReps] = useState(set.actualReps?.toString() || "");
   const [done, setDone] = useState(set.isAchieved);
-  const [timerOn, setTimerOn] = useState(false);
-  const [timerKey, setTimerKey] = useState(0);
 
   const handleSetsUpdate = async (set: DailyExerciseSets, exId: number) => {
+    if (isRestTimerRunning) return;
     const setToUpdate: DailyExerciseSetsDto = {
       id: set.id,
       dailyStudentExerciseId: exId,
@@ -479,13 +560,11 @@ function DetailsSetsRow({
     } finally {
       setReps("");
       setWeight("");
-      setDone((d) => {
-        if (!d) {
-          setTimerKey((k) => k + 1);
-          setTimerOn(true);
-        }
-        return !d;
-      });
+      setDone(true);
+      const restSec = parseRestTimeToSeconds(set.restTime);
+      if (restSec > 0) {
+        startRestTimer(restSec, `Set #${set.setNumber}`, set.id);
+      }
     }
   };
 
@@ -565,19 +644,28 @@ function DetailsSetsRow({
           onClick={() => {
             handleSetsUpdate(set, exId);
           }}
-          className="h-9 text-xs font-medium uppercase tracking-wider w-full truncate"
-          disabled={done ? true : false}
+          className={cn(
+            "h-9 text-xs font-medium uppercase tracking-wider w-full truncate transition-all",
+            !done && isRestTimerRunning && "opacity-50 cursor-not-allowed",
+          )}
+          disabled={done || isRestTimerRunning}
+          title={
+            !done && isRestTimerRunning
+              ? "Descanso en curso. Espera a que el cronómetro termine o ciérralo."
+              : undefined
+          }
         >
-          {done ? "Completada" : "Descansar"}
+          {done ? (
+            "Completada"
+          ) : isRestTimerRunning ? (
+            <span className="flex items-center justify-center gap-1">
+              <Timer className="h-3 w-3 animate-pulse" /> En descanso
+            </span>
+          ) : (
+            "Descansar"
+          )}
         </Button>
       </div>
-      {timerOn && (
-        <RestTimer
-          key={timerKey}
-          seconds={parseRestTimeToSeconds(set.restTime)}
-          onClose={() => setTimerOn(false)}
-        />
-      )}
     </div>
   );
 }
