@@ -262,6 +262,21 @@ function DayDetail() {
     setExercisesList((prev) => [...prev, newEx]);
   };
 
+  const handleSetUpdate = (exerciseId: number, updatedSet: DailyExerciseSets) => {
+    setExercisesList((prev) =>
+      prev.map((item) =>
+        item.dailyExerciseId === exerciseId
+          ? {
+              ...item,
+              dailyExerciseSets: item.dailyExerciseSets.map((s) =>
+                s.id === updatedSet.id ? updatedSet : s,
+              ),
+            }
+          : item,
+      ),
+    );
+  };
+
   return (
     <RoutineTimerContext.Provider
       value={{
@@ -333,6 +348,7 @@ function DayDetail() {
                 index={i + 1}
                 onComplete={handleExerciseComplete}
                 onOpenVideo={(exercise) => setSelectedVideoExercise(exercise)}
+                onSetUpdate={handleSetUpdate}
               />
             );
           })}
@@ -378,11 +394,13 @@ function ExerciseRow({
   index,
   onComplete,
   onOpenVideo,
+  onSetUpdate,
 }: {
   ex: Exercise;
   index: number;
   onComplete: (ex: Exercise, notes?: string) => Promise<void>;
   onOpenVideo: (ex: Exercise) => void;
+  onSetUpdate: (exerciseId: number, updatedSet: DailyExerciseSets) => void;
 }) {
   const { isRestTimerRunning } = useContext(RoutineTimerContext);
   const [loading, setLoading] = useState(false);
@@ -483,7 +501,13 @@ function ExerciseRow({
             <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
               {ex.dailyExerciseSets.map((set, index) => {
                 return (
-                  <DetailsSetsRow key={set.id} exId={ex.dailyExerciseId} set={set} index={index} />
+                  <DetailsSetsRow
+                    key={set.id}
+                    exId={ex.dailyExerciseId}
+                    set={set}
+                    index={index}
+                    onSetUpdate={onSetUpdate}
+                  />
                 );
               })}
             </div>
@@ -527,18 +551,60 @@ function DetailsSetsRow({
   exId,
   set,
   index,
+  onSetUpdate,
 }: {
   exId: number;
   set: DailyExerciseSets;
   index: number;
+  onSetUpdate?: (exId: number, updatedSet: DailyExerciseSets) => void;
 }) {
   const { isRestTimerRunning, startRestTimer } = useContext(RoutineTimerContext);
-  const [weight, setWeight] = useState(set.actualWeight?.toString() || "");
-  const [reps, setReps] = useState(set.actualReps?.toString() || "");
-  const [done, setDone] = useState(set.isAchieved);
+
+  const getInitialWeight = (s: DailyExerciseSets) => {
+    if (s.isAchieved) {
+      return s.actualWeight !== undefined && s.actualWeight !== null ? s.actualWeight.toString() : "";
+    }
+    return s.actualWeight ? s.actualWeight.toString() : "";
+  };
+
+  const getInitialReps = (s: DailyExerciseSets) => {
+    if (s.isAchieved) {
+      return s.actualReps !== undefined && s.actualReps !== null ? s.actualReps.toString() : "";
+    }
+    return s.actualReps ? s.actualReps.toString() : "";
+  };
+
+  const [weight, setWeight] = useState(getInitialWeight(set));
+  const [reps, setReps] = useState(getInitialReps(set));
+  const [done, setDone] = useState(Boolean(set.isAchieved));
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    if (set.isAchieved) {
+      setDone(true);
+      if (set.actualWeight !== undefined && set.actualWeight !== null) {
+        setWeight(set.actualWeight.toString());
+      }
+      if (set.actualReps !== undefined && set.actualReps !== null) {
+        setReps(set.actualReps.toString());
+      }
+    } else {
+      if (set.actualWeight) {
+        setWeight(set.actualWeight.toString());
+      }
+      if (set.actualReps) {
+        setReps(set.actualReps.toString());
+      }
+      setDone(false);
+    }
+  }, [set.actualWeight, set.actualReps, set.isAchieved]);
 
   const handleSetsUpdate = async (set: DailyExerciseSets, exId: number) => {
-    if (isRestTimerRunning) return;
+    if (isRestTimerRunning || done || isSaving) return;
+
+    const actualRepsNum = Number(reps) || 0;
+    const actualWeightNum = Number(weight) || 0;
+
     const setToUpdate: DailyExerciseSetsDto = {
       id: set.id,
       dailyStudentExerciseId: exId,
@@ -546,25 +612,34 @@ function DetailsSetsRow({
       targetReps: Number(set.targetReps),
       targetWeight: Number(set.targetWeight),
       restTime: set.restTime,
-      actualReps: Number(reps),
-      actualWeight: Number(weight),
+      actualReps: actualRepsNum,
+      actualWeight: actualWeightNum,
       isAchieved: true,
     };
 
+    setIsSaving(true);
     try {
       await updateDailyExercisesSets(set.id, setToUpdate);
-    } catch (error) {
-      notify.error("Error al actualizar el set", "Intenta de nuevo");
-      console.error("Error al actualizar set:", error);
-      return;
-    } finally {
-      setReps("");
-      setWeight("");
       setDone(true);
+
+      const updatedSetObj: DailyExerciseSets = {
+        ...set,
+        actualReps: actualRepsNum,
+        actualWeight: actualWeightNum,
+        isAchieved: true,
+      };
+
+      onSetUpdate?.(exId, updatedSetObj);
+
       const restSec = parseRestTimeToSeconds(set.restTime);
       if (restSec > 0) {
         startRestTimer(restSec, `Set #${set.setNumber}`, set.id);
       }
+    } catch (error) {
+      notify.error("Error al actualizar el set", "Intenta de nuevo");
+      console.error("Error al actualizar set:", error);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -618,9 +693,9 @@ function DetailsSetsRow({
             <Layers className="h-3 w-3" /> Peso Logrado
           </Label>
           <WeightInput
-            value={set.actualWeight || weight}
+            value={weight}
             onChange={(val) => setWeight(val)}
-            disabled={set.actualWeight ? true : false}
+            disabled={done || isSaving}
             compact
             className="mt-1"
           />
@@ -631,11 +706,11 @@ function DetailsSetsRow({
           </Label>
           <Input
             placeholder="Reps"
-            value={set.actualReps || reps}
+            value={reps}
             onChange={(e) => setReps(e.target.value)}
             type="number"
             inputMode="numeric"
-            disabled={set.actualReps ? true : false}
+            disabled={done || isSaving}
             className="bg-background/50 h-9 text-sm focus-visible:ring-primary-glow w-full"
           />
         </div>
@@ -648,14 +723,16 @@ function DetailsSetsRow({
             "h-9 text-xs font-medium uppercase tracking-wider w-full truncate transition-all",
             !done && isRestTimerRunning && "opacity-50 cursor-not-allowed",
           )}
-          disabled={done || isRestTimerRunning}
+          disabled={done || isRestTimerRunning || isSaving}
           title={
             !done && isRestTimerRunning
               ? "Descanso en curso. Espera a que el cronómetro termine o ciérralo."
               : undefined
           }
         >
-          {done ? (
+          {isSaving ? (
+            "Guardando..."
+          ) : done ? (
             "Completada"
           ) : isRestTimerRunning ? (
             <span className="flex items-center justify-center gap-1">
