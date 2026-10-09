@@ -18,6 +18,7 @@ import {
   PlayCircle,
   Video,
   Plus,
+  Lock,
 } from "lucide-react";
 import { useEffect, useMemo, useState, createContext, useContext } from "react";
 import { cn } from "@/lib/utils";
@@ -420,6 +421,12 @@ function ExerciseRow({
     }
   };
 
+  const sortedSets = useMemo(() => {
+    return [...ex.dailyExerciseSets].sort(
+      (a, b) => (Number(a.setNumber) || 0) - (Number(b.setNumber) || 0),
+    );
+  }, [ex.dailyExerciseSets]);
+
   return (
     <Card className="bg-gradient-card border-border p-4 sm:p-5 lg:p-6">
       <div className="flex items-start gap-3 sm:gap-4">
@@ -499,13 +506,19 @@ function ExerciseRow({
 
           {showSets && (
             <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
-              {ex.dailyExerciseSets.map((set, index) => {
+              {sortedSets.map((set, index) => {
+                // Una serie se bloquea si alguna serie anterior aún no está completada
+                const isLocked =
+                  index > 0 &&
+                  !sortedSets.slice(0, index).every((prevSet) => Boolean(prevSet.isAchieved));
+
                 return (
                   <DetailsSetsRow
                     key={set.id}
                     exId={ex.dailyExerciseId}
                     set={set}
                     index={index}
+                    isLocked={isLocked}
                     onSetUpdate={onSetUpdate}
                   />
                 );
@@ -551,11 +564,13 @@ function DetailsSetsRow({
   exId,
   set,
   index,
+  isLocked = false,
   onSetUpdate,
 }: {
   exId: number;
   set: DailyExerciseSets;
   index: number;
+  isLocked?: boolean;
   onSetUpdate?: (exId: number, updatedSet: DailyExerciseSets) => void;
 }) {
   const { isRestTimerRunning, startRestTimer } = useContext(RoutineTimerContext);
@@ -600,7 +615,7 @@ function DetailsSetsRow({
   }, [set.actualWeight, set.actualReps, set.isAchieved]);
 
   const handleSetsUpdate = async (set: DailyExerciseSets, exId: number) => {
-    if (isRestTimerRunning || done || isSaving) return;
+    if (isRestTimerRunning || done || isSaving || isLocked) return;
 
     const actualRepsNum = Number(reps) || 0;
     const actualWeightNum = Number(weight) || 0;
@@ -646,7 +661,11 @@ function DetailsSetsRow({
   return (
     <div
       key={set.id || index}
-      className="bg-background/20 border border-border/40 rounded-xl p-3 sm:p-4 flex flex-col gap-3.5"
+      className={cn(
+        "bg-background/20 border border-border/40 rounded-xl p-3 sm:p-4 flex flex-col gap-3.5 transition-all",
+        isLocked && "opacity-60 bg-background/10",
+        done && "border-success/30 bg-success/5",
+      )}
     >
       {/* LADO IZQUIERDO (AHORA ARRIBA): Datos objetivos alineados */}
       <div className="grid grid-cols-4 gap-2 w-full text-center">
@@ -655,7 +674,15 @@ function DetailsSetsRow({
           <p className="text-[10px] uppercase tracking-wider text-muted-foreground flex items-center justify-center gap-1 mb-0.5">
             <Layers className="h-3 w-3" /> Set
           </p>
-          <p className="text-sm sm:text-base font-bold text-primary-glow">#{set.setNumber}</p>
+          <p className="text-sm sm:text-base font-bold text-primary-glow flex items-center justify-center gap-1">
+            #{set.setNumber}
+            {isLocked && (
+              <span title="Bloqueada hasta completar la serie anterior">
+                <Lock className="h-3 w-3 text-muted-foreground" />
+              </span>
+            )}
+            {done && <CheckCircle2 className="h-3 w-3 text-success" />}
+          </p>
         </div>
 
         {/* Bloque de Repeticiones Objetivo */}
@@ -695,7 +722,7 @@ function DetailsSetsRow({
           <WeightInput
             value={weight}
             onChange={(val) => setWeight(val)}
-            disabled={done || isSaving}
+            disabled={done || isSaving || isLocked}
             compact
             className="mt-1"
           />
@@ -710,7 +737,7 @@ function DetailsSetsRow({
             onChange={(e) => setReps(e.target.value)}
             type="number"
             inputMode="numeric"
-            disabled={done || isSaving}
+            disabled={done || isSaving || isLocked}
             className="bg-background/50 h-9 text-sm focus-visible:ring-primary-glow w-full"
           />
         </div>
@@ -721,11 +748,13 @@ function DetailsSetsRow({
           }}
           className={cn(
             "h-9 text-xs font-medium uppercase tracking-wider w-full truncate transition-all",
-            !done && isRestTimerRunning && "opacity-50 cursor-not-allowed",
+            !done && (isRestTimerRunning || isLocked) && "opacity-50 cursor-not-allowed",
           )}
-          disabled={done || isRestTimerRunning || isSaving}
+          disabled={done || isRestTimerRunning || isSaving || isLocked}
           title={
-            !done && isRestTimerRunning
+            isLocked
+              ? "Debes completar la serie anterior antes de continuar"
+              : !done && isRestTimerRunning
               ? "Descanso en curso. Espera a que el cronómetro termine o ciérralo."
               : undefined
           }
@@ -737,6 +766,10 @@ function DetailsSetsRow({
           ) : isRestTimerRunning ? (
             <span className="flex items-center justify-center gap-1">
               <Timer className="h-3 w-3 animate-pulse" /> En descanso
+            </span>
+          ) : isLocked ? (
+            <span className="flex items-center justify-center gap-1 opacity-80">
+              <Lock className="h-3 w-3" /> Bloqueada
             </span>
           ) : (
             "Descansar"
