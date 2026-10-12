@@ -36,6 +36,10 @@ export const exercisesMapper = (
       short: shortDay,
       dailyExerciseSets: item.dailyExerciseSets,
       muscleGroupId: muscleGroupId || 0,
+      videoKey: item.videoKey || item.exercise?.videoKey || null,
+      videoUrl: item.videoUrl || item.exercise?.videoUrl || null,
+      superSetTag: item.superSetTag ?? null,
+      superSetOrder: item.superSetOrder ?? null,
     };
   });
 };

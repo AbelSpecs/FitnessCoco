@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -37,6 +37,7 @@ import {
   Copy,
   CopyPlus,
   ClipboardPaste,
+  Link2,
 } from "lucide-react";
 import { notify } from "@/components/NotificationCenter";
 import { useAuthStore } from "@/store/authStore";
@@ -80,14 +81,15 @@ interface AddDailyExerciseDialogProps {
   studentId: number;
   scheduledDate: string; // "YYYY-MM-DD"
   onExerciseAdded: (exercise: Exercise) => void;
+  existingExercises?: Exercise[];
 }
 
-const createEmptySet = (): DailyExerciseSetsForm => ({
+const createEmptySet = (defaultRest: string = "90"): DailyExerciseSetsForm => ({
   id: `set-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
   setNumber: "",
   targetReps: "12",
   targetWeight: "20",
-  restTime: "90",
+  restTime: defaultRest,
   isAchieved: false,
 });
 
@@ -97,6 +99,7 @@ export function AddDailyExerciseDialog({
   studentId,
   scheduledDate,
   onExerciseAdded,
+  existingExercises = [],
 }: AddDailyExerciseDialogProps) {
   const { user } = useAuthStore();
 
@@ -109,6 +112,24 @@ export function AddDailyExerciseDialog({
   const [copiedSet, setCopiedSet] = useState<DailyExerciseSetsForm | null>(null);
   const [saving, setSaving] = useState<boolean>(false);
   const [refreshing, setRefreshing] = useState<boolean>(false);
+
+  // Serie Combinada (Superserie)
+  const [isSuperSet, setIsSuperSet] = useState<boolean>(false);
+  const [combinedRestTime, setCombinedRestTime] = useState<string>("90");
+
+  const existingSuperSet = useMemo(() => {
+    return (existingExercises || []).filter((e) => !!e.superSetTag);
+  }, [existingExercises]);
+
+  const hasExistingSuperSet = existingSuperSet.length > 0;
+  const firstSuperSetExercise = hasExistingSuperSet
+    ? existingSuperSet.find((e: Exercise) => (e.superSetOrder ?? 1) === 1) || existingSuperSet[0]
+    : null;
+  const establishedRestTime =
+    firstSuperSetExercise?.dailyExerciseSets?.[0]?.restTime || "90";
+
+  const effectiveOrder = hasExistingSuperSet ? existingSuperSet.length + 1 : 1;
+  const effectiveRestTime = hasExistingSuperSet ? establishedRestTime : combinedRestTime;
 
   // New Exercise Dialog State
   const [showNewExerciseDialog, setShowNewExerciseDialog] = useState<boolean>(false);
@@ -171,7 +192,22 @@ export function AddDailyExerciseDialog({
 
   // Set management
   const addSet = () => {
-    setSets((prev) => [createEmptySet(), ...prev]);
+    const defaultRest = isSuperSet ? effectiveRestTime : "90";
+    setSets((prev) => [createEmptySet(defaultRest), ...prev]);
+  };
+
+  const handleToggleSuperSet = () => {
+    const nextState = !isSuperSet;
+    setIsSuperSet(nextState);
+    if (nextState) {
+      const restToApply = hasExistingSuperSet ? establishedRestTime : combinedRestTime;
+      setSets((prev) => prev.map((s) => ({ ...s, restTime: restToApply })));
+    }
+  };
+
+  const handleCombinedRestTimeChange = (newRest: string) => {
+    setCombinedRestTime(newRest);
+    setSets((prev) => prev.map((s) => ({ ...s, restTime: newRest })));
   };
 
   const copySet = (set: DailyExerciseSetsForm) => {
@@ -217,6 +253,8 @@ export function AddDailyExerciseDialog({
     setNotes("");
     setSets([createEmptySet()]);
     setCopiedSet(null);
+    setIsSuperSet(false);
+    setCombinedRestTime("90");
   };
 
   const handleClose = () => {
@@ -256,6 +294,9 @@ export function AddDailyExerciseDialog({
         isAchieved: false,
       }));
 
+      const superSetTagClean = isSuperSet ? "A" : null;
+      const superSetOrderClean = isSuperSet ? effectiveOrder : null;
+
       const payload: DailyStudentExerciseDto = {
         assign: {
           coachId: Number(user?.coachId || user?.myCoachId || 9),
@@ -264,6 +305,8 @@ export function AddDailyExerciseDialog({
           scheduledDate: scheduledDate,
           dailyExerciseSets: dailyExerciseSetsData,
           coachNotes: notes || "",
+          superSetTag: superSetTagClean ?? undefined,
+          superSetOrder: superSetOrderClean ?? undefined,
         },
       };
 
@@ -295,6 +338,8 @@ export function AddDailyExerciseDialog({
         })),
         videoKey: extraData.videoKey || null,
         videoUrl: extraData.videoUrl || null,
+        superSetTag: response.superSetTag ?? superSetTagClean,
+        superSetOrder: response.superSetOrder ?? superSetOrderClean,
       };
 
       notify.created("Ejercicio agregado", `${newExercise.exerciseName} se añadió a la rutina`);
@@ -491,7 +536,101 @@ export function AddDailyExerciseDialog({
             </div>
 
             {/* Sets & Reps */}
-            <div>
+            <div className="space-y-3">
+              {/* Botón de Serie Combinada (Link) y Configuración de Descanso Unificado */}
+              <div className="rounded-xl border border-border/80 bg-background/50 p-3 space-y-2.5">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                  <Button
+                    type="button"
+                    variant={isSuperSet ? "default" : "outline"}
+                    size="sm"
+                    onClick={handleToggleSuperSet}
+                    className={
+                      isSuperSet
+                        ? "bg-amber-500 hover:bg-amber-600 text-black font-semibold h-8 px-3 text-xs shadow-md transition-all"
+                        : "border-dashed border-border hover:border-amber-500/60 hover:text-amber-500 h-8 px-3 text-xs transition-all"
+                    }
+                  >
+                    <Link2 className={`h-3.5 w-3.5 mr-1.5 ${isSuperSet ? "text-black" : "text-amber-500"}`} />
+                    {isSuperSet ? "Serie Combinada Activada" : "Vincular a Serie Combinada"}
+                  </Button>
+                  <span className="text-[11px] text-muted-foreground">
+                    {isSuperSet
+                      ? hasExistingSuperSet
+                        ? `Ejercicio #${effectiveOrder} vinculado a la combinación existente`
+                        : "1er ejercicio de la combinación: define el descanso único"
+                      : "Vincula ejercicios en combinación sin descanso entre series"}
+                  </span>
+                </div>
+
+                {isSuperSet && (
+                  <div className="pt-2 border-t border-border/60 space-y-2 animate-in fade-in-50 duration-200">
+                    {hasExistingSuperSet ? (
+                      <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-2.5 flex items-center justify-between gap-3 flex-wrap">
+                        <div className="flex items-center gap-2">
+                          <span className="h-6 px-2 rounded bg-amber-500 text-black text-xs font-bold flex items-center">
+                            #{effectiveOrder}
+                          </span>
+                          <div className="text-xs">
+                            <p className="font-medium text-foreground">
+                              Vinculado a Serie Combinada existente
+                            </p>
+                            <p className="text-[11px] text-muted-foreground">
+                              Descanso establecido en el 1er ejercicio ({firstSuperSetExercise?.exerciseName || "Ejercicio #1"})
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1.5 bg-background/60 px-2.5 py-1 rounded-md border border-border">
+                          <span className="text-[11px] text-muted-foreground">Descanso único:</span>
+                          <span className="text-xs font-bold text-amber-400 font-mono">
+                            {establishedRestTime}s
+                          </span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-2.5 space-y-2">
+                        <div className="flex items-center justify-between gap-2 flex-wrap">
+                          <Label className="text-[11px] uppercase tracking-widest text-amber-400 flex items-center gap-1.5 font-semibold">
+                            <Link2 className="h-3.5 w-3.5" />
+                            Descanso Único de la Combinación
+                          </Label>
+                          <span className="text-[10px] text-muted-foreground">
+                            Reemplaza el descanso en las series
+                          </span>
+                        </div>
+
+                        <div className="grid sm:grid-cols-[1fr_auto] gap-2 items-center">
+                          <RestTimeInput
+                            value={combinedRestTime}
+                            onChange={handleCombinedRestTimeChange}
+                            placeholder="Ej. 90"
+                            compact
+                          />
+                          <div className="flex items-center gap-1 flex-wrap">
+                            {["30", "60", "90", "120", "180"].map((time) => (
+                              <Button
+                                key={time}
+                                type="button"
+                                size="sm"
+                                variant={combinedRestTime === time ? "default" : "outline"}
+                                className={`h-8 px-2 text-xs ${
+                                  combinedRestTime === time
+                                    ? "bg-amber-500 text-black hover:bg-amber-600 font-bold"
+                                    : "border-border/60 hover:text-white"
+                                }`}
+                                onClick={() => handleCombinedRestTimeChange(time)}
+                              >
+                                {time}s
+                              </Button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
               <div className="flex items-center justify-between mb-2">
                 <h3 className="font-display text-sm flex items-center gap-1.5 text-foreground">
                   <Layers className="h-4 w-4 text-primary-glow" />
@@ -577,11 +716,12 @@ export function AddDailyExerciseDialog({
                       </div>
                       <div>
                         <Label className="text-[10px] uppercase tracking-widest text-muted-foreground flex items-center gap-1">
-                          <Repeat className="h-3 w-3" /> Descanso
+                          <Repeat className="h-3 w-3" /> Descanso {isSuperSet && <span className="text-amber-400 text-[9px]">(Fijo)</span>}
                         </Label>
                         <RestTimeInput
                           value={set.restTime}
                           onChange={(val) => updateSet(set.id, { restTime: val })}
+                          disabled={isSuperSet}
                           compact
                           className="mt-1"
                         />

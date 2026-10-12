@@ -19,6 +19,8 @@ import {
   Video,
   Plus,
   Lock,
+  Link2,
+  Zap,
 } from "lucide-react";
 import { useEffect, useMemo, useState, createContext, useContext } from "react";
 import { cn } from "@/lib/utils";
@@ -41,7 +43,7 @@ import { format } from "date-fns";
 import { notify } from "@/components/NotificationCenter";
 import { VideoThumbnail } from "@/components/VideoThumbnail";
 import { ExerciseVideoModal } from "@/components/exercises/ExerciseVideoModal";
-import { isUserIndependent } from "@/utils/exerciseFilter";
+import { isUserIndependent, getMuscleGroupsTitle } from "@/utils/exerciseFilter";
 import { AddDailyExerciseDialog } from "@/components/exercises/AddDailyExerciseDialog";
 import { formatRestTimeDisplay, parseRestTimeToSeconds } from "@/utils/timeFormat";
 import { formatWeightWithEquivalent } from "@/utils/weightFormat";
@@ -213,7 +215,7 @@ function DayDetail() {
       short: exercisesList[0].short,
       estimated: "",
       rest: false,
-      muscleGroupName: exercisesList[0].muscleGroupName || "Entrenamiento",
+      muscleGroupName: getMuscleGroupsTitle(exercisesList),
       exercises: exercisesList,
     };
   }, [exercisesList, dayId]);
@@ -344,15 +346,41 @@ function DayDetail() {
         ) : (
           <div className="space-y-3">
             {actualDay?.exercises.map((ex, i) => {
+              const prevEx = i > 0 ? actualDay.exercises[i - 1] : null;
+              const isNewSuperSetBlock = Boolean(
+                ex.superSetTag && (!prevEx || prevEx.superSetTag !== ex.superSetTag),
+              );
+
               return (
-                <ExerciseRow
-                  key={ex.dailyExerciseId}
-                  ex={ex}
-                  index={i + 1}
-                  onComplete={handleExerciseComplete}
-                  onOpenVideo={(exercise) => setSelectedVideoExercise(exercise)}
-                  onSetUpdate={handleSetUpdate}
-                />
+                <div key={ex.dailyExerciseId} className="space-y-2">
+                  {isNewSuperSetBlock && (
+                    <div className="flex items-center justify-between gap-2 py-2 px-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs shadow-sm mt-3 first:mt-0">
+                      <div className="flex items-center gap-2">
+                        <Link2 className="h-4 w-4 text-amber-400 shrink-0" />
+                        <span className="font-bold tracking-wide uppercase text-[11px]">
+                          Serie Combinada #{ex.superSetTag}
+                        </span>
+                        <span className="hidden sm:inline text-amber-200/80">
+                          • Realiza 1 set de cada ejercicio antes de descansar
+                        </span>
+                      </div>
+                      <Badge
+                        variant="outline"
+                        className="border-amber-500/40 text-amber-300 bg-amber-500/10 text-[10px]"
+                      >
+                        Descanso único al final
+                      </Badge>
+                    </div>
+                  )}
+                  <ExerciseRow
+                    ex={ex}
+                    index={i + 1}
+                    allExercises={actualDay.exercises}
+                    onComplete={handleExerciseComplete}
+                    onOpenVideo={(exercise) => setSelectedVideoExercise(exercise)}
+                    onSetUpdate={handleSetUpdate}
+                  />
+                </div>
               );
             })}
           </div>
@@ -373,6 +401,7 @@ function DayDetail() {
             studentId={Number(user?.studentId || 0)}
             scheduledDate={dayId || format(new Date(), "yyyy-MM-dd")}
             onExerciseAdded={handleExerciseAdded}
+            existingExercises={actualDay?.exercises || []}
           />
         )}
 
@@ -395,12 +424,14 @@ function DayDetail() {
 function ExerciseRow({
   ex,
   index,
+  allExercises = [],
   onComplete,
   onOpenVideo,
   onSetUpdate,
 }: {
   ex: Exercise;
   index: number;
+  allExercises?: Exercise[];
   onComplete: (ex: Exercise, notes?: string) => Promise<void>;
   onOpenVideo: (ex: Exercise) => void;
   onSetUpdate: (exerciseId: number, updatedSet: DailyExerciseSets) => void;
@@ -410,6 +441,34 @@ function ExerciseRow({
   const [notes, setNotes] = useState(ex.studentNotes || "");
   const [showSets, setShowSets] = useState(false);
   const hasVideo = !!(ex.videoKey?.trim() || ex.videoUrl?.trim());
+
+  // Detectar grupo de serie combinada
+  const superSetGroup = useMemo(() => {
+    const tag = (ex.superSetTag || "").trim();
+    if (!tag) return [];
+    return allExercises
+      .filter((item) => (item.superSetTag || "").trim().toLowerCase() === tag.toLowerCase())
+      .sort((a, b) => (Number(a.superSetOrder) || 0) - (Number(b.superSetOrder) || 0));
+  }, [allExercises, ex.superSetTag]);
+
+  const isSuperSet = superSetGroup.length > 1;
+  const totalInSuperSet = superSetGroup.length;
+  const groupIndex = superSetGroup.findIndex((item) => item.dailyExerciseId === ex.dailyExerciseId);
+  const isFirstInSuperSet = isSuperSet && groupIndex === 0;
+  const isLastInSuperSet = isSuperSet && groupIndex === superSetGroup.length - 1;
+  const nextExerciseInSuperSet =
+    isSuperSet && groupIndex >= 0 && groupIndex < superSetGroup.length - 1
+      ? superSetGroup[groupIndex + 1]
+      : null;
+
+  // Tiempo de descanso combinado unificado establecido en la serie combinada
+  const combinedRestTime = useMemo(() => {
+    if (!isSuperSet) return undefined;
+    const found = superSetGroup.find(
+      (e) => e.dailyExerciseSets?.[0]?.restTime && e.dailyExerciseSets[0].restTime !== "0",
+    );
+    return found?.dailyExerciseSets?.[0]?.restTime || ex.dailyExerciseSets?.[0]?.restTime || "60";
+  }, [isSuperSet, superSetGroup, ex.dailyExerciseSets]);
 
   const handleFinish = async () => {
     if (ex.isCompleted || loading || isRestTimerRunning) return;
@@ -430,19 +489,57 @@ function ExerciseRow({
   }, [ex.dailyExerciseSets]);
 
   return (
-    <Card className="bg-gradient-card border-border p-4 sm:p-5 lg:p-6">
+    <Card
+      className={cn(
+        "bg-gradient-card border-border p-4 sm:p-5 lg:p-6 transition-all",
+        isSuperSet && "border-amber-500/30 shadow-[0_0_15px_rgba(245,158,11,0.06)]",
+      )}
+    >
       <div className="flex items-start gap-3 sm:gap-4">
         <div
           className={`h-10 w-10 sm:h-12 sm:w-12 rounded-xl flex items-center justify-center font-display text-lg sm:text-xl shrink-0 ${
             ex.isCompleted
               ? "bg-success text-success-foreground"
-              : "bg-gradient-primary text-primary-foreground"
+              : isSuperSet
+                ? "bg-amber-500/20 text-amber-300 border border-amber-500/40"
+                : "bg-gradient-primary text-primary-foreground"
           }`}
         >
           {ex.isCompleted ? <CheckCircle2 className="h-5 w-5" /> : index}
         </div>
 
         <div className="flex-1 min-w-0">
+          {/* TAG / ETIQUETA VISIBLE DE SERIE COMBINADA */}
+          {isSuperSet && (
+            <div className="flex flex-wrap items-center gap-1.5 mb-2">
+              <Badge className="bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-amber-300 border-amber-500/40 gap-1.5 text-xs py-0.5 px-2.5 font-semibold shadow-sm">
+                <Link2 className="h-3.5 w-3.5 text-amber-400" />
+                <span>Serie Combinada #{ex.superSetTag}</span>
+                {ex.superSetOrder && (
+                  <span className="text-amber-200/90 font-normal">
+                    • Ejercicio {ex.superSetOrder} de {totalInSuperSet}
+                  </span>
+                )}
+              </Badge>
+              {isFirstInSuperSet && (
+                <Badge
+                  variant="outline"
+                  className="border-amber-500/30 text-amber-400/90 text-[10px] py-0 px-2"
+                >
+                  1° en la combinación
+                </Badge>
+              )}
+              {isLastInSuperSet && (
+                <Badge
+                  variant="outline"
+                  className="border-emerald-500/30 text-emerald-400/90 text-[10px] py-0 px-2"
+                >
+                  Cierre de ronda (Activa descanso)
+                </Badge>
+              )}
+            </div>
+          )}
+
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-3 mb-1">
             <div className="min-w-0">
               <h3 className="font-display text-xl sm:text-2xl leading-tight break-words">
@@ -508,19 +605,72 @@ function ExerciseRow({
 
           {showSets && (
             <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
-              {sortedSets.map((set, index) => {
-                // Una serie se bloquea si alguna serie anterior aún no está completada
-                const isLocked =
-                  index > 0 &&
-                  !sortedSets.slice(0, index).every((prevSet) => Boolean(prevSet.isAchieved));
+              {sortedSets.map((set, setIdx) => {
+                let isLocked = false;
+                let lockReason = "";
+
+                if (isSuperSet) {
+                  // Regla 1: Series anteriores en este mismo ejercicio deben estar completas
+                  const prevSetsInCurrent = sortedSets.slice(0, setIdx);
+                  if (!prevSetsInCurrent.every((s) => Boolean(s.isAchieved))) {
+                    isLocked = true;
+                    lockReason = "Completa tu serie anterior en este ejercicio";
+                  }
+
+                  // Regla 2: Los ejercicios anteriores de la combinación deben haber completado esta misma serie
+                  if (!isLocked) {
+                    const priorExercises = superSetGroup.slice(0, groupIndex);
+                    for (const priorEx of priorExercises) {
+                      const priorSorted = [...(priorEx.dailyExerciseSets || [])].sort(
+                        (a, b) => (Number(a.setNumber) || 0) - (Number(b.setNumber) || 0),
+                      );
+                      const targetPriorSet = priorSorted[setIdx];
+                      if (targetPriorSet && !targetPriorSet.isAchieved) {
+                        isLocked = true;
+                        lockReason = `Completa primero el Set #${setIdx + 1} de ${priorEx.exerciseName}`;
+                        break;
+                      }
+                    }
+                  }
+
+                  // Regla 3: Si setIdx > 0, los ejercicios posteriores de la combinación deben haber completado la ronda anterior (setIdx - 1)
+                  if (!isLocked && setIdx > 0) {
+                    const laterExercises = superSetGroup.slice(groupIndex + 1);
+                    for (const laterEx of laterExercises) {
+                      const laterSorted = [...(laterEx.dailyExerciseSets || [])].sort(
+                        (a, b) => (Number(a.setNumber) || 0) - (Number(b.setNumber) || 0),
+                      );
+                      const targetPrevSet = laterSorted[setIdx - 1];
+                      if (targetPrevSet && !targetPrevSet.isAchieved) {
+                        isLocked = true;
+                        lockReason = `Completa la ronda anterior en ${laterEx.exerciseName} antes de iniciar el Set #${setIdx + 1}`;
+                        break;
+                      }
+                    }
+                  }
+                } else {
+                  // Ejercicio estándar individual
+                  isLocked =
+                    setIdx > 0 &&
+                    !sortedSets.slice(0, setIdx).every((prevSet) => Boolean(prevSet.isAchieved));
+                  if (isLocked) {
+                    lockReason = "Completa la serie anterior antes de continuar";
+                  }
+                }
 
                 return (
                   <DetailsSetsRow
                     key={set.id}
                     exId={ex.dailyExerciseId}
                     set={set}
-                    index={index}
+                    index={setIdx}
                     isLocked={isLocked}
+                    lockReason={lockReason}
+                    isSuperSet={isSuperSet}
+                    isLastInSuperSet={isLastInSuperSet}
+                    nextExerciseName={nextExerciseInSuperSet?.exerciseName}
+                    nextExerciseOrder={nextExerciseInSuperSet?.superSetOrder}
+                    combinedRestTime={combinedRestTime}
                     onSetUpdate={onSetUpdate}
                   />
                 );
@@ -567,12 +717,24 @@ function DetailsSetsRow({
   set,
   index,
   isLocked = false,
+  lockReason = "",
+  isSuperSet = false,
+  isLastInSuperSet = false,
+  nextExerciseName,
+  nextExerciseOrder,
+  combinedRestTime,
   onSetUpdate,
 }: {
   exId: number;
   set: DailyExerciseSets;
   index: number;
   isLocked?: boolean;
+  lockReason?: string;
+  isSuperSet?: boolean;
+  isLastInSuperSet?: boolean;
+  nextExerciseName?: string;
+  nextExerciseOrder?: number | null;
+  combinedRestTime?: string;
   onSetUpdate?: (exId: number, updatedSet: DailyExerciseSets) => void;
 }) {
   const { isRestTimerRunning, startRestTimer } = useContext(RoutineTimerContext);
@@ -650,9 +812,30 @@ function DetailsSetsRow({
 
       onSetUpdate?.(exId, updatedSetObj);
 
-      const restSec = parseRestTimeToSeconds(set.restTime);
+      // Si es ejercicio combinado y NO es el último de la combinación:
+      // Pasar directo al siguiente ejercicio sin activar el cronómetro
+      if (isSuperSet && !isLastInSuperSet) {
+        notify.info(
+          "¡Set completado!",
+          nextExerciseName
+            ? `Pasa directo a ${nextExerciseName} (${nextExerciseOrder ? `Ejercicio #${nextExerciseOrder}` : "siguiente"}) sin descanso ⚡`
+            : "Pasa directo al siguiente ejercicio de la combinación ⚡",
+        );
+        return;
+      }
+
+      // Si es ejercicio normal O si es el último de la combinación:
+      // Iniciar el cronómetro de descanso para toda la ronda
+      const effectiveRestTime = isSuperSet ? (combinedRestTime || set.restTime) : set.restTime;
+      const restSec = parseRestTimeToSeconds(effectiveRestTime);
       if (restSec > 0) {
-        startRestTimer(restSec, `Set #${set.setNumber}`, set.id);
+        const timerLabel = isSuperSet
+          ? `Descanso Combinado • Ronda #${set.setNumber}`
+          : `Set #${set.setNumber}`;
+        startRestTimer(restSec, timerLabel, set.id);
+        if (isSuperSet) {
+          notify.success("¡Ronda combinada completada!", `Iniciando descanso de ${restSec}s 🔥`);
+        }
       }
     } catch (error) {
       notify.error("Error al actualizar el set", "Intenta de nuevo");
@@ -681,7 +864,7 @@ function DetailsSetsRow({
           <p className="text-sm sm:text-base font-bold text-primary-glow flex items-center justify-center gap-1">
             #{set.setNumber}
             {isLocked && (
-              <span title="Bloqueada hasta completar la serie anterior">
+              <span title={lockReason || "Bloqueada hasta completar la serie anterior"}>
                 <Lock className="h-3 w-3 text-muted-foreground" />
               </span>
             )}
@@ -712,7 +895,23 @@ function DetailsSetsRow({
             <Timer className="h-3 w-3" /> Descanso
           </p>
           <p className="text-sm sm:text-base font-medium text-muted-foreground">
-            {formatRestTimeDisplay(set.restTime)}
+            {isSuperSet && !isLastInSuperSet ? (
+              <span
+                className="text-amber-400 font-semibold text-xs flex items-center justify-center gap-0.5"
+                title="Sin descanso intermedio: pasa directo al siguiente ejercicio"
+              >
+                <Zap className="h-3 w-3" /> Directo
+              </span>
+            ) : isSuperSet && isLastInSuperSet ? (
+              <span
+                className="text-emerald-400 font-semibold text-xs flex items-center justify-center gap-0.5"
+                title="Descanso único de la ronda combinada"
+              >
+                <Timer className="h-3 w-3" /> Único: {formatRestTimeDisplay(combinedRestTime || set.restTime)}
+              </span>
+            ) : (
+              formatRestTimeDisplay(set.restTime)
+            )}
           </p>
         </div>
       </div>
@@ -753,11 +952,23 @@ function DetailsSetsRow({
           className={cn(
             "h-9 text-xs font-medium uppercase tracking-wider w-full truncate transition-all",
             !done && (isRestTimerRunning || isLocked) && "opacity-50 cursor-not-allowed",
+            !done &&
+              !isLocked &&
+              !isRestTimerRunning &&
+              isSuperSet &&
+              !isLastInSuperSet &&
+              "border-amber-500/50 bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 shadow-sm",
+            !done &&
+              !isLocked &&
+              !isRestTimerRunning &&
+              isSuperSet &&
+              isLastInSuperSet &&
+              "bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-glow hover:opacity-90",
           )}
           disabled={done || isRestTimerRunning || isSaving || isLocked}
           title={
             isLocked
-              ? "Debes completar la serie anterior antes de continuar"
+              ? lockReason || "Debes completar la serie anterior antes de continuar"
               : !done && isRestTimerRunning
                 ? "Descanso en curso. Espera a que el cronómetro termine o ciérralo."
                 : undefined
@@ -774,6 +985,16 @@ function DetailsSetsRow({
           ) : isLocked ? (
             <span className="flex items-center justify-center gap-1 opacity-80">
               <Lock className="h-3 w-3" /> Bloqueada
+            </span>
+          ) : isSuperSet && !isLastInSuperSet ? (
+            <span className="flex items-center justify-center gap-1 text-amber-200">
+              <Zap className="h-3.5 w-3.5 text-amber-400" />
+              <span>Pasa a #{nextExerciseOrder || 2}</span>
+            </span>
+          ) : isSuperSet && isLastInSuperSet ? (
+            <span className="flex items-center justify-center gap-1">
+              <Timer className="h-3.5 w-3.5" />
+              <span>Descanso ({parseRestTimeToSeconds(combinedRestTime || set.restTime)}s)</span>
             </span>
           ) : (
             "Descansar"
