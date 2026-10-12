@@ -985,9 +985,7 @@ function ClientRoutinesPage() {
                         </Label>
                         <WeightInput
                           value={set.targetWeight}
-                          onChange={(val) =>
-                            updateSet(set.id.toString(), { targetWeight: val })
-                          }
+                          onChange={(val) => updateSet(set.id.toString(), { targetWeight: val })}
                           className="mt-1.5"
                         />
                       </div>
@@ -997,9 +995,7 @@ function ClientRoutinesPage() {
                         </Label>
                         <RestTimeInput
                           value={set.restTime}
-                          onChange={(val) =>
-                            updateSet(set.id.toString(), { restTime: val })
-                          }
+                          onChange={(val) => updateSet(set.id.toString(), { restTime: val })}
                           className="mt-1.5"
                         />
                       </div>
@@ -1024,7 +1020,9 @@ function ClientRoutinesPage() {
                     className="w-full sm:w-auto border-primary/60 bg-primary/10 hover:bg-primary/20 text-primary-glow"
                     title="Pegar la serie copiada arriba"
                   >
-                    <ClipboardPaste className="h-4 w-4 mr-1.5" /> Pegar serie ({copiedSet.targetReps} reps • {formatWeightWithEquivalent(copiedSet.targetWeight)})
+                    <ClipboardPaste className="h-4 w-4 mr-1.5" /> Pegar serie (
+                    {copiedSet.targetReps} reps •{" "}
+                    {formatWeightWithEquivalent(copiedSet.targetWeight)})
                   </Button>
                 )}
               </div>

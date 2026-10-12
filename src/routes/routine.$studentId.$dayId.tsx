@@ -99,6 +99,8 @@ export const Route = createFileRoute("/routine/$studentId/$dayId")({
             dailyExerciseSets: (e.dailyExerciseSets as DailyExerciseSets[]) || [],
             videoKey,
             videoUrl,
+            superSetTag: e.superSetTag ?? null,
+            superSetOrder: e.superSetOrder ?? null,
           };
         }),
       );
@@ -288,105 +290,105 @@ function DayDetail() {
       }}
     >
       <AppShell>
-      <Button variant="ghost" size="sm" asChild className="mb-4 -ml-2 hover:text-white">
-        <Link to="/routine/$studentId" params={{ studentId: user?.studentId?.toString() ?? "" }}>
-          <ArrowLeft className="h-4 w-4" /> Volver a la semana
-        </Link>
-      </Button>
+        <Button variant="ghost" size="sm" asChild className="mb-4 -ml-2 hover:text-white">
+          <Link to="/routine/$studentId" params={{ studentId: user?.studentId?.toString() ?? "" }}>
+            <ArrowLeft className="h-4 w-4" /> Volver a la semana
+          </Link>
+        </Button>
 
-      <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl border border-border p-5 sm:p-6 lg:p-10 mb-5 sm:mb-6">
-        <div className="absolute inset-0 bg-gradient-mesh opacity-60 pointer-events-none" />
-        <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <p className="text-[10px] sm:text-xs uppercase tracking-[0.3em] text-primary-glow mb-2">
-              {actualDay?.name}
-            </p>
-            <h1 className="font-display text-4xl sm:text-5xl lg:text-7xl leading-none">
-              {actualDay?.muscleGroupName}
-            </h1>
-            {!actualDay?.rest && (
-              <div className="flex flex-wrap items-center gap-3 sm:gap-4 mt-4 sm:mt-5 text-xs sm:text-sm">
-                <Badge variant="secondary">{actualDay?.exercises.length} ejercicios</Badge>
-              </div>
+        <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl border border-border p-5 sm:p-6 lg:p-10 mb-5 sm:mb-6">
+          <div className="absolute inset-0 bg-gradient-mesh opacity-60 pointer-events-none" />
+          <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <p className="text-[10px] sm:text-xs uppercase tracking-[0.3em] text-primary-glow mb-2">
+                {actualDay?.name}
+              </p>
+              <h1 className="font-display text-4xl sm:text-5xl lg:text-7xl leading-none">
+                {actualDay?.muscleGroupName}
+              </h1>
+              {!actualDay?.rest && (
+                <div className="flex flex-wrap items-center gap-3 sm:gap-4 mt-4 sm:mt-5 text-xs sm:text-sm">
+                  <Badge variant="secondary">{actualDay?.exercises.length} ejercicios</Badge>
+                </div>
+              )}
+            </div>
+            {isUserIndependent(user) && (
+              <Button
+                onClick={() => setShowAddExerciseModal(true)}
+                className="bg-gradient-primary hover:opacity-90 shadow-glow self-start sm:self-auto shrink-0 cursor-pointer"
+                size="lg"
+              >
+                <Plus className="h-4 w-4 mr-1.5" /> Agregar ejercicio
+              </Button>
             )}
           </div>
-          {isUserIndependent(user) && (
-            <Button
-              onClick={() => setShowAddExerciseModal(true)}
-              className="bg-gradient-primary hover:opacity-90 shadow-glow self-start sm:self-auto shrink-0 cursor-pointer"
-              size="lg"
-            >
-              <Plus className="h-4 w-4 mr-1.5" /> Agregar ejercicio
-            </Button>
-          )}
         </div>
-      </div>
 
-      {actualDay?.rest ? (
-        <Card className="bg-gradient-card border-border p-12 text-center">
-          <div className="text-7xl mb-4">🌿</div>
-          <h2 className="font-display text-4xl mb-2">Descanso</h2>
-          <p className="text-muted-foreground max-w-md mx-auto mb-6">
-            Recuperarse es parte del entrenamiento. Hidrátate, duerme bien y mueve el cuerpo con
-            calma.
-          </p>
-          {isUserIndependent(user) && (
-            <Button
-              onClick={() => setShowAddExerciseModal(true)}
-              className="bg-gradient-primary hover:opacity-90 shadow-glow cursor-pointer"
-            >
-              <Plus className="h-4 w-4 mr-1.5" /> Agregar ejercicio a este día
-            </Button>
-          )}
-        </Card>
-      ) : (
-        <div className="space-y-3">
-          {actualDay?.exercises.map((ex, i) => {
-            return (
-              <ExerciseRow
-                key={ex.dailyExerciseId}
-                ex={ex}
-                index={i + 1}
-                onComplete={handleExerciseComplete}
-                onOpenVideo={(exercise) => setSelectedVideoExercise(exercise)}
-                onSetUpdate={handleSetUpdate}
-              />
-            );
-          })}
-        </div>
-      )}
+        {actualDay?.rest ? (
+          <Card className="bg-gradient-card border-border p-12 text-center">
+            <div className="text-7xl mb-4">🌿</div>
+            <h2 className="font-display text-4xl mb-2">Descanso</h2>
+            <p className="text-muted-foreground max-w-md mx-auto mb-6">
+              Recuperarse es parte del entrenamiento. Hidrátate, duerme bien y mueve el cuerpo con
+              calma.
+            </p>
+            {isUserIndependent(user) && (
+              <Button
+                onClick={() => setShowAddExerciseModal(true)}
+                className="bg-gradient-primary hover:opacity-90 shadow-glow cursor-pointer"
+              >
+                <Plus className="h-4 w-4 mr-1.5" /> Agregar ejercicio a este día
+              </Button>
+            )}
+          </Card>
+        ) : (
+          <div className="space-y-3">
+            {actualDay?.exercises.map((ex, i) => {
+              return (
+                <ExerciseRow
+                  key={ex.dailyExerciseId}
+                  ex={ex}
+                  index={i + 1}
+                  onComplete={handleExerciseComplete}
+                  onOpenVideo={(exercise) => setSelectedVideoExercise(exercise)}
+                  onSetUpdate={handleSetUpdate}
+                />
+              );
+            })}
+          </div>
+        )}
 
-      {/* Modal reproductor de video demostrativo */}
-      <ExerciseVideoModal
-        exercise={selectedVideoExercise}
-        isOpen={!!selectedVideoExercise}
-        onClose={() => setSelectedVideoExercise(null)}
-      />
-
-      {/* Modal para agregar ejercicios de forma rápida (independientes) */}
-      {isUserIndependent(user) && (
-        <AddDailyExerciseDialog
-          isOpen={showAddExerciseModal}
-          onClose={() => setShowAddExerciseModal(false)}
-          studentId={Number(user?.studentId || 0)}
-          scheduledDate={dayId || format(new Date(), "yyyy-MM-dd")}
-          onExerciseAdded={handleExerciseAdded}
+        {/* Modal reproductor de video demostrativo */}
+        <ExerciseVideoModal
+          exercise={selectedVideoExercise}
+          isOpen={!!selectedVideoExercise}
+          onClose={() => setSelectedVideoExercise(null)}
         />
-      )}
 
-      {/* Temporizador de descanso flotante único */}
-      {activeTimer && (
-        <RestTimer
-          key={activeTimer.key}
-          seconds={activeTimer.seconds}
-          label={activeTimer.label}
-          onClose={closeRestTimer}
-          onFinish={handleTimerFinish}
-          onRestart={handleTimerRestart}
-        />
-      )}
-    </AppShell>
-  </RoutineTimerContext.Provider>
+        {/* Modal para agregar ejercicios de forma rápida (independientes) */}
+        {isUserIndependent(user) && (
+          <AddDailyExerciseDialog
+            isOpen={showAddExerciseModal}
+            onClose={() => setShowAddExerciseModal(false)}
+            studentId={Number(user?.studentId || 0)}
+            scheduledDate={dayId || format(new Date(), "yyyy-MM-dd")}
+            onExerciseAdded={handleExerciseAdded}
+          />
+        )}
+
+        {/* Temporizador de descanso flotante único */}
+        {activeTimer && (
+          <RestTimer
+            key={activeTimer.key}
+            seconds={activeTimer.seconds}
+            label={activeTimer.label}
+            onClose={closeRestTimer}
+            onFinish={handleTimerFinish}
+            onRestart={handleTimerRestart}
+          />
+        )}
+      </AppShell>
+    </RoutineTimerContext.Provider>
   );
 }
 
@@ -549,10 +551,10 @@ function ExerciseRow({
             {ex.isCompleted
               ? "Completado"
               : loading
-              ? "Guardando..."
-              : isRestTimerRunning
-              ? "Descanso en curso..."
-              : "Terminar Ejercicio"}
+                ? "Guardando..."
+                : isRestTimerRunning
+                  ? "Descanso en curso..."
+                  : "Terminar Ejercicio"}
           </Button>
         </div>
       </div>
@@ -577,7 +579,9 @@ function DetailsSetsRow({
 
   const getInitialWeight = (s: DailyExerciseSets) => {
     if (s.isAchieved) {
-      return s.actualWeight !== undefined && s.actualWeight !== null ? s.actualWeight.toString() : "";
+      return s.actualWeight !== undefined && s.actualWeight !== null
+        ? s.actualWeight.toString()
+        : "";
     }
     return s.actualWeight ? s.actualWeight.toString() : "";
   };
@@ -755,8 +759,8 @@ function DetailsSetsRow({
             isLocked
               ? "Debes completar la serie anterior antes de continuar"
               : !done && isRestTimerRunning
-              ? "Descanso en curso. Espera a que el cronómetro termine o ciérralo."
-              : undefined
+                ? "Descanso en curso. Espera a que el cronómetro termine o ciérralo."
+                : undefined
           }
         >
           {isSaving ? (

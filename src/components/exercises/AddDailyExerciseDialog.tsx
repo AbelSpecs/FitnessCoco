@@ -207,9 +207,7 @@ export function AddDailyExerciseDialog({
   };
 
   const updateSet = (id: string | number, patch: Partial<DailyExerciseSetsForm>) => {
-    setSets((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, ...patch } : item)),
-    );
+    setSets((prev) => prev.map((item) => (item.id === id ? { ...item, ...patch } : item)));
   };
 
   const resetForm = () => {
@@ -239,7 +237,10 @@ export function AddDailyExerciseDialog({
 
     const incomplete = sets.some((s) => !s.targetReps || !s.targetWeight || !s.restTime);
     if (incomplete) {
-      notify.error("Sets incompletos", "Completa las repeticiones, peso y descanso para cada serie");
+      notify.error(
+        "Sets incompletos",
+        "Completa las repeticiones, peso y descanso para cada serie",
+      );
       return;
     }
 
@@ -280,7 +281,9 @@ export function AddDailyExerciseDialog({
         coachNotes: response.coachNotes,
         studentNotes: response.studentNotes,
         isCompleted: response.isCompleted,
-        scheduledDate: response.scheduledDate ? response.scheduledDate.split("T")[0] : scheduledDate,
+        scheduledDate: response.scheduledDate
+          ? response.scheduledDate.split("T")[0]
+          : scheduledDate,
         day: dateInfo.day,
         short: dateInfo.short,
         dailyExerciseSets: (response.dailyExerciseSets || []).map((s: GetDailyExerciseSetsDto) => ({
@@ -418,7 +421,8 @@ export function AddDailyExerciseDialog({
               Agregar ejercicio a la rutina
             </DialogTitle>
             <DialogDescription>
-              Selecciona el ejercicio, define las series y añádelo directamente al entrenamiento de este día.
+              Selecciona el ejercicio, define las series y añádelo directamente al entrenamiento de
+              este día.
             </DialogDescription>
           </DialogHeader>
 
@@ -595,7 +599,8 @@ export function AddDailyExerciseDialog({
                   size="sm"
                   className="w-full flex-1 border-dashed border-primary/40 hover:bg-primary/10 text-xs"
                 >
-                  <Plus className="h-3.5 w-3.5 mr-1 text-primary-glow" /> Añadir nueva serie (arriba)
+                  <Plus className="h-3.5 w-3.5 mr-1 text-primary-glow" /> Añadir nueva serie
+                  (arriba)
                 </Button>
                 {copiedSet && (
                   <Button
@@ -606,7 +611,9 @@ export function AddDailyExerciseDialog({
                     className="w-full sm:w-auto border-primary/60 bg-primary/10 hover:bg-primary/20 text-primary-glow text-xs"
                     title="Pegar la serie copiada arriba"
                   >
-                    <ClipboardPaste className="h-3.5 w-3.5 mr-1" /> Pegar serie ({copiedSet.targetReps} reps • {formatWeightWithEquivalent(copiedSet.targetWeight)})
+                    <ClipboardPaste className="h-3.5 w-3.5 mr-1" /> Pegar serie (
+                    {copiedSet.targetReps} reps •{" "}
+                    {formatWeightWithEquivalent(copiedSet.targetWeight)})
                   </Button>
                 )}
               </div>
@@ -667,9 +674,7 @@ export function AddDailyExerciseDialog({
               <Sparkles className="h-5 w-5 text-primary-glow" />
               Crear nuevo ejercicio
             </DialogTitle>
-            <DialogDescription>
-              Crea un ejercicio personalizado para tus rutinas.
-            </DialogDescription>
+            <DialogDescription>Crea un ejercicio personalizado para tus rutinas.</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-2">
@@ -702,9 +707,7 @@ export function AddDailyExerciseDialog({
               </Label>
               <Input
                 value={newExerciseForm.name}
-                onChange={(e) =>
-                  setNewExerciseForm((prev) => ({ ...prev, name: e.target.value }))
-                }
+                onChange={(e) => setNewExerciseForm((prev) => ({ ...prev, name: e.target.value }))}
                 placeholder="Ej. Press banca con mancuernas"
                 className="mt-1.5 bg-background/60"
               />

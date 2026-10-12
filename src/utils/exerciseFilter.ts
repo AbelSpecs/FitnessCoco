@@ -99,3 +99,90 @@ export function filterExercisesForUser<
     return regex.test(desc) || desc.includes(`studentId:${effectiveId}`) || desc.includes(`student:${effectiveId}`);
   });
 }
+
+/**
+ * Estructura resultante de agrupar ejercicios por superserie / biseries.
+ */
+export interface GroupedExercisesResult<T> {
+  /** Diccionario de grupos indexados por superSetTag (ej. "A", "B") */
+  groups: Record<string, T[]>;
+  /** Lista de ejercicios individuales que no pertenecen a ninguna superserie */
+  standalone: T[];
+  /** Bloques secuenciales de la rutina para fácil iteración en la UI */
+  blocks: RoutineBlock<T>[];
+}
+
+export type RoutineBlock<T> =
+  | { type: "standalone"; exercise: T }
+  | { type: "superset"; tag: string; exercises: T[]; muscleGroupsTitle: string };
+
+/**
+ * Agrupa una lista de ejercicios por su superSetTag (ej. "A", "B").
+ * Ordena los ejercicios dentro de cada superserie por su superSetOrder.
+ */
+export function groupExercisesBySuperSet<
+  T extends { superSetTag?: string | null; superSetOrder?: number | null; muscleGroupName?: string }
+>(exercisesList: T[]): GroupedExercisesResult<T> {
+  const groups: Record<string, T[]> = {};
+  const standalone: T[] = [];
+  const blocks: RoutineBlock<T>[] = [];
+  const seenGroups = new Set<string>();
+
+  exercisesList.forEach((ex) => {
+    const tag = (ex.superSetTag || "").trim();
+    if (tag) {
+      if (!groups[tag]) {
+        groups[tag] = [];
+      }
+      groups[tag].push(ex);
+    } else {
+      standalone.push(ex);
+    }
+  });
+
+  // Ordenar los ejercicios dentro de cada grupo por superSetOrder
+  Object.keys(groups).forEach((tag) => {
+    groups[tag].sort((a, b) => (Number(a.superSetOrder) || 0) - (Number(b.superSetOrder) || 0));
+  });
+
+  // Construir bloques preservando el orden de aparición en la rutina
+  exercisesList.forEach((ex) => {
+    const tag = (ex.superSetTag || "").trim();
+    if (tag) {
+      if (!seenGroups.has(tag)) {
+        seenGroups.add(tag);
+        const groupExercises = groups[tag];
+        const muscleTitles = Array.from(
+          new Set(groupExercises.map((e) => e.muscleGroupName).filter(Boolean))
+        ).join(" + ");
+
+        blocks.push({
+          type: "superset",
+          tag,
+          exercises: groupExercises,
+          muscleGroupsTitle: muscleTitles || "Superserie",
+        });
+      }
+    } else {
+      blocks.push({
+        type: "standalone",
+        exercise: ex,
+      });
+    }
+  });
+
+  return { groups, standalone, blocks };
+}
+
+/**
+ * Genera el título combinado de grupos musculares para una lista de ejercicios (ej. "Pecho + Espalda").
+ */
+export function getMuscleGroupsTitle<T extends { muscleGroupName?: string }>(
+  exercises: T[]
+): string {
+  const uniqueGroups = Array.from(
+    new Set(exercises.map((e) => e.muscleGroupName).filter(Boolean))
+  );
+  return uniqueGroups.length > 0 ? uniqueGroups.join(" + ") : "Entrenamiento";
+}
+
