@@ -186,3 +186,16 @@ export function getMuscleGroupsTitle<T extends { muscleGroupName?: string }>(
   return uniqueGroups.length > 0 ? uniqueGroups.join(" + ") : "Entrenamiento";
 }
 
+export const SUPERSET_TAG_LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+
+export function getNextAvailableSuperSetTag(usedTags: string[]): string {
+  const upperUsed = new Set(
+    usedTags.map((t) => (t || "").trim().toUpperCase()).filter(Boolean)
+  );
+  for (const letter of SUPERSET_TAG_LETTERS) {
+    if (!upperUsed.has(letter)) {
+      return letter;
+    }
+  }
+  return `C${upperUsed.size + 1}`;
+}

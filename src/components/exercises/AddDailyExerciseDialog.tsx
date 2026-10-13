@@ -44,6 +44,7 @@ import { useAuthStore } from "@/store/authStore";
 import {
   filterExercisesForUser,
   formatExerciseDescriptionWithStudentId,
+  getNextAvailableSuperSetTag,
   isUserIndependent,
 } from "@/utils/exerciseFilter";
 import {
@@ -116,21 +117,53 @@ export function AddDailyExerciseDialog({
 
   // Serie Combinada (Superserie)
   const [isSuperSet, setIsSuperSet] = useState<boolean>(false);
+  const [selectedSuperSetTag, setSelectedSuperSetTag] = useState<string>("A");
   const [combinedRestTime, setCombinedRestTime] = useState<string>("90");
 
-  const existingSuperSet = useMemo(() => {
+  const supersetExercises = useMemo(() => {
     return (existingExercises || []).filter((e) => !!e.superSetTag);
   }, [existingExercises]);
 
-  const hasExistingSuperSet = existingSuperSet.length > 0;
-  const firstSuperSetExercise = hasExistingSuperSet
-    ? existingSuperSet.find((e: Exercise) => (e.superSetOrder ?? 1) === 1) || existingSuperSet[0]
-    : null;
-  const establishedRestTime =
-    firstSuperSetExercise?.dailyExerciseSets?.[0]?.restTime || "90";
+  const existingSuperSetsByTag = useMemo(() => {
+    const map: Record<string, Exercise[]> = {};
+    for (const e of supersetExercises) {
+      const tag = (e.superSetTag || "").trim().toUpperCase();
+      if (!tag) continue;
+      if (!map[tag]) map[tag] = [];
+      map[tag].push(e);
+    }
+    Object.keys(map).forEach((tag) => {
+      map[tag].sort((a, b) => (Number(a.superSetOrder) || 1) - (Number(b.superSetOrder) || 1));
+    });
+    return map;
+  }, [supersetExercises]);
 
-  const effectiveOrder = hasExistingSuperSet ? existingSuperSet.length + 1 : 1;
-  const effectiveRestTime = hasExistingSuperSet ? establishedRestTime : combinedRestTime;
+  const existingTags = useMemo(() => {
+    return Object.keys(existingSuperSetsByTag).sort();
+  }, [existingSuperSetsByTag]);
+
+  const nextAvailableTag = useMemo(() => {
+    return getNextAvailableSuperSetTag(existingTags);
+  }, [existingTags]);
+
+  const effectiveTag = useMemo(() => {
+    if (!isSuperSet) return "";
+    return (selectedSuperSetTag || existingTags[0] || "A").trim().toUpperCase();
+  }, [isSuperSet, selectedSuperSetTag, existingTags]);
+
+  const currentTagExercises = useMemo(() => {
+    return existingSuperSetsByTag[effectiveTag] || [];
+  }, [existingSuperSetsByTag, effectiveTag]);
+
+  const hasExistingInSelectedTag = currentTagExercises.length > 0;
+  const firstExerciseInSelectedTag = hasExistingInSelectedTag ? currentTagExercises[0] : null;
+  const establishedRestInSelectedTag =
+    firstExerciseInSelectedTag?.dailyExerciseSets?.[0]?.restTime || "90";
+
+  const effectiveOrder = hasExistingInSelectedTag ? currentTagExercises.length + 1 : 1;
+  const effectiveRestTime = hasExistingInSelectedTag
+    ? establishedRestInSelectedTag
+    : combinedRestTime;
 
   // New Exercise Dialog State
   const [showNewExerciseDialog, setShowNewExerciseDialog] = useState<boolean>(false);
@@ -201,9 +234,26 @@ export function AddDailyExerciseDialog({
     const nextState = !isSuperSet;
     setIsSuperSet(nextState);
     if (nextState) {
-      const restToApply = hasExistingSuperSet ? establishedRestTime : combinedRestTime;
+      const targetTag = selectedSuperSetTag || existingTags[0] || "A";
+      setSelectedSuperSetTag(targetTag);
+      const tagExercises = existingSuperSetsByTag[targetTag] || [];
+      const restToApply =
+        tagExercises.length > 0
+          ? tagExercises[0]?.dailyExerciseSets?.[0]?.restTime || "90"
+          : combinedRestTime;
       setSets((prev) => prev.map((s) => ({ ...s, restTime: restToApply })));
     }
+  };
+
+  const handleSelectSuperSetTag = (tag: string) => {
+    const cleanTag = tag.trim().toUpperCase();
+    setSelectedSuperSetTag(cleanTag);
+    const tagExercises = existingSuperSetsByTag[cleanTag] || [];
+    const restToApply =
+      tagExercises.length > 0
+        ? tagExercises[0]?.dailyExerciseSets?.[0]?.restTime || "90"
+        : combinedRestTime;
+    setSets((prev) => prev.map((s) => ({ ...s, restTime: restToApply })));
   };
 
   const handleCombinedRestTimeChange = (newRest: string) => {
@@ -255,6 +305,7 @@ export function AddDailyExerciseDialog({
     setSets([createEmptySet()]);
     setCopiedSet(null);
     setIsSuperSet(false);
+    setSelectedSuperSetTag("A");
     setCombinedRestTime("90");
   };
 
@@ -298,7 +349,7 @@ export function AddDailyExerciseDialog({
         isAchieved: false,
       }));
 
-      const superSetTagClean = isSuperSet ? "A" : null;
+      const superSetTagClean = isSuperSet ? effectiveTag : null;
       const superSetOrderClean = isSuperSet ? effectiveOrder : null;
 
       const payload: DailyStudentExerciseDto = {
@@ -563,44 +614,102 @@ export function AddDailyExerciseDialog({
                   </Button>
                   <span className="text-[11px] text-muted-foreground">
                     {isSuperSet
-                      ? hasExistingSuperSet
-                        ? `Ejercicio #${effectiveOrder} vinculado a la combinación existente`
-                        : "1er ejercicio de la combinación: define el descanso único"
+                      ? hasExistingInSelectedTag
+                        ? `Ejercicio #${effectiveOrder} vinculado a Serie #${effectiveTag}`
+                        : `1er ejercicio de Serie #${effectiveTag}: define el descanso único`
                       : "Vincula ejercicios en combinación sin descanso entre series"}
                   </span>
                 </div>
 
                 {isSuperSet && (
-                  <div className="pt-2 border-t border-border/60 space-y-2 animate-in fade-in-50 duration-200">
-                    {hasExistingSuperSet ? (
+                  <div className="pt-2.5 border-t border-border/60 space-y-2.5 animate-in fade-in-50 duration-200">
+                    {/* Selector de Combinaciones */}
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between flex-wrap gap-1">
+                        <Label className="text-[11px] font-semibold text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
+                          <Link2 className="h-3.5 w-3.5" />
+                          Combinación para este día:
+                        </Label>
+                        <span className="text-[10px] text-muted-foreground">
+                          Varias combinaciones posibles (#A, #B, #C...)
+                        </span>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        {existingTags.map((tag) => {
+                          const count = existingSuperSetsByTag[tag]?.length || 0;
+                          const isSelected = effectiveTag === tag;
+                          return (
+                            <Button
+                              key={tag}
+                              type="button"
+                              size="sm"
+                              variant={isSelected ? "default" : "outline"}
+                              onClick={() => handleSelectSuperSetTag(tag)}
+                              className={`h-7 px-2.5 text-xs font-semibold rounded-lg transition-all ${
+                                isSelected
+                                  ? "bg-amber-500 text-black hover:bg-amber-600 shadow"
+                                  : "border-border/80 hover:border-amber-500/50 hover:text-amber-400"
+                              }`}
+                            >
+                              Serie #{tag} {count > 0 ? `(${count} ej.)` : ""}
+                            </Button>
+                          );
+                        })}
+
+                        {/* Opción para crear una nueva combinación */}
+                        {(!existingTags.includes(nextAvailableTag) || existingTags.length === 0) && (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant={effectiveTag === nextAvailableTag ? "default" : "outline"}
+                            onClick={() => handleSelectSuperSetTag(nextAvailableTag)}
+                            className={`h-7 px-2.5 text-xs font-semibold rounded-lg border-dashed transition-all ${
+                              effectiveTag === nextAvailableTag
+                                ? "bg-amber-500 text-black hover:bg-amber-600 shadow"
+                                : "border-amber-500/60 text-amber-400 hover:bg-amber-500/10"
+                            }`}
+                          >
+                            + Nueva Serie (#{nextAvailableTag})
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Detalle de la combinación seleccionada */}
+                    {hasExistingInSelectedTag ? (
                       <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-2.5 flex items-center justify-between gap-3 flex-wrap">
                         <div className="flex items-center gap-2">
                           <span className="h-6 px-2 rounded bg-amber-500 text-black text-xs font-bold flex items-center">
-                            #{effectiveOrder}
+                            #{effectiveTag} • Ejercicio #{effectiveOrder}
                           </span>
                           <div className="text-xs">
                             <p className="font-medium text-foreground">
-                              Vinculado a Serie Combinada existente
+                              Vinculado a Serie Combinada #{effectiveTag} existente
                             </p>
                             <p className="text-[11px] text-muted-foreground">
-                              Descanso establecido en el 1er ejercicio ({firstSuperSetExercise?.exerciseName || "Ejercicio #1"})
+                              Descanso sincronizado con el 1er ejercicio ({firstExerciseInSelectedTag?.exerciseName || "Ejercicio #1"})
                             </p>
                           </div>
                         </div>
                         <div className="flex items-center gap-1.5 bg-background/60 px-2.5 py-1 rounded-md border border-border">
                           <span className="text-[11px] text-muted-foreground">Descanso único:</span>
                           <span className="text-xs font-bold text-amber-400 font-mono">
-                            {establishedRestTime}s
+                            {establishedRestInSelectedTag}s
                           </span>
                         </div>
                       </div>
                     ) : (
                       <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-2.5 space-y-2">
                         <div className="flex items-center justify-between gap-2 flex-wrap">
-                          <Label className="text-[11px] uppercase tracking-widest text-amber-400 flex items-center gap-1.5 font-semibold">
-                            <Link2 className="h-3.5 w-3.5" />
-                            Descanso Único de la Combinación
-                          </Label>
+                          <div className="flex items-center gap-2">
+                            <span className="h-6 px-2 rounded bg-amber-500 text-black text-xs font-bold flex items-center">
+                              #{effectiveTag} • Ejercicio #1
+                            </span>
+                            <Label className="text-[11px] uppercase tracking-widest text-amber-400 font-semibold">
+                              Descanso Único para Serie #{effectiveTag}
+                            </Label>
+                          </div>
                           <span className="text-[10px] text-muted-foreground">
                             Reemplaza el descanso en las series
                           </span>

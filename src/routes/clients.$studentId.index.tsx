@@ -113,6 +113,7 @@ import { addDays, format, isAfter, isEqual } from "date-fns";
 import {
   filterExercisesForUser,
   formatExerciseDescriptionWithStudentId,
+  getNextAvailableSuperSetTag,
   isUserIndependent,
 } from "@/utils/exerciseFilter";
 
@@ -255,10 +256,13 @@ function ClientRoutinesPage() {
 
   // Serie Combinada (Superserie)
   const [isSuperSet, setIsSuperSet] = useState<boolean>(false);
+  const [selectedSuperSetTag, setSelectedSuperSetTag] = useState<string>("A");
   const [combinedRestTime, setCombinedRestTime] = useState<string>("90");
 
   const selectedDateStr = format(selectedDate || new Date(), "yyyy-MM-dd");
-  const existingSuperSetInDate = useMemo(() => {
+
+  // Ejercicios combinados en la fecha seleccionada (excluyendo el ejercicio actual si estamos editando)
+  const supersetExercisesOnDate = useMemo(() => {
     return routines.filter((r) => {
       const rDate = r.scheduledDate?.includes("T")
         ? r.scheduledDate.split("T")[0]
@@ -268,27 +272,61 @@ function ClientRoutinesPage() {
     });
   }, [routines, selectedDateStr, isUpdating, routineForm.dailyStudentExerciseId]);
 
-  const hasExistingSuperSetInDate = existingSuperSetInDate.length > 0;
-  const firstSuperSetInDate = hasExistingSuperSetInDate
-    ? existingSuperSetInDate.find((r) => (r.superSetOrder ?? 1) === 1) || existingSuperSetInDate[0]
-    : null;
-  const establishedRestInDate =
-    firstSuperSetInDate?.dailyExerciseSets?.[0]?.restTime || "90";
+  // Agrupados por superSetTag (ej. "A", "B")
+  const existingSuperSetsByTag = useMemo(() => {
+    const map: Record<string, Exercise[]> = {};
+    for (const r of supersetExercisesOnDate) {
+      const tag = (r.superSetTag || "").trim().toUpperCase();
+      if (!tag) continue;
+      if (!map[tag]) map[tag] = [];
+      map[tag].push(r);
+    }
+    Object.keys(map).forEach((tag) => {
+      map[tag].sort((a, b) => (Number(a.superSetOrder) || 1) - (Number(b.superSetOrder) || 1));
+    });
+    return map;
+  }, [supersetExercisesOnDate]);
 
-  const effectiveOrder = hasExistingSuperSetInDate
-    ? existingSuperSetInDate.length + 1
+  const existingTags = useMemo(() => {
+    return Object.keys(existingSuperSetsByTag).sort();
+  }, [existingSuperSetsByTag]);
+
+  const nextAvailableTag = useMemo(() => {
+    return getNextAvailableSuperSetTag(existingTags);
+  }, [existingTags]);
+
+  const effectiveTag = useMemo(() => {
+    if (!isSuperSet) return "";
+    return (selectedSuperSetTag || existingTags[0] || "A").trim().toUpperCase();
+  }, [isSuperSet, selectedSuperSetTag, existingTags]);
+
+  const currentTagExercises = useMemo(() => {
+    return existingSuperSetsByTag[effectiveTag] || [];
+  }, [existingSuperSetsByTag, effectiveTag]);
+
+  const hasExistingInSelectedTag = currentTagExercises.length > 0;
+  const firstExerciseInSelectedTag = hasExistingInSelectedTag ? currentTagExercises[0] : null;
+  const establishedRestInSelectedTag =
+    firstExerciseInSelectedTag?.dailyExerciseSets?.[0]?.restTime || "90";
+
+  const effectiveOrder = hasExistingInSelectedTag
+    ? currentTagExercises.length + 1
     : 1;
-  const effectiveRestTime = hasExistingSuperSetInDate
-    ? establishedRestInDate
+  const effectiveRestTime = hasExistingInSelectedTag
+    ? establishedRestInSelectedTag
     : combinedRestTime;
 
   const handleToggleSuperSet = () => {
     const nextState = !isSuperSet;
     setIsSuperSet(nextState);
     if (nextState) {
-      const restToApply = hasExistingSuperSetInDate
-        ? establishedRestInDate
-        : combinedRestTime;
+      const targetTag = selectedSuperSetTag || existingTags[0] || "A";
+      setSelectedSuperSetTag(targetTag);
+      const tagExercises = existingSuperSetsByTag[targetTag] || [];
+      const restToApply =
+        tagExercises.length > 0
+          ? tagExercises[0]?.dailyExerciseSets?.[0]?.restTime || "90"
+          : combinedRestTime;
       setRoutineForm((prev) => ({
         ...prev,
         dailyExerciseSets: prev.dailyExerciseSets.map((s) => ({
@@ -297,6 +335,23 @@ function ClientRoutinesPage() {
         })),
       }));
     }
+  };
+
+  const handleSelectSuperSetTag = (tag: string) => {
+    const cleanTag = tag.trim().toUpperCase();
+    setSelectedSuperSetTag(cleanTag);
+    const tagExercises = existingSuperSetsByTag[cleanTag] || [];
+    const restToApply =
+      tagExercises.length > 0
+        ? tagExercises[0]?.dailyExerciseSets?.[0]?.restTime || "90"
+        : combinedRestTime;
+    setRoutineForm((prev) => ({
+      ...prev,
+      dailyExerciseSets: prev.dailyExerciseSets.map((s) => ({
+        ...s,
+        restTime: restToApply,
+      })),
+    }));
   };
 
   const handleCombinedRestTimeChange = (newRest: string) => {
@@ -325,6 +380,7 @@ function ClientRoutinesPage() {
     setSelectedDate(new Date());
     setCopiedSet(null);
     setIsSuperSet(false);
+    setSelectedSuperSetTag("A");
     setCombinedRestTime("90");
     setIsUpdating(false);
   };
@@ -633,10 +689,13 @@ function ClientRoutinesPage() {
     }
 
     if (routine.superSetTag) {
+      const tag = routine.superSetTag.trim().toUpperCase();
       setIsSuperSet(true);
+      setSelectedSuperSetTag(tag);
       setCombinedRestTime(routine.dailyExerciseSets?.[0]?.restTime || "90");
     } else {
       setIsSuperSet(false);
+      setSelectedSuperSetTag(existingTags[0] || "A");
       setCombinedRestTime("90");
     }
 
@@ -659,7 +718,7 @@ function ClientRoutinesPage() {
     isSavingRoutineRef.current = true;
     setSavedRoutine(true);
 
-    const superSetTagClean = isSuperSet ? "A" : null;
+    const superSetTagClean = isSuperSet ? effectiveTag : null;
     const superSetOrderClean = isSuperSet ? effectiveOrder : null;
 
     try {
@@ -810,7 +869,7 @@ function ClientRoutinesPage() {
     );
 
     const scheduledDateFormatted = format(selectedDate || new Date(), "yyyy-MM-dd");
-    const superSetTagClean = isSuperSet ? "A" : null;
+    const superSetTagClean = isSuperSet ? effectiveTag : null;
     const superSetOrderClean = isSuperSet ? effectiveOrder : null;
 
     const dailyExerciseData: DailyStudentExerciseDto = {
@@ -1084,46 +1143,104 @@ function ClientRoutinesPage() {
                   </Button>
                   <span className="text-[11px] text-muted-foreground">
                     {isSuperSet
-                      ? hasExistingSuperSetInDate
-                        ? `Ejercicio #${effectiveOrder} vinculado a la combinación existente en este día`
-                        : "1er ejercicio de la combinación: define el descanso único para el bloque"
+                      ? hasExistingInSelectedTag
+                        ? `Ejercicio #${effectiveOrder} vinculado a Serie #${effectiveTag}`
+                        : `1er ejercicio de Serie #${effectiveTag}: define el descanso único`
                       : "Vincula ejercicios en combinación sin descanso entre series"}
                   </span>
                 </div>
 
                 {isSuperSet && (
-                  <div className="pt-2 border-t border-border/60 space-y-2 animate-in fade-in-50 duration-200">
-                    {hasExistingSuperSetInDate ? (
+                  <div className="pt-3 border-t border-border/60 space-y-3 animate-in fade-in-50 duration-200">
+                    {/* Selector de Combinaciones */}
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between flex-wrap gap-1">
+                        <Label className="text-[11px] font-semibold text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
+                          <Link2 className="h-3.5 w-3.5" />
+                          Combinación para este día:
+                        </Label>
+                        <span className="text-[10px] text-muted-foreground">
+                          Puedes crear varias combinaciones (#A, #B, #C...) en el mismo día
+                        </span>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        {existingTags.map((tag) => {
+                          const count = existingSuperSetsByTag[tag]?.length || 0;
+                          const isSelected = effectiveTag === tag;
+                          return (
+                            <Button
+                              key={tag}
+                              type="button"
+                              size="sm"
+                              variant={isSelected ? "default" : "outline"}
+                              onClick={() => handleSelectSuperSetTag(tag)}
+                              className={`h-7 px-3 text-xs font-semibold rounded-lg transition-all ${
+                                isSelected
+                                  ? "bg-amber-500 text-black hover:bg-amber-600 shadow"
+                                  : "border-border/80 hover:border-amber-500/50 hover:text-amber-400"
+                              }`}
+                            >
+                              Serie #{tag} {count > 0 ? `(${count} ej.)` : ""}
+                            </Button>
+                          );
+                        })}
+
+                        {/* Opción para crear una nueva combinación */}
+                        {(!existingTags.includes(nextAvailableTag) || existingTags.length === 0) && (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant={effectiveTag === nextAvailableTag ? "default" : "outline"}
+                            onClick={() => handleSelectSuperSetTag(nextAvailableTag)}
+                            className={`h-7 px-3 text-xs font-semibold rounded-lg border-dashed transition-all ${
+                              effectiveTag === nextAvailableTag
+                                ? "bg-amber-500 text-black hover:bg-amber-600 shadow"
+                                : "border-amber-500/60 text-amber-400 hover:bg-amber-500/10"
+                            }`}
+                          >
+                            + Nueva Serie (#{nextAvailableTag})
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Detalle de la combinación seleccionada */}
+                    {hasExistingInSelectedTag ? (
                       <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-2.5 flex items-center justify-between gap-3 flex-wrap">
                         <div className="flex items-center gap-2">
                           <span className="h-6 px-2 rounded bg-amber-500 text-black text-xs font-bold flex items-center">
-                            #{effectiveOrder}
+                            #{effectiveTag} • Ejercicio #{effectiveOrder}
                           </span>
                           <div className="text-xs">
                             <p className="font-medium text-foreground">
-                              Vinculado a Serie Combinada existente
+                              Vinculado a Serie Combinada #{effectiveTag} existente
                             </p>
                             <p className="text-[11px] text-muted-foreground">
-                              Descanso establecido en el 1er ejercicio ({firstSuperSetInDate?.exerciseName || "Ejercicio #1"})
+                              Descanso sincronizado con el 1er ejercicio ({firstExerciseInSelectedTag?.exerciseName || "Ejercicio #1"})
                             </p>
                           </div>
                         </div>
                         <div className="flex items-center gap-1.5 bg-background/60 px-2.5 py-1 rounded-md border border-border">
                           <span className="text-[11px] text-muted-foreground">Descanso único:</span>
                           <span className="text-xs font-bold text-amber-400 font-mono">
-                            {establishedRestInDate}s
+                            {establishedRestInSelectedTag}s
                           </span>
                         </div>
                       </div>
                     ) : (
                       <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 space-y-2.5">
                         <div className="flex items-center justify-between gap-2 flex-wrap">
-                          <Label className="text-[11px] uppercase tracking-widest text-amber-400 flex items-center gap-1.5 font-semibold">
-                            <Link2 className="h-3.5 w-3.5" />
-                            Descanso Único de la Combinación
-                          </Label>
+                          <div className="flex items-center gap-2">
+                            <span className="h-6 px-2 rounded bg-amber-500 text-black text-xs font-bold flex items-center">
+                              #{effectiveTag} • Ejercicio #1
+                            </span>
+                            <Label className="text-[11px] uppercase tracking-widest text-amber-400 font-semibold">
+                              Descanso Único para Serie #{effectiveTag}
+                            </Label>
+                          </div>
                           <span className="text-[11px] text-muted-foreground">
-                            Reemplaza el descanso en las series de todos los ejercicios de la combinación
+                            Reemplaza el descanso en las series de todos los ejercicios de este bloque
                           </span>
                         </div>
 
