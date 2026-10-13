@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -111,6 +111,7 @@ export function AddDailyExerciseDialog({
   const [sets, setSets] = useState<DailyExerciseSetsForm[]>([createEmptySet()]);
   const [copiedSet, setCopiedSet] = useState<DailyExerciseSetsForm | null>(null);
   const [saving, setSaving] = useState<boolean>(false);
+  const isSavingRef = useRef<boolean>(false);
   const [refreshing, setRefreshing] = useState<boolean>(false);
 
   // Serie Combinada (Superserie)
@@ -264,6 +265,8 @@ export function AddDailyExerciseDialog({
 
   // Save Exercise Assignment
   const handleSave = async () => {
+    if (isSavingRef.current || saving) return;
+
     if (!selectedMuscleGroupId) {
       notify.error("Falta grupo muscular", "Selecciona el grupo muscular");
       return;
@@ -282,6 +285,7 @@ export function AddDailyExerciseDialog({
       return;
     }
 
+    isSavingRef.current = true;
     setSaving(true);
     try {
       const dailyExerciseSetsData: DailyExerciseSetsDto[] = sets.map((set, idx) => ({
@@ -349,12 +353,15 @@ export function AddDailyExerciseDialog({
       console.error("Error al guardar ejercicio en la rutina:", err);
       notify.error("Error al guardar", "Ocurrió un error al añadir el ejercicio a la rutina");
     } finally {
+      isSavingRef.current = false;
       setSaving(false);
     }
   };
 
   // Save Brand New Custom Exercise
   const handleSaveNewExercise = async () => {
+    if (savingNewExercise) return;
+
     const name = newExerciseForm.name.trim();
     if (!name) {
       notify.error("Falta el nombre", "Escribe el nombre del ejercicio");

@@ -16,6 +16,7 @@ export interface DailyStudentExerciseDto {
 }
 
 export interface UpdateDailyStudentExerciseDto {
+  id?: number;
   coachId: number;
   studentId: number;
   exerciseId: number;

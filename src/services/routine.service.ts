@@ -148,7 +148,11 @@ export const updateDailyStudentsExercises = async (
   exerciseData: UpdateDailyStudentExerciseDto,
 ) => {
   try {
-    const response = await api.put(`/DailyStudentExercises/${id}`, exerciseData);
+    const payload = {
+      ...exerciseData,
+      id: Number(id),
+    };
+    const response = await api.put(`/DailyStudentExercises/${id}`, payload);
     const { data } = response.data;
 
     return data;

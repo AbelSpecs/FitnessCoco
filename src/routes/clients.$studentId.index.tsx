@@ -1,5 +1,5 @@
 import { createFileRoute, Link, redirect, useParams } from "@tanstack/react-router";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -43,6 +43,7 @@ import {
   CopyPlus,
   ClipboardPaste,
   Link2,
+  Pencil,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { notify } from "@/components/NotificationCenter";
@@ -65,6 +66,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   deleteDailyStudentExercises,
+  deleteDailyExercisesSets,
   deleteExercise,
   getDailyStudentExercisesByStudentIdAndDate,
   getExercise,
@@ -234,6 +236,7 @@ function ClientRoutinesPage() {
   const [getShowForm, setGetShowForm] = useState<number | string>("");
   // Post state
   const [savedRoutine, setSavedRoutine] = useState<boolean>(false);
+  const isSavingRoutineRef = useRef<boolean>(false);
   const [routineForm, setRoutineForm] = useState<ExerciseForm>({
     dailyStudentExerciseId: 0,
     exerciseId: 0,
@@ -323,6 +326,7 @@ function ClientRoutinesPage() {
     setCopiedSet(null);
     setIsSuperSet(false);
     setCombinedRestTime("90");
+    setIsUpdating(false);
   };
 
   const newExerciseFormReset = () => {
@@ -339,6 +343,10 @@ function ClientRoutinesPage() {
   };
 
   const handleAdd = () => {
+    if (!showForm) {
+      resetForm();
+      setIsUpdating(false);
+    }
     setShowForm((s) => !s);
   };
 
@@ -482,7 +490,10 @@ function ClientRoutinesPage() {
       const updatedRoutines: GetDailyStudentExerciseDto[] =
         await getDailyStudentExercisesByStudentIdAndDate(Number(studentId), dateString);
 
-      const completeExercisesMapped: Exercise[] = exercisesMapper(updatedRoutines);
+      const completeExercisesMapped: Exercise[] = exercisesMapper(
+        updatedRoutines,
+        muscleGroups,
+      );
       setRoutines(completeExercisesMapped);
     } catch (error) {
       console.error("Error fetching routines by date:", error);
@@ -617,6 +628,10 @@ function ClientRoutinesPage() {
       superSetOrder: routine.superSetOrder ?? null,
     });
 
+    if (routine.muscleGroupId) {
+      handleExercises(routine.muscleGroupId);
+    }
+
     if (routine.superSetTag) {
       setIsSuperSet(true);
       setCombinedRestTime(routine.dailyExerciseSets?.[0]?.restTime || "90");
@@ -631,34 +646,67 @@ function ClientRoutinesPage() {
   };
 
   const handleUpdateRoutine = async () => {
-    const setsWithNoId: DailyExerciseSetsForm[] = routineForm.dailyExerciseSets.filter((d) =>
-      Number.isNaN(d.id),
+    if (isSavingRoutineRef.current || savedRoutine) return;
+
+    const incomplete = routineForm.dailyExerciseSets.some(
+      (e) => !e.targetReps || !e.targetWeight || !e.restTime,
     );
+    if (incomplete) {
+      notify.error("Sets incompletos", "Completa los campos para cada serie");
+      return;
+    }
+
+    isSavingRoutineRef.current = true;
+    setSavedRoutine(true);
 
     const superSetTagClean = isSuperSet ? "A" : null;
     const superSetOrderClean = isSuperSet ? effectiveOrder : null;
 
     try {
+      // 1. Eliminar sets que fueron removidos por el usuario en la interfaz
+      const currentRoutine = routines.find(
+        (r) => r.dailyExerciseId === routineForm.dailyStudentExerciseId,
+      );
+      const originalSetIds = (currentRoutine?.dailyExerciseSets || [])
+        .map((s) => Number(s.id))
+        .filter((id) => !Number.isNaN(id) && id > 0);
+      const currentSetIds = routineForm.dailyExerciseSets
+        .map((s) => Number(s.id))
+        .filter((id) => !Number.isNaN(id) && id > 0);
+      const deletedSetIds = originalSetIds.filter((id) => !currentSetIds.includes(id));
+
+      if (deletedSetIds.length > 0) {
+        await Promise.all(deletedSetIds.map((id) => deleteDailyExercisesSets(id)));
+      }
+
+      // 2. Mapear TODOS los sets (los existentes con su ID real y los nuevos/duplicados con id: 0)
+      const setsPayload: DailyExerciseSetsDto[] = routineForm.dailyExerciseSets.map(
+        (s, index) => {
+          const rawId = Number(s.id);
+          const validId = !Number.isNaN(rawId) && rawId > 0 ? rawId : 0;
+          return {
+            id: validId,
+            dailyStudentExerciseId: Number(routineForm.dailyStudentExerciseId),
+            setNumber: Number(index + 1),
+            targetReps: Number(s.targetReps),
+            targetWeight: Number(s.targetWeight),
+            restTime: String(s.restTime),
+            actualReps: s.actualReps !== undefined && s.actualReps !== null ? Number(s.actualReps) : undefined,
+            actualWeight: s.actualWeight !== undefined && s.actualWeight !== null ? Number(s.actualWeight) : undefined,
+            isAchieved: Boolean(s.isAchieved),
+          };
+        },
+      );
+
       const dailyExerciseToUpdate: UpdateDailyStudentExerciseDto = {
+        id: Number(routineForm.dailyStudentExerciseId),
         coachId: user!.coachId!,
         studentId: Number(studentId),
         exerciseId: routineForm.exerciseId,
         scheduledDate: routineForm.scheduledDate,
         superSetTag: superSetTagClean ?? undefined,
         superSetOrder: superSetOrderClean ?? undefined,
-        dailyExerciseSets: routineForm.dailyExerciseSets
-          .filter((s) => Number(s.id))
-          .map((s) => ({
-            id: Number(s.id),
-            dailyStudentExerciseId: routineForm.dailyStudentExerciseId,
-            setNumber: Number(s.setNumber),
-            targetReps: Number(s.targetReps),
-            targetWeight: Number(s.targetWeight),
-            restTime: s.restTime,
-            actualReps: s.actualReps,
-            actualWeight: s.actualWeight,
-            isAchieved: s.isAchieved,
-          })),
+        dailyExerciseSets: setsPayload,
         exerciseName: routineForm.exerciseName,
         muscleGroupName: routineForm.muscleGroupName,
         coachNotes: routineForm.coachNotes,
@@ -669,28 +717,38 @@ function ClientRoutinesPage() {
         dailyExerciseToUpdate,
       );
 
-      if (setsWithNoId.length > 0) {
-        const setsFormatted: DailyExerciseSetsDto[] = setsWithNoId?.map((s) => ({
-          dailyStudentExerciseId: routineForm.dailyStudentExerciseId,
-          setNumber: Number(s.setNumber),
-          targetReps: Number(s.targetReps),
-          targetWeight: Number(s.targetWeight),
-          restTime: s.restTime,
-          actualReps: s.actualReps,
-          actualWeight: s.actualWeight,
-          isAchieved: s.isAchieved,
-        }));
-
-        const setsResponses = setsFormatted.map((s) => postDailyExercisesSets(s));
-
-        const responses = await Promise.all(setsResponses);
-      }
+      const finalSets = updatedDailyExercises?.dailyExerciseSets?.length
+        ? updatedDailyExercises.dailyExerciseSets.map((s: any, idx: number) => ({
+            id: Number(s.id),
+            setNumber: String(s.setNumber || idx + 1),
+            targetReps: String(s.targetReps),
+            targetWeight: String(s.targetWeight),
+            restTime: String(s.restTime || "90"),
+            actualReps: Number(s.actualReps || 0),
+            actualWeight: Number(s.actualWeight || 0),
+            isAchieved: Boolean(s.isAchieved),
+          }))
+        : setsPayload.map((s, idx) => ({
+            id: s.id || idx + 1,
+            setNumber: String(s.setNumber),
+            targetReps: String(s.targetReps),
+            targetWeight: String(s.targetWeight),
+            restTime: String(s.restTime),
+            actualReps: Number(s.actualReps || 0),
+            actualWeight: Number(s.actualWeight || 0),
+            isAchieved: Boolean(s.isAchieved),
+          }));
 
       setRoutines((prev) =>
         prev.map((r) =>
           r.dailyExerciseId === routineForm.dailyStudentExerciseId
             ? {
                 ...r,
+                exerciseId: routineForm.exerciseId,
+                exerciseName: routineForm.exerciseName || r.exerciseName,
+                muscleGroupName: routineForm.muscleGroupName || r.muscleGroupName,
+                coachNotes: routineForm.coachNotes || r.coachNotes || "",
+                dailyExerciseSets: finalSets,
                 superSetTag: superSetTagClean,
                 superSetOrder: superSetOrderClean,
               }
@@ -698,28 +756,31 @@ function ClientRoutinesPage() {
         ),
       );
 
-      notify.created("Ejercicio actualizado", `se ha actualizado con exito`);
+      notify.updated("Ejercicio actualizado", "La rutina se ha actualizado con éxito.");
       resetForm();
+      setShowForm(false);
     } catch (error) {
       console.error("Error al actualizar la rutina:", error);
       notify.error(
         "Error al actualizar",
         "Ocurrió un error al actualizar la rutina. Intenta de nuevo.",
       );
+    } finally {
+      isSavingRoutineRef.current = false;
+      setSavedRoutine(false);
     }
   };
 
   const handleSaveRoutine = async () => {
-    setSavedRoutine(true);
+    if (isSavingRoutineRef.current || savedRoutine) return;
+
     if (!routineForm.muscleGroupId) {
       notify.error("Falta el grupo muscular", "Selecciona grupo muscular");
-      setSavedRoutine(false);
       return;
     }
 
     if (!routineForm.exerciseId) {
       notify.error("Falta el ejercicio", "Selecciona ejercicio");
-      setSavedRoutine(false);
       return;
     }
 
@@ -728,9 +789,11 @@ function ClientRoutinesPage() {
     );
     if (incomplete) {
       notify.error("Sets incompletos", "Completa los campos para cada serie");
-      setSavedRoutine(false);
       return;
     }
+
+    isSavingRoutineRef.current = true;
+    setSavedRoutine(true);
 
     const dailyExerciseSetsData: DailyExerciseSetsDto[] = routineForm.dailyExerciseSets.map(
       (set, index) => {
@@ -804,6 +867,7 @@ function ClientRoutinesPage() {
       console.error("Error al guardar la rutina:", error);
       notify.error("Error al guardar", "Ocurrió un error al guardar la rutina. Intenta de nuevo.");
     } finally {
+      isSavingRoutineRef.current = false;
       setSavedRoutine(false);
       setShowForm(false);
     }
@@ -1232,11 +1296,20 @@ function ClientRoutinesPage() {
                 </Button>
                 <Button
                   onClick={isUpdating ? handleUpdateRoutine : handleSaveRoutine}
-                  className="bg-gradient-primary hover:opacity-90 shadow-glow"
+                  className="bg-gradient-primary hover:opacity-90 shadow-glow disabled:opacity-70 disabled:cursor-not-allowed"
                   disabled={savedRoutine}
                 >
-                  <Save className="h-4 w-4 mr-1" />{" "}
-                  {isUpdating ? "Actualizar rutina" : "Guardar rutina"}
+                  {savedRoutine ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      {isUpdating ? "Actualizando rutina..." : "Guardando rutina..."}
+                    </>
+                  ) : (
+                    <>
+                      <Save className="h-4 w-4 mr-1" />{" "}
+                      {isUpdating ? "Actualizar rutina" : "Guardar rutina"}
+                    </>
+                  )}
                 </Button>
               </div>
             </Card>
@@ -1618,22 +1691,15 @@ function ClientRoutinesPage() {
                         ))}
                         <div className="flex items-center gap-3 justify-end flex-wrap">
                           {isFutureRoutine && (
-                            <>
-                              {/* <Button
-                                variant="outline"
-                                className="border-border hover:text-white "
-                                onClick={() => handleEnableEdit(routine)}
-                              >
-                                Editar
-                              </Button> */}
-                              {/* <Button
-                                variant="outline"
-                                className="border-border hover:text-white "
-                                onClick={() => handleUpdateRoutine(routine)}
-                              >
-                                Actualizar
-                              </Button> */}
-                            </>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="border-border hover:text-white"
+                              onClick={() => handleEnableEdit(routine)}
+                            >
+                              <Pencil className="h-4 w-4 mr-1.5" />
+                              Editar
+                            </Button>
                           )}
                           <Button
                             variant="outline"
@@ -1643,7 +1709,7 @@ function ClientRoutinesPage() {
                               resetForm();
                             }}
                           >
-                            Cancelar
+                            Cerrar
                           </Button>
                         </div>
                       </div>

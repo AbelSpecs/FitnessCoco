@@ -322,6 +322,8 @@ function EjerciciosPage() {
   };
 
   async function handleSave() {
+    if (saving) return;
+
     if (!form.name.trim()) {
       notify.error("Falta el nombre", "Escribe un nombre para el ejercicio.");
       return;
@@ -389,7 +391,7 @@ function EjerciciosPage() {
 
         setItems((prev) =>
           prev.map((e) =>
-            e.id === editing.id
+            Number(e.id) === Number(editing.id)
               ? {
                   ...e,
                   name: form.name.trim(),
@@ -471,6 +473,9 @@ function EjerciciosPage() {
       }
 
       setFormOpen(false);
+      setEditing(null);
+      setSelectedFile(null);
+      setUploadProgress(0);
     } catch (err: any) {
       console.error("Error al guardar ejercicio:", err);
       notify.error(
@@ -808,7 +813,17 @@ function EjerciciosPage() {
       </div>
 
       {/* Create / Edit Modal */}
-      <Dialog open={formOpen} onOpenChange={setFormOpen}>
+      <Dialog
+        open={formOpen}
+        onOpenChange={(open) => {
+          setFormOpen(open);
+          if (!open) {
+            setEditing(null);
+            setSelectedFile(null);
+            setUploadProgress(0);
+          }
+        }}
+      >
         <DialogContent className="bg-gradient-card border-border sm:max-w-xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="font-display tracking-wide text-xl">
@@ -993,18 +1008,31 @@ function EjerciciosPage() {
           </div>
 
           <DialogFooter className="gap-2 pt-2">
-            <Button variant="outline" onClick={() => setFormOpen(false)} disabled={saving}>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setFormOpen(false);
+                setEditing(null);
+                setSelectedFile(null);
+                setUploadProgress(0);
+              }}
+              disabled={saving}
+            >
               Cancelar
             </Button>
             <Button
               onClick={handleSave}
-              className="bg-gradient-primary shadow-glow"
+              className="bg-gradient-primary shadow-glow transition-all disabled:opacity-70 disabled:cursor-not-allowed"
               disabled={saving}
             >
               {saving ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  {uploading ? "Subiendo video..." : "Guardando..."}
+                  {uploading
+                    ? "Subiendo video..."
+                    : editing
+                    ? "Guardando cambios..."
+                    : "Guardando ejercicio..."}
                 </>
               ) : editing ? (
                 "Guardar cambios"

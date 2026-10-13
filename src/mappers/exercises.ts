@@ -17,9 +17,18 @@ export const exercisesMapper = (
   return routinesToMap.map((item: GetDailyStudentExerciseDto) => {
     const completeDay = determineDate(item.scheduledDate).day;
     const shortDay = determineDate(item.scheduledDate).short;
-    const muscleGroupId = muscleGroups
-      ? muscleGroups.find((m) => m.name === item.muscleGroupName)?.id
-      : 0;
+    const muscleGroupId =
+      item.exercise?.muscleGroupId ||
+      (muscleGroups
+        ? muscleGroups.find(
+            (m) =>
+              (item.muscleGroupName &&
+                m.name.trim().toLowerCase() === item.muscleGroupName.trim().toLowerCase()) ||
+              (item.exercise?.muscleGroup &&
+                m.name.trim().toLowerCase() === item.exercise.muscleGroup.trim().toLowerCase()),
+          )?.id
+        : 0) ||
+      0;
 
     return {
       dailyExerciseId: item.id,
