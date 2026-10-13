@@ -2,12 +2,13 @@ import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, ChevronRight, Dumbbell, Video } from "lucide-react";
+import { CheckCircle2, ChevronRight, Dumbbell, Video, Link2 } from "lucide-react";
 import { useState } from "react";
 import { CompleteDate, DailyExerciseSets, DayRoutine, Exercise } from "@/types/exercises";
 import { determineDate } from "@/utils/determineDate";
 import { getDailyStudentExercisesByStudentIdAndDates } from "@/services/routine.service";
 import { GetDailyStudentExerciseDto } from "@/dtos/exerciseDto";
+import { getMuscleGroupsTitle } from "@/utils/exerciseFilter";
 import WeekSlider from "@/components/ui/weekSlider";
 import { addDays, startOfWeek, format } from "date-fns";
 import { getSixDaysLater } from "@/helpers/generics";
@@ -57,6 +58,8 @@ export const Route = createFileRoute("/routine/$studentId/")({
           dailyExerciseSets: (e.dailyExerciseSets as DailyExerciseSets[]) || [],
           videoKey: e.videoKey || e.exercise?.videoKey || null,
           videoUrl: e.videoUrl || e.exercise?.videoUrl || null,
+          superSetTag: e.superSetTag ?? null,
+          superSetOrder: e.superSetOrder ?? null,
         };
       });
 
@@ -75,7 +78,7 @@ export const Route = createFileRoute("/routine/$studentId/")({
           short: dayShort.charAt(0).toUpperCase(),
           estimated: "",
           rest: dayExercises.length === 0,
-          muscleGroupName: dayExercises.length > 0 ? dayExercises[0].muscleGroupName : "Descanso",
+          muscleGroupName: dayExercises.length > 0 ? getMuscleGroupsTitle(dayExercises) : "Descanso",
           exercises: dayExercises,
         };
 
@@ -149,6 +152,8 @@ function RutinaPage() {
           dailyExerciseSets: (e.dailyExerciseSets as DailyExerciseSets[]) || [],
           videoKey: e.videoKey || e.exercise?.videoKey || null,
           videoUrl: e.videoUrl || e.exercise?.videoUrl || null,
+          superSetTag: e.superSetTag ?? null,
+          superSetOrder: e.superSetOrder ?? null,
         };
       });
 
@@ -167,7 +172,7 @@ function RutinaPage() {
           short: dayShort.charAt(0).toUpperCase(),
           estimated: "",
           rest: dayExercises.length === 0,
-          muscleGroupName: dayExercises.length > 0 ? dayExercises[0].muscleGroupName : "Descanso",
+          muscleGroupName: dayExercises.length > 0 ? getMuscleGroupsTitle(dayExercises) : "Descanso",
           exercises: dayExercises,
         };
 
@@ -253,6 +258,14 @@ function RutinaPage() {
                           title="Videos demostrativos disponibles"
                         >
                           <Video className="h-3 w-3 text-primary" /> Videos
+                        </span>
+                      )}
+                      {day.exercises?.some((ex) => Boolean(ex.superSetTag)) && (
+                        <span
+                          className="flex items-center gap-1 text-amber-400 font-medium"
+                          title="Contiene series combinadas"
+                        >
+                          <Link2 className="h-3 w-3 text-amber-400" /> Combinada
                         </span>
                       )}
                     </div>

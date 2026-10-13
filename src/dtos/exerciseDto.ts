@@ -10,10 +10,13 @@ export interface DailyStudentExerciseDto {
     exerciseName?: string;
     muscleGroupName?: string;
     coachNotes?: string;
+    superSetTag?: string;
+    superSetOrder?: number;
   };
 }
 
 export interface UpdateDailyStudentExerciseDto {
+  id?: number;
   coachId: number;
   studentId: number;
   exerciseId: number;
@@ -22,6 +25,8 @@ export interface UpdateDailyStudentExerciseDto {
   exerciseName?: string;
   muscleGroupName?: string;
   coachNotes?: string;
+  superSetTag?: string;
+  superSetOrder?: number;
 }
 
 export interface UpdateCompleteDailyStudentExerciseDto {
@@ -44,6 +49,8 @@ export interface GetDailyStudentExerciseDto {
   videoKey?: string | null;
   videoUrl?: string | null;
   exercise?: GetExerciseDto;
+  superSetTag?: string;
+  superSetOrder?: number;
 }
 
 // ExerciseDto

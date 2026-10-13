@@ -1,13 +1,16 @@
 import { useEffect, useRef, useState } from "react";
 import { X, Pause, Play, RotateCcw } from "lucide-react";
-interface RestTimerProps {
+export interface RestTimerProps {
   seconds: number;
   label?: string;
   onClose: () => void;
+  onFinish?: () => void;
+  onRestart?: () => void;
 }
-export function RestTimer({ seconds, label, onClose }: RestTimerProps) {
+export function RestTimer({ seconds, label, onClose, onFinish, onRestart }: RestTimerProps) {
   const [remaining, setRemaining] = useState(seconds);
   const [paused, setPaused] = useState(false);
+  const hasFinishedRef = useRef(false);
   const [pos, setPos] = useState(() => ({
     x: typeof window !== "undefined" ? window.innerWidth - 140 : 200,
     y: typeof window !== "undefined" ? window.innerHeight - 200 : 200,
@@ -18,12 +21,47 @@ export function RestTimer({ seconds, label, onClose }: RestTimerProps) {
     dragging: false,
     moved: false,
   });
+
+  useEffect(() => {
+    setRemaining(seconds);
+    setPaused(false);
+    hasFinishedRef.current = false;
+  }, [seconds]);
+
   useEffect(() => {
     if (paused) return;
-    if (remaining <= 0) return;
+    if (remaining <= 0) {
+      if (!hasFinishedRef.current) {
+        hasFinishedRef.current = true;
+        onFinish?.();
+        try {
+          if (typeof navigator !== "undefined" && navigator.vibrate) {
+            navigator.vibrate([200, 100, 200]);
+          }
+          const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+          if (AudioCtx) {
+            const ctx = new AudioCtx();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.type = "sine";
+            osc.frequency.setValueAtTime(587.33, ctx.currentTime);
+            osc.frequency.setValueAtTime(880, ctx.currentTime + 0.15);
+            gain.gain.setValueAtTime(0.15, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.45);
+            osc.start(ctx.currentTime);
+            osc.stop(ctx.currentTime + 0.45);
+          }
+        } catch {
+          // ignore audio context restrictions
+        }
+      }
+      return;
+    }
     const id = setInterval(() => setRemaining((r) => Math.max(0, r - 1)), 1000);
     return () => clearInterval(id);
-  }, [paused, remaining]);
+  }, [paused, remaining, onFinish]);
   useEffect(() => {
     const onMove = (e: PointerEvent) => {
       if (!dragRef.current.dragging) return;
@@ -124,8 +162,10 @@ export function RestTimer({ seconds, label, onClose }: RestTimerProps) {
               e.stopPropagation();
               if (!dragRef.current.moved) {
                 if (finished) {
+                  hasFinishedRef.current = false;
                   setRemaining(seconds);
                   setPaused(false);
+                  onRestart?.();
                 } else {
                   setPaused((p) => !p);
                 }

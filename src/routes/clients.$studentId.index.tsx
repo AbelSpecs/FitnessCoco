@@ -1,5 +1,5 @@
 import { createFileRoute, Link, redirect, useParams } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useMemo, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -39,7 +39,13 @@ import {
   CheckCircle2,
   UserCog,
   Loader2,
+  Copy,
+  CopyPlus,
+  ClipboardPaste,
+  Link2,
+  Pencil,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { notify } from "@/components/NotificationCenter";
 import { AppShell } from "@/components/AppShell";
 import { getStudentById } from "@/services/student.service";
@@ -47,6 +53,9 @@ import { getUser } from "@/services/user.service";
 import { StorageImage } from "@/components/StorageImage";
 import { StudentClinicalOverview } from "@/components/students/StudentClinicalOverview";
 import { ExerciseVideoSelector } from "@/components/exercises/ExerciseVideoSelector";
+import { RestTimeInput } from "@/components/exercises/RestTimeInput";
+import { WeightInput } from "@/components/exercises/WeightInput";
+import { formatWeightWithEquivalent } from "@/utils/weightFormat";
 import {
   getPresignedVideoUrl,
   uploadFileToPresignedUrl,
@@ -57,6 +66,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   deleteDailyStudentExercises,
+  deleteDailyExercisesSets,
   deleteExercise,
   getDailyStudentExercisesByStudentIdAndDate,
   getExercise,
@@ -103,6 +113,7 @@ import { addDays, format, isAfter, isEqual } from "date-fns";
 import {
   filterExercisesForUser,
   formatExerciseDescriptionWithStudentId,
+  getNextAvailableSuperSetTag,
   isUserIndependent,
 } from "@/utils/exerciseFilter";
 
@@ -226,6 +237,7 @@ function ClientRoutinesPage() {
   const [getShowForm, setGetShowForm] = useState<number | string>("");
   // Post state
   const [savedRoutine, setSavedRoutine] = useState<boolean>(false);
+  const isSavingRoutineRef = useRef<boolean>(false);
   const [routineForm, setRoutineForm] = useState<ExerciseForm>({
     dailyStudentExerciseId: 0,
     exerciseId: 0,
@@ -240,6 +252,118 @@ function ClientRoutinesPage() {
   // update state
   const [isUpdating, setIsUpdating] = useState<boolean>(false);
   const [setsLength, setSetsLength] = useState<number>(0);
+  const [copiedSet, setCopiedSet] = useState<DailyExerciseSetsForm | null>(null);
+
+  // Serie Combinada (Superserie)
+  const [isSuperSet, setIsSuperSet] = useState<boolean>(false);
+  const [selectedSuperSetTag, setSelectedSuperSetTag] = useState<string>("A");
+  const [combinedRestTime, setCombinedRestTime] = useState<string>("90");
+
+  const selectedDateStr = format(selectedDate || new Date(), "yyyy-MM-dd");
+
+  // Ejercicios combinados en la fecha seleccionada (excluyendo el ejercicio actual si estamos editando)
+  const supersetExercisesOnDate = useMemo(() => {
+    return routines.filter((r) => {
+      const rDate = r.scheduledDate?.includes("T")
+        ? r.scheduledDate.split("T")[0]
+        : r.scheduledDate;
+      if (isUpdating && r.dailyExerciseId === routineForm.dailyStudentExerciseId) return false;
+      return !!r.superSetTag && rDate === selectedDateStr;
+    });
+  }, [routines, selectedDateStr, isUpdating, routineForm.dailyStudentExerciseId]);
+
+  // Agrupados por superSetTag (ej. "A", "B")
+  const existingSuperSetsByTag = useMemo(() => {
+    const map: Record<string, Exercise[]> = {};
+    for (const r of supersetExercisesOnDate) {
+      const tag = (r.superSetTag || "").trim().toUpperCase();
+      if (!tag) continue;
+      if (!map[tag]) map[tag] = [];
+      map[tag].push(r);
+    }
+    Object.keys(map).forEach((tag) => {
+      map[tag].sort((a, b) => (Number(a.superSetOrder) || 1) - (Number(b.superSetOrder) || 1));
+    });
+    return map;
+  }, [supersetExercisesOnDate]);
+
+  const existingTags = useMemo(() => {
+    return Object.keys(existingSuperSetsByTag).sort();
+  }, [existingSuperSetsByTag]);
+
+  const nextAvailableTag = useMemo(() => {
+    return getNextAvailableSuperSetTag(existingTags);
+  }, [existingTags]);
+
+  const effectiveTag = useMemo(() => {
+    if (!isSuperSet) return "";
+    return (selectedSuperSetTag || existingTags[0] || "A").trim().toUpperCase();
+  }, [isSuperSet, selectedSuperSetTag, existingTags]);
+
+  const currentTagExercises = useMemo(() => {
+    return existingSuperSetsByTag[effectiveTag] || [];
+  }, [existingSuperSetsByTag, effectiveTag]);
+
+  const hasExistingInSelectedTag = currentTagExercises.length > 0;
+  const firstExerciseInSelectedTag = hasExistingInSelectedTag ? currentTagExercises[0] : null;
+  const establishedRestInSelectedTag =
+    firstExerciseInSelectedTag?.dailyExerciseSets?.[0]?.restTime || "90";
+
+  const effectiveOrder = hasExistingInSelectedTag
+    ? currentTagExercises.length + 1
+    : 1;
+  const effectiveRestTime = hasExistingInSelectedTag
+    ? establishedRestInSelectedTag
+    : combinedRestTime;
+
+  const handleToggleSuperSet = () => {
+    const nextState = !isSuperSet;
+    setIsSuperSet(nextState);
+    if (nextState) {
+      const targetTag = selectedSuperSetTag || existingTags[0] || "A";
+      setSelectedSuperSetTag(targetTag);
+      const tagExercises = existingSuperSetsByTag[targetTag] || [];
+      const restToApply =
+        tagExercises.length > 0
+          ? tagExercises[0]?.dailyExerciseSets?.[0]?.restTime || "90"
+          : combinedRestTime;
+      setRoutineForm((prev) => ({
+        ...prev,
+        dailyExerciseSets: prev.dailyExerciseSets.map((s) => ({
+          ...s,
+          restTime: restToApply,
+        })),
+      }));
+    }
+  };
+
+  const handleSelectSuperSetTag = (tag: string) => {
+    const cleanTag = tag.trim().toUpperCase();
+    setSelectedSuperSetTag(cleanTag);
+    const tagExercises = existingSuperSetsByTag[cleanTag] || [];
+    const restToApply =
+      tagExercises.length > 0
+        ? tagExercises[0]?.dailyExerciseSets?.[0]?.restTime || "90"
+        : combinedRestTime;
+    setRoutineForm((prev) => ({
+      ...prev,
+      dailyExerciseSets: prev.dailyExerciseSets.map((s) => ({
+        ...s,
+        restTime: restToApply,
+      })),
+    }));
+  };
+
+  const handleCombinedRestTimeChange = (newRest: string) => {
+    setCombinedRestTime(newRest);
+    setRoutineForm((prev) => ({
+      ...prev,
+      dailyExerciseSets: prev.dailyExerciseSets.map((s) => ({
+        ...s,
+        restTime: newRest,
+      })),
+    }));
+  };
 
   const resetForm = () => {
     setRoutineForm({
@@ -254,6 +378,11 @@ function ClientRoutinesPage() {
       dailyExerciseSets: [emptySet()],
     });
     setSelectedDate(new Date());
+    setCopiedSet(null);
+    setIsSuperSet(false);
+    setSelectedSuperSetTag("A");
+    setCombinedRestTime("90");
+    setIsUpdating(false);
   };
 
   const newExerciseFormReset = () => {
@@ -270,6 +399,10 @@ function ClientRoutinesPage() {
   };
 
   const handleAdd = () => {
+    if (!showForm) {
+      resetForm();
+      setIsUpdating(false);
+    }
     setShowForm((s) => !s);
   };
 
@@ -282,11 +415,64 @@ function ClientRoutinesPage() {
     }));
   };
 
-  const addSet = () =>
+  const addSet = () => {
+    const defaultRest = isSuperSet ? effectiveRestTime : "90";
     setRoutineForm((prev) => ({
       ...prev,
-      dailyExerciseSets: [...prev.dailyExerciseSets, emptySet()],
+      dailyExerciseSets: [
+        { ...emptySet(), restTime: defaultRest },
+        ...prev.dailyExerciseSets,
+      ],
     }));
+  };
+
+  const copySet = (set: DailyExerciseSetsForm | DailyExerciseSets) => {
+    setCopiedSet({
+      id: `copy-${Date.now()}`,
+      setNumber: "",
+      targetReps: String(set.targetReps || ""),
+      targetWeight: String(set.targetWeight || ""),
+      restTime: String(set.restTime || ""),
+      isAchieved: false,
+    });
+    notify.success(
+      "Serie copiada",
+      `${set.targetReps || "0"} reps • ${formatWeightWithEquivalent(set.targetWeight)}`,
+    );
+  };
+
+  const duplicateSet = (set: DailyExerciseSetsForm | DailyExerciseSets) => {
+    const newSet: DailyExerciseSetsForm = {
+      id: `ex-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      setNumber: "",
+      targetReps: String(set.targetReps || ""),
+      targetWeight: String(set.targetWeight || ""),
+      restTime: String(set.restTime || ""),
+      isAchieved: false,
+    };
+    setRoutineForm((prev) => ({
+      ...prev,
+      dailyExerciseSets: [newSet, ...prev.dailyExerciseSets],
+    }));
+    notify.created("Serie duplicada", "Se añadió una copia arriba");
+  };
+
+  const pasteSet = () => {
+    if (!copiedSet) return;
+    const newSet: DailyExerciseSetsForm = {
+      id: `ex-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      setNumber: "",
+      targetReps: copiedSet.targetReps,
+      targetWeight: copiedSet.targetWeight,
+      restTime: copiedSet.restTime,
+      isAchieved: false,
+    };
+    setRoutineForm((prev) => ({
+      ...prev,
+      dailyExerciseSets: [newSet, ...prev.dailyExerciseSets],
+    }));
+    notify.created("Serie pegada", "Se añadió la serie copiada arriba");
+  };
 
   const removeSet = (id: string) =>
     setRoutineForm((prev) => ({
@@ -360,7 +546,10 @@ function ClientRoutinesPage() {
       const updatedRoutines: GetDailyStudentExerciseDto[] =
         await getDailyStudentExercisesByStudentIdAndDate(Number(studentId), dateString);
 
-      const completeExercisesMapped: Exercise[] = exercisesMapper(updatedRoutines);
+      const completeExercisesMapped: Exercise[] = exercisesMapper(
+        updatedRoutines,
+        muscleGroups,
+      );
       setRoutines(completeExercisesMapped);
     } catch (error) {
       console.error("Error fetching routines by date:", error);
@@ -491,7 +680,24 @@ function ClientRoutinesPage() {
       coachNotes: routine.coachNotes,
       scheduledDate: routine.scheduledDate,
       dailyExerciseSets: routine.dailyExerciseSets,
+      superSetTag: routine.superSetTag ?? null,
+      superSetOrder: routine.superSetOrder ?? null,
     });
+
+    if (routine.muscleGroupId) {
+      handleExercises(routine.muscleGroupId);
+    }
+
+    if (routine.superSetTag) {
+      const tag = routine.superSetTag.trim().toUpperCase();
+      setIsSuperSet(true);
+      setSelectedSuperSetTag(tag);
+      setCombinedRestTime(routine.dailyExerciseSets?.[0]?.restTime || "90");
+    } else {
+      setIsSuperSet(false);
+      setSelectedSuperSetTag(existingTags[0] || "A");
+      setCombinedRestTime("90");
+    }
 
     setIsUpdating(true);
     setGetShowForm("");
@@ -499,29 +705,67 @@ function ClientRoutinesPage() {
   };
 
   const handleUpdateRoutine = async () => {
-    const setsWithNoId: DailyExerciseSetsForm[] = routineForm.dailyExerciseSets.filter((d) =>
-      Number.isNaN(d.id),
+    if (isSavingRoutineRef.current || savedRoutine) return;
+
+    const incomplete = routineForm.dailyExerciseSets.some(
+      (e) => !e.targetReps || !e.targetWeight || !e.restTime,
     );
+    if (incomplete) {
+      notify.error("Sets incompletos", "Completa los campos para cada serie");
+      return;
+    }
+
+    isSavingRoutineRef.current = true;
+    setSavedRoutine(true);
+
+    const superSetTagClean = isSuperSet ? effectiveTag : null;
+    const superSetOrderClean = isSuperSet ? effectiveOrder : null;
 
     try {
+      // 1. Eliminar sets que fueron removidos por el usuario en la interfaz
+      const currentRoutine = routines.find(
+        (r) => r.dailyExerciseId === routineForm.dailyStudentExerciseId,
+      );
+      const originalSetIds = (currentRoutine?.dailyExerciseSets || [])
+        .map((s) => Number(s.id))
+        .filter((id) => !Number.isNaN(id) && id > 0);
+      const currentSetIds = routineForm.dailyExerciseSets
+        .map((s) => Number(s.id))
+        .filter((id) => !Number.isNaN(id) && id > 0);
+      const deletedSetIds = originalSetIds.filter((id) => !currentSetIds.includes(id));
+
+      if (deletedSetIds.length > 0) {
+        await Promise.all(deletedSetIds.map((id) => deleteDailyExercisesSets(id)));
+      }
+
+      // 2. Mapear TODOS los sets (los existentes con su ID real y los nuevos/duplicados con id: 0)
+      const setsPayload: DailyExerciseSetsDto[] = routineForm.dailyExerciseSets.map(
+        (s, index) => {
+          const rawId = Number(s.id);
+          const validId = !Number.isNaN(rawId) && rawId > 0 ? rawId : 0;
+          return {
+            id: validId,
+            dailyStudentExerciseId: Number(routineForm.dailyStudentExerciseId),
+            setNumber: Number(index + 1),
+            targetReps: Number(s.targetReps),
+            targetWeight: Number(s.targetWeight),
+            restTime: String(s.restTime),
+            actualReps: s.actualReps !== undefined && s.actualReps !== null ? Number(s.actualReps) : undefined,
+            actualWeight: s.actualWeight !== undefined && s.actualWeight !== null ? Number(s.actualWeight) : undefined,
+            isAchieved: Boolean(s.isAchieved),
+          };
+        },
+      );
+
       const dailyExerciseToUpdate: UpdateDailyStudentExerciseDto = {
+        id: Number(routineForm.dailyStudentExerciseId),
         coachId: user!.coachId!,
         studentId: Number(studentId),
         exerciseId: routineForm.exerciseId,
         scheduledDate: routineForm.scheduledDate,
-        dailyExerciseSets: routineForm.dailyExerciseSets
-          .filter((s) => Number(s.id))
-          .map((s) => ({
-            id: Number(s.id),
-            dailyStudentExerciseId: routineForm.dailyStudentExerciseId,
-            setNumber: Number(s.setNumber),
-            targetReps: Number(s.targetReps),
-            targetWeight: Number(s.targetWeight),
-            restTime: s.restTime,
-            actualReps: s.actualReps,
-            actualWeight: s.actualWeight,
-            isAchieved: s.isAchieved,
-          })),
+        superSetTag: superSetTagClean ?? undefined,
+        superSetOrder: superSetOrderClean ?? undefined,
+        dailyExerciseSets: setsPayload,
         exerciseName: routineForm.exerciseName,
         muscleGroupName: routineForm.muscleGroupName,
         coachNotes: routineForm.coachNotes,
@@ -532,45 +776,70 @@ function ClientRoutinesPage() {
         dailyExerciseToUpdate,
       );
 
-      if (setsWithNoId.length > 0) {
-        const setsFormatted: DailyExerciseSetsDto[] = setsWithNoId?.map((s) => ({
-          dailyStudentExerciseId: routineForm.dailyStudentExerciseId,
-          setNumber: Number(s.setNumber),
-          targetReps: Number(s.targetReps),
-          targetWeight: Number(s.targetWeight),
-          restTime: s.restTime,
-          actualReps: s.actualReps,
-          actualWeight: s.actualWeight,
-          isAchieved: s.isAchieved,
-        }));
+      const finalSets = updatedDailyExercises?.dailyExerciseSets?.length
+        ? updatedDailyExercises.dailyExerciseSets.map((s: any, idx: number) => ({
+            id: Number(s.id),
+            setNumber: String(s.setNumber || idx + 1),
+            targetReps: String(s.targetReps),
+            targetWeight: String(s.targetWeight),
+            restTime: String(s.restTime || "90"),
+            actualReps: Number(s.actualReps || 0),
+            actualWeight: Number(s.actualWeight || 0),
+            isAchieved: Boolean(s.isAchieved),
+          }))
+        : setsPayload.map((s, idx) => ({
+            id: s.id || idx + 1,
+            setNumber: String(s.setNumber),
+            targetReps: String(s.targetReps),
+            targetWeight: String(s.targetWeight),
+            restTime: String(s.restTime),
+            actualReps: Number(s.actualReps || 0),
+            actualWeight: Number(s.actualWeight || 0),
+            isAchieved: Boolean(s.isAchieved),
+          }));
 
-        const setsResponses = setsFormatted.map((s) => postDailyExercisesSets(s));
+      setRoutines((prev) =>
+        prev.map((r) =>
+          r.dailyExerciseId === routineForm.dailyStudentExerciseId
+            ? {
+                ...r,
+                exerciseId: routineForm.exerciseId,
+                exerciseName: routineForm.exerciseName || r.exerciseName,
+                muscleGroupName: routineForm.muscleGroupName || r.muscleGroupName,
+                coachNotes: routineForm.coachNotes || r.coachNotes || "",
+                dailyExerciseSets: finalSets,
+                superSetTag: superSetTagClean,
+                superSetOrder: superSetOrderClean,
+              }
+            : r,
+        ),
+      );
 
-        const responses = await Promise.all(setsResponses);
-      }
-
-      notify.created("Ejercicio actualizado", `se ha actualizado con exito`);
+      notify.updated("Ejercicio actualizado", "La rutina se ha actualizado con éxito.");
       resetForm();
+      setShowForm(false);
     } catch (error) {
       console.error("Error al actualizar la rutina:", error);
       notify.error(
         "Error al actualizar",
         "Ocurrió un error al actualizar la rutina. Intenta de nuevo.",
       );
+    } finally {
+      isSavingRoutineRef.current = false;
+      setSavedRoutine(false);
     }
   };
 
   const handleSaveRoutine = async () => {
-    setSavedRoutine(true);
+    if (isSavingRoutineRef.current || savedRoutine) return;
+
     if (!routineForm.muscleGroupId) {
       notify.error("Falta el grupo muscular", "Selecciona grupo muscular");
-      setSavedRoutine(false);
       return;
     }
 
     if (!routineForm.exerciseId) {
       notify.error("Falta el ejercicio", "Selecciona ejercicio");
-      setSavedRoutine(false);
       return;
     }
 
@@ -579,9 +848,11 @@ function ClientRoutinesPage() {
     );
     if (incomplete) {
       notify.error("Sets incompletos", "Completa los campos para cada serie");
-      setSavedRoutine(false);
       return;
     }
+
+    isSavingRoutineRef.current = true;
+    setSavedRoutine(true);
 
     const dailyExerciseSetsData: DailyExerciseSetsDto[] = routineForm.dailyExerciseSets.map(
       (set, index) => {
@@ -598,6 +869,8 @@ function ClientRoutinesPage() {
     );
 
     const scheduledDateFormatted = format(selectedDate || new Date(), "yyyy-MM-dd");
+    const superSetTagClean = isSuperSet ? effectiveTag : null;
+    const superSetOrderClean = isSuperSet ? effectiveOrder : null;
 
     const dailyExerciseData: DailyStudentExerciseDto = {
       assign: {
@@ -607,6 +880,8 @@ function ClientRoutinesPage() {
         scheduledDate: scheduledDateFormatted,
         dailyExerciseSets: dailyExerciseSetsData,
         coachNotes: routineForm.coachNotes!,
+        superSetTag: superSetTagClean ?? undefined,
+        superSetOrder: superSetOrderClean ?? undefined,
       },
     };
 
@@ -631,6 +906,8 @@ function ClientRoutinesPage() {
         scheduledDate: exercisesResponse.scheduledDate,
         day: completeDay,
         short: shortDay,
+        superSetTag: exercisesResponse.superSetTag ?? superSetTagClean,
+        superSetOrder: exercisesResponse.superSetOrder ?? superSetOrderClean,
         dailyExerciseSets: exercisesResponse.dailyExerciseSets.map(
           (set: GetDailyExerciseSetsDto) => set,
         ),
@@ -649,6 +926,7 @@ function ClientRoutinesPage() {
       console.error("Error al guardar la rutina:", error);
       notify.error("Error al guardar", "Ocurrió un error al guardar la rutina. Intenta de nuevo.");
     } finally {
+      isSavingRoutineRef.current = false;
       setSavedRoutine(false);
       setShowForm(false);
     }
@@ -846,6 +1124,157 @@ function ClientRoutinesPage() {
                   />
                 </div>
               </div>
+              {/* Botón de Serie Combinada (Link) y Configuración de Descanso Unificado */}
+              <div className="rounded-xl border border-border/80 bg-background/50 p-3 sm:p-4 mb-4 space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                  <Button
+                    type="button"
+                    variant={isSuperSet ? "default" : "outline"}
+                    size="sm"
+                    onClick={handleToggleSuperSet}
+                    className={
+                      isSuperSet
+                        ? "bg-amber-500 hover:bg-amber-600 text-black font-semibold h-8 px-3 text-xs shadow-md transition-all"
+                        : "border-dashed border-border hover:border-amber-500/60 hover:text-amber-500 h-8 px-3 text-xs transition-all"
+                    }
+                  >
+                    <Link2 className={`h-3.5 w-3.5 mr-1.5 ${isSuperSet ? "text-black" : "text-amber-500"}`} />
+                    {isSuperSet ? "Serie Combinada Activada" : "Vincular a Serie Combinada"}
+                  </Button>
+                  <span className="text-[11px] text-muted-foreground">
+                    {isSuperSet
+                      ? hasExistingInSelectedTag
+                        ? `Ejercicio #${effectiveOrder} vinculado a Serie #${effectiveTag}`
+                        : `1er ejercicio de Serie #${effectiveTag}: define el descanso único`
+                      : "Vincula ejercicios en combinación sin descanso entre series"}
+                  </span>
+                </div>
+
+                {isSuperSet && (
+                  <div className="pt-3 border-t border-border/60 space-y-3 animate-in fade-in-50 duration-200">
+                    {/* Selector de Combinaciones */}
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between flex-wrap gap-1">
+                        <Label className="text-[11px] font-semibold text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
+                          <Link2 className="h-3.5 w-3.5" />
+                          Combinación para este día:
+                        </Label>
+                        <span className="text-[10px] text-muted-foreground">
+                          Puedes crear varias combinaciones (#A, #B, #C...) en el mismo día
+                        </span>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        {existingTags.map((tag) => {
+                          const count = existingSuperSetsByTag[tag]?.length || 0;
+                          const isSelected = effectiveTag === tag;
+                          return (
+                            <Button
+                              key={tag}
+                              type="button"
+                              size="sm"
+                              variant={isSelected ? "default" : "outline"}
+                              onClick={() => handleSelectSuperSetTag(tag)}
+                              className={`h-7 px-3 text-xs font-semibold rounded-lg transition-all ${
+                                isSelected
+                                  ? "bg-amber-500 text-black hover:bg-amber-600 shadow"
+                                  : "border-border/80 hover:border-amber-500/50 hover:text-amber-400"
+                              }`}
+                            >
+                              Serie #{tag} {count > 0 ? `(${count} ej.)` : ""}
+                            </Button>
+                          );
+                        })}
+
+                        {/* Opción para crear una nueva combinación */}
+                        {(!existingTags.includes(nextAvailableTag) || existingTags.length === 0) && (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant={effectiveTag === nextAvailableTag ? "default" : "outline"}
+                            onClick={() => handleSelectSuperSetTag(nextAvailableTag)}
+                            className={`h-7 px-3 text-xs font-semibold rounded-lg border-dashed transition-all ${
+                              effectiveTag === nextAvailableTag
+                                ? "bg-amber-500 text-black hover:bg-amber-600 shadow"
+                                : "border-amber-500/60 text-amber-400 hover:bg-amber-500/10"
+                            }`}
+                          >
+                            + Nueva Serie (#{nextAvailableTag})
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Detalle de la combinación seleccionada */}
+                    {hasExistingInSelectedTag ? (
+                      <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-2.5 flex items-center justify-between gap-3 flex-wrap">
+                        <div className="flex items-center gap-2">
+                          <span className="h-6 px-2 rounded bg-amber-500 text-black text-xs font-bold flex items-center">
+                            #{effectiveTag} • Ejercicio #{effectiveOrder}
+                          </span>
+                          <div className="text-xs">
+                            <p className="font-medium text-foreground">
+                              Vinculado a Serie Combinada #{effectiveTag} existente
+                            </p>
+                            <p className="text-[11px] text-muted-foreground">
+                              Descanso sincronizado con el 1er ejercicio ({firstExerciseInSelectedTag?.exerciseName || "Ejercicio #1"})
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1.5 bg-background/60 px-2.5 py-1 rounded-md border border-border">
+                          <span className="text-[11px] text-muted-foreground">Descanso único:</span>
+                          <span className="text-xs font-bold text-amber-400 font-mono">
+                            {establishedRestInSelectedTag}s
+                          </span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 space-y-2.5">
+                        <div className="flex items-center justify-between gap-2 flex-wrap">
+                          <div className="flex items-center gap-2">
+                            <span className="h-6 px-2 rounded bg-amber-500 text-black text-xs font-bold flex items-center">
+                              #{effectiveTag} • Ejercicio #1
+                            </span>
+                            <Label className="text-[11px] uppercase tracking-widest text-amber-400 font-semibold">
+                              Descanso Único para Serie #{effectiveTag}
+                            </Label>
+                          </div>
+                          <span className="text-[11px] text-muted-foreground">
+                            Reemplaza el descanso en las series de todos los ejercicios de este bloque
+                          </span>
+                        </div>
+
+                        <div className="grid sm:grid-cols-[1fr_auto] gap-2.5 items-center">
+                          <RestTimeInput
+                            value={combinedRestTime}
+                            onChange={handleCombinedRestTimeChange}
+                            placeholder="Ej. 90"
+                          />
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            {["30", "60", "90", "120", "180"].map((time) => (
+                              <Button
+                                key={time}
+                                type="button"
+                                size="sm"
+                                variant={combinedRestTime === time ? "default" : "outline"}
+                                className={`h-8 sm:h-9 px-3 text-xs ${
+                                  combinedRestTime === time
+                                    ? "bg-amber-500 text-black hover:bg-amber-600 font-bold"
+                                    : "border-border/60 hover:text-white"
+                                }`}
+                                onClick={() => handleCombinedRestTimeChange(time)}
+                              >
+                                {time}s
+                              </Button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
               <div className="flex items-center justify-between mb-3">
                 <h3 className="font-display text-base flex items-center gap-2">
                   <Layers className="h-4 w-4 text-primary-glow" />
@@ -871,15 +1300,39 @@ function ClientRoutinesPage() {
                           Serie
                         </span>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-destructive hover:bg-destructive/10 hover:text-destructive disabled:opacity-30"
-                        onClick={() => removeSet(set.id.toString())}
-                        disabled={routineForm.dailyExerciseSets.length === 1}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => copySet(set)}
+                          className="h-7 px-2 text-xs text-muted-foreground hover:text-primary-glow hover:bg-primary/10"
+                          title="Copiar valores de esta serie para pegar"
+                        >
+                          <Copy className="h-3.5 w-3.5 mr-1" /> Copiar
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => duplicateSet(set)}
+                          className="h-7 px-2 text-xs text-muted-foreground hover:text-primary-glow hover:bg-primary/10"
+                          title="Duplicar esta serie inmediatamente arriba"
+                        >
+                          <CopyPlus className="h-3.5 w-3.5 mr-1" /> Duplicar
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive hover:bg-destructive/10 hover:text-destructive disabled:opacity-30 h-7 w-7 p-0"
+                          onClick={() => removeSet(set.id.toString())}
+                          disabled={routineForm.dailyExerciseSets.length === 1}
+                          title="Eliminar serie"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                     <div className="grid sm:grid-cols-3 gap-3 mb-3">
                       <div>
@@ -901,50 +1354,52 @@ function ClientRoutinesPage() {
                       </div>
                       <div>
                         <Label className="text-[10px] uppercase tracking-widest text-muted-foreground flex items-center gap-1">
-                          <Layers className="h-3 w-3" /> Peso (kg)
+                          <Layers className="h-3 w-3" /> Peso
                         </Label>
-                        <Input
-                          type="number"
-                          name="targetWeight"
-                          min={1}
-                          max={500}
+                        <WeightInput
                           value={set.targetWeight}
-                          onChange={(e) =>
-                            updateSet(set.id.toString(), { targetWeight: e.target.value })
-                          }
-                          placeholder="100"
-                          className="mt-1.5 bg-background/60 border-border focus-visible:ring-primary/40"
+                          onChange={(val) => updateSet(set.id.toString(), { targetWeight: val })}
+                          className="mt-1.5"
                         />
                       </div>
                       <div>
                         <Label className="text-[10px] uppercase tracking-widest text-muted-foreground flex items-center gap-1">
-                          <Repeat className="h-3 w-3" /> Descanso (s)
+                          <Repeat className="h-3 w-3" /> Descanso {isSuperSet && <span className="text-amber-400 text-[9px]">(Fijo)</span>}
                         </Label>
-                        <Input
+                        <RestTimeInput
                           value={set.restTime}
-                          name="restTime"
-                          onChange={(e) =>
-                            updateSet(set.id.toString(), { restTime: e.target.value })
-                          }
-                          placeholder="90"
-                          type="number"
-                          min={0}
-                          max={1200}
-                          className="mt-1.5 bg-background/60 border-border focus-visible:ring-primary/40"
+                          onChange={(val) => updateSet(set.id.toString(), { restTime: val })}
+                          disabled={isSuperSet}
+                          className="mt-1.5"
                         />
                       </div>
                     </div>
                   </div>
                 ))}
               </div>
-              <Button
-                onClick={addSet}
-                variant="outline"
-                className="w-full border-dashed border-primary/40 hover:bg-primary/10 hover:border-primary/60 mb-5"
-              >
-                <Plus className="h-4 w-4 mr-1 text-white" />{" "}
-                <span className="text-white">Añadir otro set</span>
-              </Button>
+              <div className="flex flex-col sm:flex-row items-center gap-2 mb-5">
+                <Button
+                  onClick={addSet}
+                  variant="outline"
+                  className="w-full flex-1 border-dashed border-primary/40 hover:bg-primary/10 hover:border-primary/60"
+                >
+                  <Plus className="h-4 w-4 mr-1 text-white" />{" "}
+                  <span className="text-white">Añadir otro set (arriba)</span>
+                </Button>
+                {copiedSet && (
+                  <Button
+                    type="button"
+                    onClick={pasteSet}
+                    variant="outline"
+                    className="w-full sm:w-auto border-primary/60 bg-primary/10 hover:bg-primary/20 text-primary-glow"
+                    title="Pegar la serie copiada arriba"
+                  >
+                    <ClipboardPaste className="h-4 w-4 mr-1.5" /> Pegar serie (
+                    {copiedSet.targetReps} reps •{" "}
+                    {formatWeightWithEquivalent(copiedSet.targetWeight)})
+                  </Button>
+                )}
+              </div>
               <div className="flex items-center gap-3 justify-end flex-wrap">
                 <Button
                   variant="outline"
@@ -958,11 +1413,20 @@ function ClientRoutinesPage() {
                 </Button>
                 <Button
                   onClick={isUpdating ? handleUpdateRoutine : handleSaveRoutine}
-                  className="bg-gradient-primary hover:opacity-90 shadow-glow"
+                  className="bg-gradient-primary hover:opacity-90 shadow-glow disabled:opacity-70 disabled:cursor-not-allowed"
                   disabled={savedRoutine}
                 >
-                  <Save className="h-4 w-4 mr-1" />{" "}
-                  {isUpdating ? "Actualizar rutina" : "Guardar rutina"}
+                  {savedRoutine ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      {isUpdating ? "Actualizando rutina..." : "Guardando rutina..."}
+                    </>
+                  ) : (
+                    <>
+                      <Save className="h-4 w-4 mr-1" />{" "}
+                      {isUpdating ? "Actualizar rutina" : "Guardar rutina"}
+                    </>
+                  )}
                 </Button>
               </div>
             </Card>
@@ -1025,82 +1489,194 @@ function ClientRoutinesPage() {
 
                 const isFutureRoutine = todayFormatted <= routineDayFormatted;
 
+                // Grupo de combinación al que pertenece este ejercicio
+                const superSetTag = (routine.superSetTag || "").trim();
+                const superSetGroup = superSetTag
+                  ? routines
+                      .filter(
+                        (r) =>
+                          (r.superSetTag || "").trim().toLowerCase() ===
+                          superSetTag.toLowerCase(),
+                      )
+                      .sort(
+                        (a, b) =>
+                          (Number(a.superSetOrder) || 0) - (Number(b.superSetOrder) || 0),
+                      )
+                  : [];
+                const isSuperSet = superSetGroup.length > 0;
+                const totalInSuperSet = superSetGroup.length;
+                const groupPartners = superSetGroup.filter((r) =>
+                  r.dailyExerciseId && routine.dailyExerciseId
+                    ? r.dailyExerciseId !== routine.dailyExerciseId
+                    : r.exerciseId !== routine.exerciseId,
+                );
+
+                const prevRoutine = index > 0 ? routines[index - 1] : null;
+                const isNewSuperSetBlock = Boolean(
+                  superSetTag &&
+                    (!prevRoutine ||
+                      (prevRoutine.superSetTag || "").trim().toLowerCase() !==
+                        superSetTag.toLowerCase()),
+                );
+
                 return (
-                  <Card
-                    key={routine.exerciseId}
-                    className="bg-gradient-card border-border p-4 sm:p-5 hover:border-primary/50 hover:shadow-card transition-all duration-300"
+                  <div
+                    key={routine.dailyExerciseId || `${routine.exerciseId}-${index}`}
+                    className="space-y-2"
                   >
-                    <div className="flex items-center gap-4 flex-wrap sm:flex-nowrap mb-5">
-                      <div className="h-12 w-12 rounded-xl bg-primary/10 border border-primary/30 flex items-center justify-center shrink-0">
-                        {routine.isCompleted ? (
-                          <CheckCircle2 className="h-5 w-5" />
-                        ) : (
-                          <Dumbbell className="h-5 w-5 text-primary-glow" />
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-display text-lg sm:text-xl leading-tight truncate">
-                          {routine.exerciseName}
-                        </h3>
-                        {/* <p className="font-display text-lg sm:text-xl leading-tight truncate">
-                        {routine.}
-                      </p> */}
-                        <div className="flex items-center gap-3 text-[11px] sm:text-xs text-muted-foreground mt-1 flex-wrap">
-                          <span className="flex items-center gap-1">
-                            <Calendar className="h-3 w-3 text-primary-glow" />
-                            {(() => {
-                              const fechaCruda = routine.scheduledDate;
-
-                              if (!fechaCruda) return <span>Sin fecha asignada</span>;
-
-                              const parsedDate = new Date(fechaCruda);
-                              const esValida = !isNaN(parsedDate.getTime());
-
-                              return esValida ? (
-                                <>
-                                  <span>Asignada para: </span>
-                                  <span className="font-semibold text-foreground">
-                                    {parsedDate.toLocaleDateString("es-ES", {
-                                      day: "2-digit",
-                                      month: "2-digit",
-                                      year: "numeric",
-                                      timeZone: "UTC",
-                                    })}
-                                  </span>
-                                </>
-                              ) : (
-                                <span>Cargando fecha...</span>
-                              );
-                            })()}
+                    {isNewSuperSetBlock && (
+                      <div className="flex items-center justify-between gap-2 py-2 px-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs shadow-sm mt-4 first:mt-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Link2 className="h-4 w-4 text-amber-400 shrink-0" />
+                          <span className="font-bold tracking-wide uppercase text-[11px]">
+                            Bloque Combinado #{superSetTag}
+                          </span>
+                          <span className="text-amber-200/80">
+                            • {superSetGroup.map((r) => r.exerciseName).join(" + ")}
                           </span>
                         </div>
-                      </div>
-                      <div className="flex items-center gap-2 ml-auto">
-                        <Button
+                        <Badge
                           variant="outline"
-                          size="sm"
-                          className="border-border hover:border-primary/50 hover:bg-primary/10 hover:text-white"
-                          onClick={() => handleViewExerciseDetails(routine)}
+                          className="border-amber-500/40 text-amber-300 bg-amber-500/10 text-[10px]"
                         >
-                          <Eye className="h-4 w-4 mr-1" /> Ver
-                          <ChevronRight className="h-3 w-3 ml-0.5 opacity-60" />
-                        </Button>
-                        {isFutureRoutine && (
+                          {totalInSuperSet} ejercicios vinculados
+                        </Badge>
+                      </div>
+                    )}
+
+                    <Card
+                      className={cn(
+                        "bg-gradient-card border-border p-4 sm:p-5 hover:border-primary/50 hover:shadow-card transition-all duration-300",
+                        isSuperSet &&
+                          "border-amber-500/35 bg-gradient-to-r from-amber-500/[0.04] to-transparent shadow-[0_0_15px_rgba(245,158,11,0.04)]",
+                      )}
+                    >
+                      <div className="flex items-center gap-4 flex-wrap sm:flex-nowrap mb-5">
+                        <div
+                          className={cn(
+                            "h-12 w-12 rounded-xl flex items-center justify-center shrink-0",
+                            routine.isCompleted
+                              ? "bg-emerald-500/10 border border-emerald-500/30 text-emerald-400"
+                              : isSuperSet
+                                ? "bg-amber-500/15 border border-amber-500/40 text-amber-400"
+                                : "bg-primary/10 border border-primary/30 text-primary-glow",
+                          )}
+                        >
+                          {routine.isCompleted ? (
+                            <CheckCircle2 className="h-5 w-5" />
+                          ) : isSuperSet ? (
+                            <Link2 className="h-5 w-5" />
+                          ) : (
+                            <Dumbbell className="h-5 w-5" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h3 className="font-display text-lg sm:text-xl leading-tight truncate">
+                              {routine.exerciseName}
+                            </h3>
+                            {isSuperSet && (
+                              <Badge className="bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-amber-300 border-amber-500/40 gap-1.5 text-xs py-0.5 px-2.5 font-semibold shadow-sm">
+                                <Link2 className="h-3.5 w-3.5 text-amber-400" />
+                                <span>Serie Combinada #{superSetTag}</span>
+                                {routine.superSetOrder && (
+                                  <span className="text-amber-200/90 font-normal">
+                                    • Ejercicio {routine.superSetOrder} de {totalInSuperSet}
+                                  </span>
+                                )}
+                              </Badge>
+                            )}
+                          </div>
+
+                          {isSuperSet && groupPartners.length > 0 && (
+                            <div className="flex items-center gap-1.5 mt-1 text-[11px] text-amber-200/90 flex-wrap">
+                              <span className="text-muted-foreground">Combinado con:</span>
+                              <span className="font-semibold text-amber-300">
+                                {groupPartners.map((p) => p.exerciseName).join(" + ")}
+                              </span>
+                            </div>
+                          )}
+
+                          <div className="flex items-center gap-3 text-[11px] sm:text-xs text-muted-foreground mt-1 flex-wrap">
+                            <span className="flex items-center gap-1">
+                              <Calendar className="h-3 w-3 text-primary-glow" />
+                              {(() => {
+                                const fechaCruda = routine.scheduledDate;
+
+                                if (!fechaCruda) return <span>Sin fecha asignada</span>;
+
+                                const parsedDate = new Date(fechaCruda);
+                                const esValida = !isNaN(parsedDate.getTime());
+
+                                return esValida ? (
+                                  <>
+                                    <span>Asignada para: </span>
+                                    <span className="font-semibold text-foreground">
+                                      {parsedDate.toLocaleDateString("es-ES", {
+                                        day: "2-digit",
+                                        month: "2-digit",
+                                        year: "numeric",
+                                        timeZone: "UTC",
+                                      })}
+                                    </span>
+                                  </>
+                                ) : (
+                                  <span>Cargando fecha...</span>
+                                );
+                              })()}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 ml-auto">
                           <Button
                             variant="outline"
                             size="sm"
-                            className="border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                            onClick={() => setPendingDelete(routine)}
+                            className="border-border hover:border-primary/50 hover:bg-primary/10 hover:text-white"
+                            onClick={() => handleViewExerciseDetails(routine)}
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <Eye className="h-4 w-4 mr-1" /> Ver
+                            <ChevronRight className="h-3 w-3 ml-0.5 opacity-60" />
                           </Button>
-                        )}
+                          {isFutureRoutine && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                              onClick={() => setPendingDelete(routine)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                    {getShowForm === routine.dailyExerciseId && (
-                      <div className="space-y-3 mb-3">
-                        <div className="grid grid-cols-2 gap-2 sm:gap-3 mt-3">
-                          <div>
+                      {getShowForm === routine.dailyExerciseId && (
+                        <div className="space-y-3 mb-3">
+                          {isSuperSet && (
+                            <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-2.5 flex items-center justify-between gap-2 text-xs text-amber-300 flex-wrap">
+                              <div className="flex items-center gap-2">
+                                <Link2 className="h-4 w-4 text-amber-400 shrink-0" />
+                                <div>
+                                  <p className="font-semibold text-amber-300">
+                                    Serie Combinada #{superSetTag} • Ejercicio #{routine.superSetOrder ?? 1}
+                                  </p>
+                                  {groupPartners.length > 0 && (
+                                    <p className="text-[11px] text-muted-foreground">
+                                      Ejercicios vinculados:{" "}
+                                      {superSetGroup.map((r) => r.exerciseName).join(" + ")}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                              <Badge
+                                variant="outline"
+                                className="border-amber-500/40 text-amber-300 bg-background/50 text-[10px]"
+                              >
+                                Descanso único al finalizar la ronda
+                              </Badge>
+                            </div>
+                          )}
+                          <div className="grid grid-cols-2 gap-2 sm:gap-3 mt-3">
+                            <div>
                             <Label className="text-[10px] uppercase tracking-widest text-muted-foreground flex items-center gap-1">
                               Notas del Cliente
                             </Label>
@@ -1159,33 +1735,31 @@ function ClientRoutinesPage() {
                             <div className="grid grid-cols-3 gap-2 sm:gap-3">
                               <div>
                                 <Label className="text-[10px] uppercase tracking-widest text-muted-foreground flex items-center gap-1">
-                                  <Layers className="h-3 w-3" /> Peso (kg)
+                                  <Layers className="h-3 w-3" /> Peso
                                 </Label>
-                                <Input
+                                <WeightInput
                                   value={exerciseSet.targetWeight || ""}
-                                  onChange={(e) =>
-                                    updateSet(exerciseSet.targetWeight.toString(), {
-                                      targetWeight: e.target.value,
+                                  onChange={(val) =>
+                                    updateSet(exerciseSet.id.toString(), {
+                                      targetWeight: val,
                                     })
                                   }
-                                  placeholder="10 kg"
-                                  className="mt-1.5 bg-background/60 border-border focus-visible:ring-primary/40"
+                                  className="mt-1.5"
                                   disabled
                                 />
                               </div>
                               <div>
                                 <Label className="text-[10px] uppercase tracking-widest text-muted-foreground flex items-center gap-1">
-                                  <Repeat className="h-3 w-3" /> Descanso (s)
+                                  <Repeat className="h-3 w-3" /> Descanso
                                 </Label>
-                                <Input
+                                <RestTimeInput
                                   value={exerciseSet.restTime || ""}
-                                  onChange={(e) =>
+                                  onChange={(val) =>
                                     updateSet(exerciseSet.id.toString(), {
-                                      restTime: e.target.value,
+                                      restTime: val,
                                     })
                                   }
-                                  placeholder="90 s"
-                                  className="mt-1.5 bg-background/60 border-border focus-visible:ring-primary/40"
+                                  className="mt-1.5"
                                   disabled
                                 />
                               </div>
@@ -1234,22 +1808,15 @@ function ClientRoutinesPage() {
                         ))}
                         <div className="flex items-center gap-3 justify-end flex-wrap">
                           {isFutureRoutine && (
-                            <>
-                              {/* <Button
-                                variant="outline"
-                                className="border-border hover:text-white "
-                                onClick={() => handleEnableEdit(routine)}
-                              >
-                                Editar
-                              </Button> */}
-                              {/* <Button
-                                variant="outline"
-                                className="border-border hover:text-white "
-                                onClick={() => handleUpdateRoutine(routine)}
-                              >
-                                Actualizar
-                              </Button> */}
-                            </>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="border-border hover:text-white"
+                              onClick={() => handleEnableEdit(routine)}
+                            >
+                              <Pencil className="h-4 w-4 mr-1.5" />
+                              Editar
+                            </Button>
                           )}
                           <Button
                             variant="outline"
@@ -1259,15 +1826,16 @@ function ClientRoutinesPage() {
                               resetForm();
                             }}
                           >
-                            Cancelar
+                            Cerrar
                           </Button>
                         </div>
                       </div>
                     )}
                   </Card>
-                );
-              })}
-            </div>
+                </div>
+              );
+            })}
+          </div>
           )}
         </div>
         <AlertDialog

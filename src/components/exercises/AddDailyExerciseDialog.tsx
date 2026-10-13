@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -19,6 +19,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { RestTimeInput } from "@/components/exercises/RestTimeInput";
+import { WeightInput } from "@/components/exercises/WeightInput";
+import { formatWeightWithEquivalent } from "@/utils/weightFormat";
 import {
   Dumbbell,
   Plus,
@@ -31,12 +34,17 @@ import {
   Save,
   Calendar,
   Loader2,
+  Copy,
+  CopyPlus,
+  ClipboardPaste,
+  Link2,
 } from "lucide-react";
 import { notify } from "@/components/NotificationCenter";
 import { useAuthStore } from "@/store/authStore";
 import {
   filterExercisesForUser,
   formatExerciseDescriptionWithStudentId,
+  getNextAvailableSuperSetTag,
   isUserIndependent,
 } from "@/utils/exerciseFilter";
 import {
@@ -74,14 +82,15 @@ interface AddDailyExerciseDialogProps {
   studentId: number;
   scheduledDate: string; // "YYYY-MM-DD"
   onExerciseAdded: (exercise: Exercise) => void;
+  existingExercises?: Exercise[];
 }
 
-const createEmptySet = (): DailyExerciseSetsForm => ({
+const createEmptySet = (defaultRest: string = "90"): DailyExerciseSetsForm => ({
   id: `set-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
   setNumber: "",
   targetReps: "12",
   targetWeight: "20",
-  restTime: "90",
+  restTime: defaultRest,
   isAchieved: false,
 });
 
@@ -91,6 +100,7 @@ export function AddDailyExerciseDialog({
   studentId,
   scheduledDate,
   onExerciseAdded,
+  existingExercises = [],
 }: AddDailyExerciseDialogProps) {
   const { user } = useAuthStore();
 
@@ -100,8 +110,60 @@ export function AddDailyExerciseDialog({
   const [selectedExerciseId, setSelectedExerciseId] = useState<number | null>(null);
   const [notes, setNotes] = useState<string>("");
   const [sets, setSets] = useState<DailyExerciseSetsForm[]>([createEmptySet()]);
+  const [copiedSet, setCopiedSet] = useState<DailyExerciseSetsForm | null>(null);
   const [saving, setSaving] = useState<boolean>(false);
+  const isSavingRef = useRef<boolean>(false);
   const [refreshing, setRefreshing] = useState<boolean>(false);
+
+  // Serie Combinada (Superserie)
+  const [isSuperSet, setIsSuperSet] = useState<boolean>(false);
+  const [selectedSuperSetTag, setSelectedSuperSetTag] = useState<string>("A");
+  const [combinedRestTime, setCombinedRestTime] = useState<string>("90");
+
+  const supersetExercises = useMemo(() => {
+    return (existingExercises || []).filter((e) => !!e.superSetTag);
+  }, [existingExercises]);
+
+  const existingSuperSetsByTag = useMemo(() => {
+    const map: Record<string, Exercise[]> = {};
+    for (const e of supersetExercises) {
+      const tag = (e.superSetTag || "").trim().toUpperCase();
+      if (!tag) continue;
+      if (!map[tag]) map[tag] = [];
+      map[tag].push(e);
+    }
+    Object.keys(map).forEach((tag) => {
+      map[tag].sort((a, b) => (Number(a.superSetOrder) || 1) - (Number(b.superSetOrder) || 1));
+    });
+    return map;
+  }, [supersetExercises]);
+
+  const existingTags = useMemo(() => {
+    return Object.keys(existingSuperSetsByTag).sort();
+  }, [existingSuperSetsByTag]);
+
+  const nextAvailableTag = useMemo(() => {
+    return getNextAvailableSuperSetTag(existingTags);
+  }, [existingTags]);
+
+  const effectiveTag = useMemo(() => {
+    if (!isSuperSet) return "";
+    return (selectedSuperSetTag || existingTags[0] || "A").trim().toUpperCase();
+  }, [isSuperSet, selectedSuperSetTag, existingTags]);
+
+  const currentTagExercises = useMemo(() => {
+    return existingSuperSetsByTag[effectiveTag] || [];
+  }, [existingSuperSetsByTag, effectiveTag]);
+
+  const hasExistingInSelectedTag = currentTagExercises.length > 0;
+  const firstExerciseInSelectedTag = hasExistingInSelectedTag ? currentTagExercises[0] : null;
+  const establishedRestInSelectedTag =
+    firstExerciseInSelectedTag?.dailyExerciseSets?.[0]?.restTime || "90";
+
+  const effectiveOrder = hasExistingInSelectedTag ? currentTagExercises.length + 1 : 1;
+  const effectiveRestTime = hasExistingInSelectedTag
+    ? establishedRestInSelectedTag
+    : combinedRestTime;
 
   // New Exercise Dialog State
   const [showNewExerciseDialog, setShowNewExerciseDialog] = useState<boolean>(false);
@@ -164,7 +226,66 @@ export function AddDailyExerciseDialog({
 
   // Set management
   const addSet = () => {
-    setSets((prev) => [...prev, createEmptySet()]);
+    const defaultRest = isSuperSet ? effectiveRestTime : "90";
+    setSets((prev) => [createEmptySet(defaultRest), ...prev]);
+  };
+
+  const handleToggleSuperSet = () => {
+    const nextState = !isSuperSet;
+    setIsSuperSet(nextState);
+    if (nextState) {
+      const targetTag = selectedSuperSetTag || existingTags[0] || "A";
+      setSelectedSuperSetTag(targetTag);
+      const tagExercises = existingSuperSetsByTag[targetTag] || [];
+      const restToApply =
+        tagExercises.length > 0
+          ? tagExercises[0]?.dailyExerciseSets?.[0]?.restTime || "90"
+          : combinedRestTime;
+      setSets((prev) => prev.map((s) => ({ ...s, restTime: restToApply })));
+    }
+  };
+
+  const handleSelectSuperSetTag = (tag: string) => {
+    const cleanTag = tag.trim().toUpperCase();
+    setSelectedSuperSetTag(cleanTag);
+    const tagExercises = existingSuperSetsByTag[cleanTag] || [];
+    const restToApply =
+      tagExercises.length > 0
+        ? tagExercises[0]?.dailyExerciseSets?.[0]?.restTime || "90"
+        : combinedRestTime;
+    setSets((prev) => prev.map((s) => ({ ...s, restTime: restToApply })));
+  };
+
+  const handleCombinedRestTimeChange = (newRest: string) => {
+    setCombinedRestTime(newRest);
+    setSets((prev) => prev.map((s) => ({ ...s, restTime: newRest })));
+  };
+
+  const copySet = (set: DailyExerciseSetsForm) => {
+    setCopiedSet({ ...set });
+    notify.success(
+      "Serie copiada",
+      `${set.targetReps || "0"} reps • ${formatWeightWithEquivalent(set.targetWeight)}`,
+    );
+  };
+
+  const duplicateSet = (set: DailyExerciseSetsForm) => {
+    const newSet: DailyExerciseSetsForm = {
+      ...set,
+      id: `set-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    };
+    setSets((prev) => [newSet, ...prev]);
+    notify.created("Serie duplicada", "Se añadió una copia arriba");
+  };
+
+  const pasteSet = () => {
+    if (!copiedSet) return;
+    const newSet: DailyExerciseSetsForm = {
+      ...copiedSet,
+      id: `set-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    };
+    setSets((prev) => [newSet, ...prev]);
+    notify.created("Serie pegada", "Se añadió la serie copiada arriba");
   };
 
   const removeSet = (id: string | number) => {
@@ -173,9 +294,7 @@ export function AddDailyExerciseDialog({
   };
 
   const updateSet = (id: string | number, patch: Partial<DailyExerciseSetsForm>) => {
-    setSets((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, ...patch } : item)),
-    );
+    setSets((prev) => prev.map((item) => (item.id === id ? { ...item, ...patch } : item)));
   };
 
   const resetForm = () => {
@@ -184,6 +303,10 @@ export function AddDailyExerciseDialog({
     setExercises([]);
     setNotes("");
     setSets([createEmptySet()]);
+    setCopiedSet(null);
+    setIsSuperSet(false);
+    setSelectedSuperSetTag("A");
+    setCombinedRestTime("90");
   };
 
   const handleClose = () => {
@@ -193,6 +316,8 @@ export function AddDailyExerciseDialog({
 
   // Save Exercise Assignment
   const handleSave = async () => {
+    if (isSavingRef.current || saving) return;
+
     if (!selectedMuscleGroupId) {
       notify.error("Falta grupo muscular", "Selecciona el grupo muscular");
       return;
@@ -204,10 +329,14 @@ export function AddDailyExerciseDialog({
 
     const incomplete = sets.some((s) => !s.targetReps || !s.targetWeight || !s.restTime);
     if (incomplete) {
-      notify.error("Sets incompletos", "Completa las repeticiones, peso y descanso para cada serie");
+      notify.error(
+        "Sets incompletos",
+        "Completa las repeticiones, peso y descanso para cada serie",
+      );
       return;
     }
 
+    isSavingRef.current = true;
     setSaving(true);
     try {
       const dailyExerciseSetsData: DailyExerciseSetsDto[] = sets.map((set, idx) => ({
@@ -220,6 +349,9 @@ export function AddDailyExerciseDialog({
         isAchieved: false,
       }));
 
+      const superSetTagClean = isSuperSet ? effectiveTag : null;
+      const superSetOrderClean = isSuperSet ? effectiveOrder : null;
+
       const payload: DailyStudentExerciseDto = {
         assign: {
           coachId: Number(user?.coachId || user?.myCoachId || 9),
@@ -228,6 +360,8 @@ export function AddDailyExerciseDialog({
           scheduledDate: scheduledDate,
           dailyExerciseSets: dailyExerciseSetsData,
           coachNotes: notes || "",
+          superSetTag: superSetTagClean ?? undefined,
+          superSetOrder: superSetOrderClean ?? undefined,
         },
       };
 
@@ -245,7 +379,9 @@ export function AddDailyExerciseDialog({
         coachNotes: response.coachNotes,
         studentNotes: response.studentNotes,
         isCompleted: response.isCompleted,
-        scheduledDate: response.scheduledDate ? response.scheduledDate.split("T")[0] : scheduledDate,
+        scheduledDate: response.scheduledDate
+          ? response.scheduledDate.split("T")[0]
+          : scheduledDate,
         day: dateInfo.day,
         short: dateInfo.short,
         dailyExerciseSets: (response.dailyExerciseSets || []).map((s: GetDailyExerciseSetsDto) => ({
@@ -257,6 +393,8 @@ export function AddDailyExerciseDialog({
         })),
         videoKey: extraData.videoKey || null,
         videoUrl: extraData.videoUrl || null,
+        superSetTag: response.superSetTag ?? superSetTagClean,
+        superSetOrder: response.superSetOrder ?? superSetOrderClean,
       };
 
       notify.created("Ejercicio agregado", `${newExercise.exerciseName} se añadió a la rutina`);
@@ -266,12 +404,15 @@ export function AddDailyExerciseDialog({
       console.error("Error al guardar ejercicio en la rutina:", err);
       notify.error("Error al guardar", "Ocurrió un error al añadir el ejercicio a la rutina");
     } finally {
+      isSavingRef.current = false;
       setSaving(false);
     }
   };
 
   // Save Brand New Custom Exercise
   const handleSaveNewExercise = async () => {
+    if (savingNewExercise) return;
+
     const name = newExerciseForm.name.trim();
     if (!name) {
       notify.error("Falta el nombre", "Escribe el nombre del ejercicio");
@@ -383,7 +524,8 @@ export function AddDailyExerciseDialog({
               Agregar ejercicio a la rutina
             </DialogTitle>
             <DialogDescription>
-              Selecciona el ejercicio, define las series y añádelo directamente al entrenamiento de este día.
+              Selecciona el ejercicio, define las series y añádelo directamente al entrenamiento de
+              este día.
             </DialogDescription>
           </DialogHeader>
 
@@ -452,7 +594,159 @@ export function AddDailyExerciseDialog({
             </div>
 
             {/* Sets & Reps */}
-            <div>
+            <div className="space-y-3">
+              {/* Botón de Serie Combinada (Link) y Configuración de Descanso Unificado */}
+              <div className="rounded-xl border border-border/80 bg-background/50 p-3 space-y-2.5">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                  <Button
+                    type="button"
+                    variant={isSuperSet ? "default" : "outline"}
+                    size="sm"
+                    onClick={handleToggleSuperSet}
+                    className={
+                      isSuperSet
+                        ? "bg-amber-500 hover:bg-amber-600 text-black font-semibold h-8 px-3 text-xs shadow-md transition-all"
+                        : "border-dashed border-border hover:border-amber-500/60 hover:text-amber-500 h-8 px-3 text-xs transition-all"
+                    }
+                  >
+                    <Link2 className={`h-3.5 w-3.5 mr-1.5 ${isSuperSet ? "text-black" : "text-amber-500"}`} />
+                    {isSuperSet ? "Serie Combinada Activada" : "Vincular a Serie Combinada"}
+                  </Button>
+                  <span className="text-[11px] text-muted-foreground">
+                    {isSuperSet
+                      ? hasExistingInSelectedTag
+                        ? `Ejercicio #${effectiveOrder} vinculado a Serie #${effectiveTag}`
+                        : `1er ejercicio de Serie #${effectiveTag}: define el descanso único`
+                      : "Vincula ejercicios en combinación sin descanso entre series"}
+                  </span>
+                </div>
+
+                {isSuperSet && (
+                  <div className="pt-2.5 border-t border-border/60 space-y-2.5 animate-in fade-in-50 duration-200">
+                    {/* Selector de Combinaciones */}
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between flex-wrap gap-1">
+                        <Label className="text-[11px] font-semibold text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
+                          <Link2 className="h-3.5 w-3.5" />
+                          Combinación para este día:
+                        </Label>
+                        <span className="text-[10px] text-muted-foreground">
+                          Varias combinaciones posibles (#A, #B, #C...)
+                        </span>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        {existingTags.map((tag) => {
+                          const count = existingSuperSetsByTag[tag]?.length || 0;
+                          const isSelected = effectiveTag === tag;
+                          return (
+                            <Button
+                              key={tag}
+                              type="button"
+                              size="sm"
+                              variant={isSelected ? "default" : "outline"}
+                              onClick={() => handleSelectSuperSetTag(tag)}
+                              className={`h-7 px-2.5 text-xs font-semibold rounded-lg transition-all ${
+                                isSelected
+                                  ? "bg-amber-500 text-black hover:bg-amber-600 shadow"
+                                  : "border-border/80 hover:border-amber-500/50 hover:text-amber-400"
+                              }`}
+                            >
+                              Serie #{tag} {count > 0 ? `(${count} ej.)` : ""}
+                            </Button>
+                          );
+                        })}
+
+                        {/* Opción para crear una nueva combinación */}
+                        {(!existingTags.includes(nextAvailableTag) || existingTags.length === 0) && (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant={effectiveTag === nextAvailableTag ? "default" : "outline"}
+                            onClick={() => handleSelectSuperSetTag(nextAvailableTag)}
+                            className={`h-7 px-2.5 text-xs font-semibold rounded-lg border-dashed transition-all ${
+                              effectiveTag === nextAvailableTag
+                                ? "bg-amber-500 text-black hover:bg-amber-600 shadow"
+                                : "border-amber-500/60 text-amber-400 hover:bg-amber-500/10"
+                            }`}
+                          >
+                            + Nueva Serie (#{nextAvailableTag})
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Detalle de la combinación seleccionada */}
+                    {hasExistingInSelectedTag ? (
+                      <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-2.5 flex items-center justify-between gap-3 flex-wrap">
+                        <div className="flex items-center gap-2">
+                          <span className="h-6 px-2 rounded bg-amber-500 text-black text-xs font-bold flex items-center">
+                            #{effectiveTag} • Ejercicio #{effectiveOrder}
+                          </span>
+                          <div className="text-xs">
+                            <p className="font-medium text-foreground">
+                              Vinculado a Serie Combinada #{effectiveTag} existente
+                            </p>
+                            <p className="text-[11px] text-muted-foreground">
+                              Descanso sincronizado con el 1er ejercicio ({firstExerciseInSelectedTag?.exerciseName || "Ejercicio #1"})
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1.5 bg-background/60 px-2.5 py-1 rounded-md border border-border">
+                          <span className="text-[11px] text-muted-foreground">Descanso único:</span>
+                          <span className="text-xs font-bold text-amber-400 font-mono">
+                            {establishedRestInSelectedTag}s
+                          </span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-2.5 space-y-2">
+                        <div className="flex items-center justify-between gap-2 flex-wrap">
+                          <div className="flex items-center gap-2">
+                            <span className="h-6 px-2 rounded bg-amber-500 text-black text-xs font-bold flex items-center">
+                              #{effectiveTag} • Ejercicio #1
+                            </span>
+                            <Label className="text-[11px] uppercase tracking-widest text-amber-400 font-semibold">
+                              Descanso Único para Serie #{effectiveTag}
+                            </Label>
+                          </div>
+                          <span className="text-[10px] text-muted-foreground">
+                            Reemplaza el descanso en las series
+                          </span>
+                        </div>
+
+                        <div className="grid sm:grid-cols-[1fr_auto] gap-2 items-center">
+                          <RestTimeInput
+                            value={combinedRestTime}
+                            onChange={handleCombinedRestTimeChange}
+                            placeholder="Ej. 90"
+                            compact
+                          />
+                          <div className="flex items-center gap-1 flex-wrap">
+                            {["30", "60", "90", "120", "180"].map((time) => (
+                              <Button
+                                key={time}
+                                type="button"
+                                size="sm"
+                                variant={combinedRestTime === time ? "default" : "outline"}
+                                className={`h-8 px-2 text-xs ${
+                                  combinedRestTime === time
+                                    ? "bg-amber-500 text-black hover:bg-amber-600 font-bold"
+                                    : "border-border/60 hover:text-white"
+                                }`}
+                                onClick={() => handleCombinedRestTimeChange(time)}
+                              >
+                                {time}s
+                              </Button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
               <div className="flex items-center justify-between mb-2">
                 <h3 className="font-display text-sm flex items-center gap-1.5 text-foreground">
                   <Layers className="h-4 w-4 text-primary-glow" />
@@ -475,16 +769,39 @@ export function AddDailyExerciseDialog({
                           Serie {idx + 1}
                         </span>
                       </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        disabled={sets.length === 1}
-                        onClick={() => removeSet(set.id)}
-                        className="h-7 w-7 p-0 text-destructive hover:bg-destructive/10"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => copySet(set)}
+                          className="h-7 px-2 text-[11px] text-muted-foreground hover:text-primary-glow hover:bg-primary/10"
+                          title="Copiar valores de esta serie para pegar"
+                        >
+                          <Copy className="h-3.5 w-3.5 mr-1" /> Copiar
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => duplicateSet(set)}
+                          className="h-7 px-2 text-[11px] text-muted-foreground hover:text-primary-glow hover:bg-primary/10"
+                          title="Duplicar esta serie inmediatamente arriba"
+                        >
+                          <CopyPlus className="h-3.5 w-3.5 mr-1" /> Duplicar
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          disabled={sets.length === 1}
+                          onClick={() => removeSet(set.id)}
+                          className="h-7 w-7 p-0 text-destructive hover:bg-destructive/10"
+                          title="Eliminar serie"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
                     </div>
 
                     <div className="grid grid-cols-3 gap-2">
@@ -504,30 +821,25 @@ export function AddDailyExerciseDialog({
                       </div>
                       <div>
                         <Label className="text-[10px] uppercase tracking-widest text-muted-foreground flex items-center gap-1">
-                          <Layers className="h-3 w-3" /> Peso (kg)
+                          <Layers className="h-3 w-3" /> Peso
                         </Label>
-                        <Input
-                          type="number"
-                          min={0}
-                          max={500}
+                        <WeightInput
                           value={set.targetWeight}
-                          onChange={(e) => updateSet(set.id, { targetWeight: e.target.value })}
-                          className="h-8 mt-1 bg-background/60 text-xs"
-                          placeholder="20"
+                          onChange={(val) => updateSet(set.id, { targetWeight: val })}
+                          compact
+                          className="mt-1"
                         />
                       </div>
                       <div>
                         <Label className="text-[10px] uppercase tracking-widest text-muted-foreground flex items-center gap-1">
-                          <Repeat className="h-3 w-3" /> Desc. (s)
+                          <Repeat className="h-3 w-3" /> Descanso {isSuperSet && <span className="text-amber-400 text-[9px]">(Fijo)</span>}
                         </Label>
-                        <Input
-                          type="number"
-                          min={0}
-                          max={1200}
+                        <RestTimeInput
                           value={set.restTime}
-                          onChange={(e) => updateSet(set.id, { restTime: e.target.value })}
-                          className="h-8 mt-1 bg-background/60 text-xs"
-                          placeholder="90"
+                          onChange={(val) => updateSet(set.id, { restTime: val })}
+                          disabled={isSuperSet}
+                          compact
+                          className="mt-1"
                         />
                       </div>
                     </div>
@@ -535,15 +847,32 @@ export function AddDailyExerciseDialog({
                 ))}
               </div>
 
-              <Button
-                type="button"
-                onClick={addSet}
-                variant="outline"
-                size="sm"
-                className="w-full mt-2 border-dashed border-primary/40 hover:bg-primary/10 text-xs"
-              >
-                <Plus className="h-3.5 w-3.5 mr-1 text-primary-glow" /> Añadir otro set
-              </Button>
+              <div className="flex flex-col sm:flex-row items-center gap-2 mt-2">
+                <Button
+                  type="button"
+                  onClick={addSet}
+                  variant="outline"
+                  size="sm"
+                  className="w-full flex-1 border-dashed border-primary/40 hover:bg-primary/10 text-xs"
+                >
+                  <Plus className="h-3.5 w-3.5 mr-1 text-primary-glow" /> Añadir nueva serie
+                  (arriba)
+                </Button>
+                {copiedSet && (
+                  <Button
+                    type="button"
+                    onClick={pasteSet}
+                    variant="outline"
+                    size="sm"
+                    className="w-full sm:w-auto border-primary/60 bg-primary/10 hover:bg-primary/20 text-primary-glow text-xs"
+                    title="Pegar la serie copiada arriba"
+                  >
+                    <ClipboardPaste className="h-3.5 w-3.5 mr-1" /> Pegar serie (
+                    {copiedSet.targetReps} reps •{" "}
+                    {formatWeightWithEquivalent(copiedSet.targetWeight)})
+                  </Button>
+                )}
+              </div>
             </div>
 
             {/* Notes */}
@@ -601,9 +930,7 @@ export function AddDailyExerciseDialog({
               <Sparkles className="h-5 w-5 text-primary-glow" />
               Crear nuevo ejercicio
             </DialogTitle>
-            <DialogDescription>
-              Crea un ejercicio personalizado para tus rutinas.
-            </DialogDescription>
+            <DialogDescription>Crea un ejercicio personalizado para tus rutinas.</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-2">
@@ -636,9 +963,7 @@ export function AddDailyExerciseDialog({
               </Label>
               <Input
                 value={newExerciseForm.name}
-                onChange={(e) =>
-                  setNewExerciseForm((prev) => ({ ...prev, name: e.target.value }))
-                }
+                onChange={(e) => setNewExerciseForm((prev) => ({ ...prev, name: e.target.value }))}
                 placeholder="Ej. Press banca con mancuernas"
                 className="mt-1.5 bg-background/60"
               />

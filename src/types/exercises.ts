@@ -29,6 +29,8 @@ export interface Exercise {
   dailyExerciseSets: DailyExerciseSets[];
   videoKey?: string | null;
   videoUrl?: string | null;
+  superSetTag?: string | null;
+  superSetOrder?: number | null;
 }
 
 export interface DailyExerciseSetsForm {
@@ -53,6 +55,8 @@ export interface ExerciseForm {
   studentNotes?: string;
   scheduledDate: string;
   dailyExerciseSets: DailyExerciseSetsForm[];
+  superSetTag?: string | null;
+  superSetOrder?: number | null;
 }
 
 export interface MuscleGroupSelect {
