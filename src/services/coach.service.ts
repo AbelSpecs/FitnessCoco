@@ -6,7 +6,7 @@ export const createCoach = async (coachData: Coach) => {
   try {
     const response = await api.post("/Coaches", coachData);
 
-    const { data } = response.data;
+    const data = response.data?.data !== undefined ? response.data.data : response.data;
 
     return data;
   } catch (error) {

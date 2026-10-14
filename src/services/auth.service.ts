@@ -12,7 +12,7 @@ export const register = async (credentials: RegisterCredentials) => {
   try {
     const response = await api.post("/Users/RegisterUser", credentials);
 
-    const { data } = response.data;
+    const data = response.data?.data !== undefined ? response.data.data : response.data;
 
     return data;
   } catch (error) {

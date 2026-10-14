@@ -7,7 +7,7 @@ import { Dumbbell } from "lucide-react";
 import { login } from "@/services/auth.service";
 import { useAuthStore } from "@/store/authStore";
 import { LoginCredentials, UserAuth } from "@/types/auth";
-import { getUser, getUserDetails } from "@/services/user.service";
+import { createStudent, getUser, getUserDetails } from "@/services/user.service";
 import { notify } from "@/components/NotificationCenter";
 import Spinner, { SpinnerOverlay } from "@/components/Spinner";
 import { getStudent } from "@/services/student.service";
@@ -91,10 +91,32 @@ function LoginPage() {
         getCoach(id).catch(() => null),
       ]);
 
+      const isRealCoach = coachData !== null && Number(coachData?.id) > 0;
+      let currentStudent = studentData;
       let myCoachId = 0;
-      if (studentData !== null && userData) {
+
+      if (!isRealCoach) {
         try {
-          const details = await getUserDetails(userData.id).catch(() => null);
+          const details = await getUserDetails(id).catch(() => null);
+          if (details?.student) {
+            currentStudent = details.student;
+          } else if (!currentStudent && userData) {
+            const created = await createStudent({
+              userId: Number(id),
+              weight: 70,
+              height: 0,
+              bodyFatPercentage: 0,
+              fitnessGoal: "muscle" as any,
+              activityLevel: "",
+              medicalConditions: "",
+              allergies: "",
+              fitnessExperience: "",
+              generalNotes: "",
+              gymId: 1,
+            }).catch(() => null);
+            if (created) currentStudent = created;
+          }
+
           if (details?.coach?.id) {
             myCoachId = details.coach.id;
           }
@@ -105,14 +127,12 @@ function LoginPage() {
 
       const firstName = userData?.firstName || "Usuario";
 
-      const isRealCoach = coachData !== null && Number(coachData?.id) > 0;
-
       const user: UserAuth = {
         id,
         firstName,
-        studentId: studentData?.id ?? (studentData ? Number(studentData) : 0),
+        studentId: currentStudent?.id ?? (currentStudent ? Number(currentStudent) : 0),
         myCoachId: isRealCoach ? 0 : myCoachId,
-        coachId: coachData?.id ?? 0,
+        coachId: isRealCoach ? Number(coachData.id) : 0,
         role: isRealCoach ? "coach" : "student",
       };
 
