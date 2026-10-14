@@ -25,7 +25,7 @@ import {
 } from "lucide-react";
 import { Goal, goalLabels } from "@/types/goals";
 import { User } from "@/types/user";
-import { getUser, getUserDetails, updateProfilePictures } from "@/services/user.service";
+import { createStudent, getUser, getUserDetails, updateProfilePictures } from "@/services/user.service";
 import { notify } from "@/components/NotificationCenter";
 import { SpinnerOverlay } from "@/components/Spinner";
 import { getStudent, updateStudent } from "@/services/student.service";
@@ -77,59 +77,114 @@ export const Route = createFileRoute("/perfil/$userId")({
 
       const { student = null, coach = null, profilePictureKey, bannerPictureKey } = user;
 
-      const profileKey =
-        profilePictureKey || coach?.profilePictureKey || student?.profilePictureKey;
-      const bannerKey = bannerPictureKey || coach?.bannerPictureKey || student?.bannerPictureKey;
+      // El usuario es un Entrenador únicamente si tiene registro de Coach con su propio UserId
+      const isCoachUser = Boolean(
+        coach && Number(coach.userId) === userId && Number(coach.id) > 0,
+      );
 
-      const profilePictureUrl = profileKey ? getServeUrl(profileKey) : undefined;
-      const bannerPictureUrl = bannerKey ? getServeUrl(bannerKey) : undefined;
+      if (!isCoachUser) {
+        // Modo Cliente / Estudiante
+        let studentData = student;
+        if (!studentData) {
+          const baseUser = await getUser(userId).catch(() => null);
+          try {
+            studentData = await createStudent({
+              userId,
+              weight: 70,
+              height: 0,
+              bodyFatPercentage: 0,
+              fitnessGoal: "muscle" as any,
+              activityLevel: "",
+              medicalConditions: "",
+              allergies: "",
+              fitnessExperience: "",
+              generalNotes: "",
+              gymId: 1,
+            });
+          } catch {
+            studentData = {
+              id: 0,
+              userId,
+              firstName: baseUser?.firstName || "",
+              lastName: baseUser?.lastName || "",
+              userName: baseUser?.userName || "",
+              email: baseUser?.email || "",
+              phoneNumber: baseUser?.phoneNumber || "",
+              birthdate: baseUser?.birthdate || new Date().toISOString(),
+              weight: 70,
+              height: 0,
+              bodyFatPercentage: 0,
+              fitnessGoal: "muscle",
+              activityLevel: "",
+              medicalConditions: "",
+              allergies: "",
+              fitnessExperience: "",
+              generalNotes: "",
+              gymId: 1,
+            };
+          }
+        }
 
-      if (student) {
-        const userData: User = userStudentMapper(student);
+        const profileKey = profilePictureKey || studentData?.profilePictureKey;
+        const bannerKey = bannerPictureKey || studentData?.bannerPictureKey;
+        const profilePictureUrl = profileKey ? getServeUrl(profileKey) : undefined;
+        const bannerPictureUrl = bannerKey ? getServeUrl(bannerKey) : undefined;
+
+        const userData: User = userStudentMapper(studentData);
         userData.profilePictureKey = profileKey;
         userData.bannerPictureKey = bannerKey;
         userData.profilePictureUrl = profilePictureUrl;
         userData.bannerPictureUrl = bannerPictureUrl;
 
-        return { userData };
+        return { userData, base64: null, urlToShare: null };
       } else {
-        const coachQr = await getQr(coach?.id || 1);
-        const { base64 } = coachQr.data;
+        // Modo Entrenador / Coach
+        const coachId = Number(coach.id);
+        let base64 = "";
+        try {
+          const coachQr = await getQr(coachId);
+          base64 = coachQr.data?.base64 || "";
+        } catch (err) {
+          console.warn("No se pudo obtener el QR del coach:", err);
+        }
 
         const BASE_URL = typeof window !== "undefined" ? window.location.origin : "";
-        const urlToShare = `${BASE_URL}/register-info?coachId=${coach?.id || ""}`;
+        const urlToShare = `${BASE_URL}/register-info?coachId=${coachId}`;
 
         let coachData = coach;
-        if (coach?.id) {
-          try {
-            const [profile, avgStreak] = await Promise.all([
-              getCoachProfile(coach.id).catch((err) => {
-                console.warn("No se pudieron cargar las métricas del coach:", err);
-                return null;
-              }),
-              getCoachAverageStreak(coach.id).catch((err) => {
-                console.warn("No se pudo calcular la racha media del coach:", err);
-                return 0;
-              }),
-            ]);
+        try {
+          const [profile, avgStreak] = await Promise.all([
+            getCoachProfile(coachId).catch((err) => {
+              console.warn("No se pudieron cargar las métricas del coach:", err);
+              return null;
+            }),
+            getCoachAverageStreak(coachId).catch((err) => {
+              console.warn("No se pudo calcular la racha media del coach:", err);
+              return 0;
+            }),
+          ]);
 
-            if (profile) {
-              const activeCount = profile.activeStudents ?? 0;
-              const totalCount = profile.totalStudents ?? 0;
-              const retention = totalCount > 0 ? Math.round((activeCount / totalCount) * 100) : 100;
+          if (profile) {
+            const activeCount = profile.activeStudents ?? 0;
+            const totalCount = profile.totalStudents ?? 0;
+            const retention = totalCount > 0 ? Math.round((activeCount / totalCount) * 100) : 100;
 
-              coachData = {
-                ...coach,
-                ...profile,
-                averageStreak: avgStreak,
-                retentionRate: retention,
-                sessionsPerWeek: profile.totalRoutinesCreated ?? 0,
-              };
-            }
-          } catch (err) {
-            console.warn("No se pudieron cargar las métricas dinámicas del coach en el loader:", err);
+            coachData = {
+              ...coach,
+              ...profile,
+              averageStreak: avgStreak,
+              retentionRate: retention,
+              sessionsPerWeek: profile.totalRoutinesCreated ?? 0,
+            };
           }
+        } catch (err) {
+          console.warn("No se pudieron cargar las métricas dinámicas del coach en el loader:", err);
         }
+
+        const profileKey = profilePictureKey || coach?.profilePictureKey;
+        const bannerKey = bannerPictureKey || coach?.bannerPictureKey;
+        const profilePictureUrl = profileKey ? getServeUrl(profileKey) : undefined;
+        const bannerPictureUrl = bannerKey ? getServeUrl(bannerKey) : undefined;
 
         const userData: User = userCoachMapper(coachData || {});
         userData.profilePictureKey = profileKey;

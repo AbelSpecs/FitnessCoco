@@ -40,9 +40,14 @@ function RegisterPage() {
   const handleRegisterCoach = async (formData: RegisterCredentials) => {
     try {
       const data = await register(formData);
+      const userId = Number(data?.id || data?.userId);
+
+      if (!userId || isNaN(userId)) {
+        throw new Error("No se pudo obtener el identificador del usuario registrado.");
+      }
 
       const coachToCreate: Coach = {
-        userId: data.id,
+        userId,
         bio: "",
         certifications: "",
       };
