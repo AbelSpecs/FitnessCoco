@@ -15,6 +15,7 @@ import { Goal, goalLabels } from "@/types/goals";
 import DatePicker from "@/components/DatePicker";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { CountryDto } from "@/dtos/countryDto";
+import { findPlaceHolder } from "@/utils/registerUtils";
 
 export interface RegistrationFormProps {
   type: "coach" | "student";
@@ -52,6 +53,7 @@ export function RegistrationForm({
     password: "",
     confirmPassword: "",
     phoneCode: "",
+    phonePlaceHolder: "",
     partialPhoneNumber: "",
     phoneNumber: "",
     countryId: 0,
@@ -76,7 +78,9 @@ export function RegistrationForm({
       ...registerForm,
       countryId: value,
       phoneCode: phoneCodes.find((p) => p.id === value)!.code,
+      phonePlaceHolder: findPlaceHolder(phoneCodes.find((p) => p.id === value)!.code),
     });
+
     try {
       const fetchedCities = await getCities(value);
       setCities(fetchedCities ? [fetchedCities] : []);
@@ -393,7 +397,7 @@ export function RegistrationForm({
                     <Input
                       id="phoneNumber"
                       type="text"
-                      placeholder="424-258-6514"
+                      placeholder={registerForm.phonePlaceHolder}
                       value={registerForm.partialPhoneNumber || registerForm.phoneNumber}
                       onChange={(e) =>
                         setRegisterForm({
