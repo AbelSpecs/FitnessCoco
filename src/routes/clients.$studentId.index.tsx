@@ -309,9 +309,7 @@ function ClientRoutinesPage() {
   const establishedRestInSelectedTag =
     firstExerciseInSelectedTag?.dailyExerciseSets?.[0]?.restTime || "90";
 
-  const effectiveOrder = hasExistingInSelectedTag
-    ? currentTagExercises.length + 1
-    : 1;
+  const effectiveOrder = hasExistingInSelectedTag ? currentTagExercises.length + 1 : 1;
   const effectiveRestTime = hasExistingInSelectedTag
     ? establishedRestInSelectedTag
     : combinedRestTime;
@@ -419,10 +417,7 @@ function ClientRoutinesPage() {
     const defaultRest = isSuperSet ? effectiveRestTime : "90";
     setRoutineForm((prev) => ({
       ...prev,
-      dailyExerciseSets: [
-        { ...emptySet(), restTime: defaultRest },
-        ...prev.dailyExerciseSets,
-      ],
+      dailyExerciseSets: [{ ...emptySet() }, ...prev.dailyExerciseSets],
     }));
   };
 
@@ -546,10 +541,7 @@ function ClientRoutinesPage() {
       const updatedRoutines: GetDailyStudentExerciseDto[] =
         await getDailyStudentExercisesByStudentIdAndDate(Number(studentId), dateString);
 
-      const completeExercisesMapped: Exercise[] = exercisesMapper(
-        updatedRoutines,
-        muscleGroups,
-      );
+      const completeExercisesMapped: Exercise[] = exercisesMapper(updatedRoutines, muscleGroups);
       setRoutines(completeExercisesMapped);
     } catch (error) {
       console.error("Error fetching routines by date:", error);
@@ -739,23 +731,25 @@ function ClientRoutinesPage() {
       }
 
       // 2. Mapear TODOS los sets (los existentes con su ID real y los nuevos/duplicados con id: 0)
-      const setsPayload: DailyExerciseSetsDto[] = routineForm.dailyExerciseSets.map(
-        (s, index) => {
-          const rawId = Number(s.id);
-          const validId = !Number.isNaN(rawId) && rawId > 0 ? rawId : 0;
-          return {
-            id: validId,
-            dailyStudentExerciseId: Number(routineForm.dailyStudentExerciseId),
-            setNumber: Number(index + 1),
-            targetReps: Number(s.targetReps),
-            targetWeight: Number(s.targetWeight),
-            restTime: String(s.restTime),
-            actualReps: s.actualReps !== undefined && s.actualReps !== null ? Number(s.actualReps) : undefined,
-            actualWeight: s.actualWeight !== undefined && s.actualWeight !== null ? Number(s.actualWeight) : undefined,
-            isAchieved: Boolean(s.isAchieved),
-          };
-        },
-      );
+      const setsPayload: DailyExerciseSetsDto[] = routineForm.dailyExerciseSets.map((s, index) => {
+        const rawId = Number(s.id);
+        const validId = !Number.isNaN(rawId) && rawId > 0 ? rawId : 0;
+        return {
+          id: validId,
+          dailyStudentExerciseId: Number(routineForm.dailyStudentExerciseId),
+          setNumber: Number(index + 1),
+          targetReps: Number(s.targetReps),
+          targetWeight: Number(s.targetWeight),
+          restTime: String(s.restTime),
+          actualReps:
+            s.actualReps !== undefined && s.actualReps !== null ? Number(s.actualReps) : undefined,
+          actualWeight:
+            s.actualWeight !== undefined && s.actualWeight !== null
+              ? Number(s.actualWeight)
+              : undefined,
+          isAchieved: Boolean(s.isAchieved),
+        };
+      });
 
       const dailyExerciseToUpdate: UpdateDailyStudentExerciseDto = {
         id: Number(routineForm.dailyStudentExerciseId),
@@ -1138,7 +1132,9 @@ function ClientRoutinesPage() {
                         : "border-dashed border-border hover:border-amber-500/60 hover:text-amber-500 h-8 px-3 text-xs transition-all"
                     }
                   >
-                    <Link2 className={`h-3.5 w-3.5 mr-1.5 ${isSuperSet ? "text-black" : "text-amber-500"}`} />
+                    <Link2
+                      className={`h-3.5 w-3.5 mr-1.5 ${isSuperSet ? "text-black" : "text-amber-500"}`}
+                    />
                     {isSuperSet ? "Serie Combinada Activada" : "Vincular a Serie Combinada"}
                   </Button>
                   <span className="text-[11px] text-muted-foreground">
@@ -1187,7 +1183,8 @@ function ClientRoutinesPage() {
                         })}
 
                         {/* Opción para crear una nueva combinación */}
-                        {(!existingTags.includes(nextAvailableTag) || existingTags.length === 0) && (
+                        {(!existingTags.includes(nextAvailableTag) ||
+                          existingTags.length === 0) && (
                           <Button
                             type="button"
                             size="sm"
@@ -1217,7 +1214,8 @@ function ClientRoutinesPage() {
                               Vinculado a Serie Combinada #{effectiveTag} existente
                             </p>
                             <p className="text-[11px] text-muted-foreground">
-                              Descanso sincronizado con el 1er ejercicio ({firstExerciseInSelectedTag?.exerciseName || "Ejercicio #1"})
+                              Descanso sincronizado con el 1er ejercicio (
+                              {firstExerciseInSelectedTag?.exerciseName || "Ejercicio #1"})
                             </p>
                           </div>
                         </div>
@@ -1240,7 +1238,8 @@ function ClientRoutinesPage() {
                             </Label>
                           </div>
                           <span className="text-[11px] text-muted-foreground">
-                            Reemplaza el descanso en las series de todos los ejercicios de este bloque
+                            Reemplaza el descanso en las series de todos los ejercicios de este
+                            bloque
                           </span>
                         </div>
 
@@ -1294,7 +1293,7 @@ function ClientRoutinesPage() {
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-2">
                         <div className="h-7 w-7 rounded-md bg-primary/10 border border-primary/30 flex items-center justify-center text-[11px] font-display text-primary-glow">
-                          {index + 1}
+                          {routineForm.dailyExerciseSets.length - index}
                         </div>
                         <span className="text-[10px] uppercase tracking-widest text-muted-foreground">
                           Serie
@@ -1364,7 +1363,8 @@ function ClientRoutinesPage() {
                       </div>
                       <div>
                         <Label className="text-[10px] uppercase tracking-widest text-muted-foreground flex items-center gap-1">
-                          <Repeat className="h-3 w-3" /> Descanso {isSuperSet && <span className="text-amber-400 text-[9px]">(Fijo)</span>}
+                          <Repeat className="h-3 w-3" /> Descanso{" "}
+                          {isSuperSet && <span className="text-amber-400 text-[9px]">(Fijo)</span>}
                         </Label>
                         <RestTimeInput
                           value={set.restTime}
@@ -1495,12 +1495,10 @@ function ClientRoutinesPage() {
                   ? routines
                       .filter(
                         (r) =>
-                          (r.superSetTag || "").trim().toLowerCase() ===
-                          superSetTag.toLowerCase(),
+                          (r.superSetTag || "").trim().toLowerCase() === superSetTag.toLowerCase(),
                       )
                       .sort(
-                        (a, b) =>
-                          (Number(a.superSetOrder) || 0) - (Number(b.superSetOrder) || 0),
+                        (a, b) => (Number(a.superSetOrder) || 0) - (Number(b.superSetOrder) || 0),
                       )
                   : [];
                 const isSuperSet = superSetGroup.length > 0;
@@ -1514,9 +1512,9 @@ function ClientRoutinesPage() {
                 const prevRoutine = index > 0 ? routines[index - 1] : null;
                 const isNewSuperSetBlock = Boolean(
                   superSetTag &&
-                    (!prevRoutine ||
-                      (prevRoutine.superSetTag || "").trim().toLowerCase() !==
-                        superSetTag.toLowerCase()),
+                  (!prevRoutine ||
+                    (prevRoutine.superSetTag || "").trim().toLowerCase() !==
+                      superSetTag.toLowerCase()),
                 );
 
                 return (
@@ -1657,7 +1655,8 @@ function ClientRoutinesPage() {
                                 <Link2 className="h-4 w-4 text-amber-400 shrink-0" />
                                 <div>
                                   <p className="font-semibold text-amber-300">
-                                    Serie Combinada #{superSetTag} • Ejercicio #{routine.superSetOrder ?? 1}
+                                    Serie Combinada #{superSetTag} • Ejercicio #
+                                    {routine.superSetOrder ?? 1}
                                   </p>
                                   {groupPartners.length > 0 && (
                                     <p className="text-[11px] text-muted-foreground">
@@ -1677,165 +1676,165 @@ function ClientRoutinesPage() {
                           )}
                           <div className="grid grid-cols-2 gap-2 sm:gap-3 mt-3">
                             <div>
-                            <Label className="text-[10px] uppercase tracking-widest text-muted-foreground flex items-center gap-1">
-                              Notas del Cliente
-                            </Label>
-                            <Textarea
-                              value={routine.studentNotes || ""}
-                              placeholder="notas del cliente"
-                              className="mt-1.5 bg-background/60 border-border focus-visible:ring-primary/40"
-                              disabled
-                            />
+                              <Label className="text-[10px] uppercase tracking-widest text-muted-foreground flex items-center gap-1">
+                                Notas del Cliente
+                              </Label>
+                              <Textarea
+                                value={routine.studentNotes || ""}
+                                placeholder="notas del cliente"
+                                className="mt-1.5 bg-background/60 border-border focus-visible:ring-primary/40"
+                                disabled
+                              />
+                            </div>
                           </div>
-                        </div>
-                        {getExerciseSetForm.map((exerciseSet, index) => (
-                          <div
-                            key={exerciseSet.id}
-                            className="rounded-lg border border-border bg-background/40 p-3 sm:p-4"
-                          >
-                            <div className="flex items-center justify-between mb-3">
-                              <div className="flex items-center gap-2">
-                                <div className="h-7 w-7 rounded-md bg-primary/10 border border-primary/30 flex items-center justify-center text-[11px] font-display text-primary-glow">
-                                  {index + 1}
+                          {getExerciseSetForm.map((exerciseSet, index) => (
+                            <div
+                              key={exerciseSet.id}
+                              className="rounded-lg border border-border bg-background/40 p-3 sm:p-4"
+                            >
+                              <div className="flex items-center justify-between mb-3">
+                                <div className="flex items-center gap-2">
+                                  <div className="h-7 w-7 rounded-md bg-primary/10 border border-primary/30 flex items-center justify-center text-[11px] font-display text-primary-glow">
+                                    {getExerciseSetForm.length - index}
+                                  </div>
+                                  <span className="text-[10px] uppercase tracking-widest text-muted-foreground">
+                                    Serie
+                                  </span>
                                 </div>
-                                <span className="text-[10px] uppercase tracking-widest text-muted-foreground">
-                                  Serie
-                                </span>
+                                {isFutureRoutine && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="text-destructive hover:bg-destructive/10 hover:text-destructive disabled:opacity-30"
+                                    onClick={() => removeSet(exerciseSet.id.toString())}
+                                    disabled={getExerciseSetForm.length === 1}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                )}
                               </div>
-                              {isFutureRoutine && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="text-destructive hover:bg-destructive/10 hover:text-destructive disabled:opacity-30"
-                                  onClick={() => removeSet(exerciseSet.id.toString())}
-                                  disabled={getExerciseSetForm.length === 1}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              )}
-                            </div>
-                            <div className="grid sm:grid-cols-2 gap-3 mb-3">
-                              <div>
-                                <Label className="text-[10px] uppercase tracking-widest text-muted-foreground">
-                                  Repeticiones
-                                </Label>
-                                <Input
-                                  value={exerciseSet.targetReps || ""}
-                                  onChange={(e) =>
-                                    updateSet(exerciseSet.id.toString(), {
-                                      targetReps: e.target.value,
-                                    })
-                                  }
-                                  placeholder="4"
-                                  className="mt-1.5 bg-background/60 border-border focus-visible:ring-primary/40"
-                                  disabled
-                                />
+                              <div className="grid sm:grid-cols-2 gap-3 mb-3">
+                                <div>
+                                  <Label className="text-[10px] uppercase tracking-widest text-muted-foreground">
+                                    Repeticiones
+                                  </Label>
+                                  <Input
+                                    value={exerciseSet.targetReps || ""}
+                                    onChange={(e) =>
+                                      updateSet(exerciseSet.id.toString(), {
+                                        targetReps: e.target.value,
+                                      })
+                                    }
+                                    placeholder="4"
+                                    className="mt-1.5 bg-background/60 border-border focus-visible:ring-primary/40"
+                                    disabled
+                                  />
+                                </div>
                               </div>
-                            </div>
-                            <div className="grid grid-cols-3 gap-2 sm:gap-3">
-                              <div>
-                                <Label className="text-[10px] uppercase tracking-widest text-muted-foreground flex items-center gap-1">
-                                  <Layers className="h-3 w-3" /> Peso
-                                </Label>
-                                <WeightInput
-                                  value={exerciseSet.targetWeight || ""}
-                                  onChange={(val) =>
-                                    updateSet(exerciseSet.id.toString(), {
-                                      targetWeight: val,
-                                    })
-                                  }
-                                  className="mt-1.5"
-                                  disabled
-                                />
+                              <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                                <div>
+                                  <Label className="text-[10px] uppercase tracking-widest text-muted-foreground flex items-center gap-1">
+                                    <Layers className="h-3 w-3" /> Peso
+                                  </Label>
+                                  <WeightInput
+                                    value={exerciseSet.targetWeight || ""}
+                                    onChange={(val) =>
+                                      updateSet(exerciseSet.id.toString(), {
+                                        targetWeight: val,
+                                      })
+                                    }
+                                    className="mt-1.5"
+                                    disabled
+                                  />
+                                </div>
+                                <div>
+                                  <Label className="text-[10px] uppercase tracking-widest text-muted-foreground flex items-center gap-1">
+                                    <Repeat className="h-3 w-3" /> Descanso
+                                  </Label>
+                                  <RestTimeInput
+                                    value={exerciseSet.restTime || ""}
+                                    onChange={(val) =>
+                                      updateSet(exerciseSet.id.toString(), {
+                                        restTime: val,
+                                      })
+                                    }
+                                    className="mt-1.5"
+                                    disabled
+                                  />
+                                </div>
+                                <div>
+                                  <Label className="text-[10px] uppercase tracking-widest text-muted-foreground flex items-center gap-1">
+                                    Repeticiones Logradas por el Cliente
+                                  </Label>
+                                  <Input
+                                    type="number"
+                                    min={0}
+                                    max={50}
+                                    value={exerciseSet.actualReps || ""}
+                                    onChange={(e) =>
+                                      updateSet(exerciseSet.id.toString(), {
+                                        actualReps: Number(e.target.value),
+                                      })
+                                    }
+                                    placeholder="12"
+                                    className="mt-1.5 bg-background/60 border-border focus-visible:ring-primary/40"
+                                    disabled
+                                  />
+                                </div>
                               </div>
-                              <div>
-                                <Label className="text-[10px] uppercase tracking-widest text-muted-foreground flex items-center gap-1">
-                                  <Repeat className="h-3 w-3" /> Descanso
-                                </Label>
-                                <RestTimeInput
-                                  value={exerciseSet.restTime || ""}
-                                  onChange={(val) =>
-                                    updateSet(exerciseSet.id.toString(), {
-                                      restTime: val,
-                                    })
-                                  }
-                                  className="mt-1.5"
-                                  disabled
-                                />
-                              </div>
-                              <div>
-                                <Label className="text-[10px] uppercase tracking-widest text-muted-foreground flex items-center gap-1">
-                                  Repeticiones Logradas por el Cliente
-                                </Label>
-                                <Input
-                                  type="number"
-                                  min={0}
-                                  max={50}
-                                  value={exerciseSet.actualReps || ""}
-                                  onChange={(e) =>
-                                    updateSet(exerciseSet.id.toString(), {
-                                      actualReps: Number(e.target.value),
-                                    })
-                                  }
-                                  placeholder="90"
-                                  className="mt-1.5 bg-background/60 border-border focus-visible:ring-primary/40"
-                                  disabled
-                                />
-                              </div>
-                            </div>
-                            <div className="grid grid-cols-2 gap-2 sm:gap-3 mt-3">
-                              <div>
-                                <Label className="text-[10px] uppercase tracking-widest text-muted-foreground flex items-center gap-1">
-                                  <Layers className="h-3 w-3" /> Peso Logrado por el Cliente (kg)
-                                </Label>
-                                <Input
-                                  type="number"
-                                  min={1}
-                                  max={700}
-                                  value={exerciseSet.actualWeight || ""}
-                                  onChange={(e) =>
-                                    updateSet(exerciseSet.id.toString(), {
-                                      actualWeight: Number(e.target.value),
-                                    })
-                                  }
-                                  placeholder="10 kg"
-                                  className="mt-1.5 bg-background/60 border-border focus-visible:ring-primary/40"
-                                  disabled
-                                />
+                              <div className="grid grid-cols-2 gap-2 sm:gap-3 mt-3">
+                                <div>
+                                  <Label className="text-[10px] uppercase tracking-widest text-muted-foreground flex items-center gap-1">
+                                    <Layers className="h-3 w-3" /> Peso Logrado por el Cliente (kg)
+                                  </Label>
+                                  <Input
+                                    type="number"
+                                    min={1}
+                                    max={700}
+                                    value={exerciseSet.actualWeight || ""}
+                                    onChange={(e) =>
+                                      updateSet(exerciseSet.id.toString(), {
+                                        actualWeight: Number(e.target.value),
+                                      })
+                                    }
+                                    placeholder="10 kg"
+                                    className="mt-1.5 bg-background/60 border-border focus-visible:ring-primary/40"
+                                    disabled
+                                  />
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        ))}
-                        <div className="flex items-center gap-3 justify-end flex-wrap">
-                          {isFutureRoutine && (
+                          ))}
+                          <div className="flex items-center gap-3 justify-end flex-wrap">
+                            {isFutureRoutine && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="border-border hover:text-white"
+                                onClick={() => handleEnableEdit(routine)}
+                              >
+                                <Pencil className="h-4 w-4 mr-1.5" />
+                                Editar
+                              </Button>
+                            )}
                             <Button
                               variant="outline"
-                              size="sm"
                               className="border-border hover:text-white"
-                              onClick={() => handleEnableEdit(routine)}
+                              onClick={() => {
+                                setGetShowForm("");
+                                resetForm();
+                              }}
                             >
-                              <Pencil className="h-4 w-4 mr-1.5" />
-                              Editar
+                              Cerrar
                             </Button>
-                          )}
-                          <Button
-                            variant="outline"
-                            className="border-border hover:text-white"
-                            onClick={() => {
-                              setGetShowForm("");
-                              resetForm();
-                            }}
-                          >
-                            Cerrar
-                          </Button>
+                          </div>
                         </div>
-                      </div>
-                    )}
-                  </Card>
-                </div>
-              );
-            })}
-          </div>
+                      )}
+                    </Card>
+                  </div>
+                );
+              })}
+            </div>
           )}
         </div>
         <AlertDialog

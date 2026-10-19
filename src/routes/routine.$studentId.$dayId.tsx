@@ -483,9 +483,7 @@ function ExerciseRow({
   };
 
   const sortedSets = useMemo(() => {
-    return [...ex.dailyExerciseSets].sort(
-      (a, b) => (Number(a.setNumber) || 0) - (Number(b.setNumber) || 0),
-    );
+    return [...(ex.dailyExerciseSets || [])].reverse();
   }, [ex.dailyExerciseSets]);
 
   return (
@@ -621,9 +619,7 @@ function ExerciseRow({
                   if (!isLocked) {
                     const priorExercises = superSetGroup.slice(0, groupIndex);
                     for (const priorEx of priorExercises) {
-                      const priorSorted = [...(priorEx.dailyExerciseSets || [])].sort(
-                        (a, b) => (Number(a.setNumber) || 0) - (Number(b.setNumber) || 0),
-                      );
+                      const priorSorted = [...(priorEx.dailyExerciseSets || [])].reverse();
                       const targetPriorSet = priorSorted[setIdx];
                       if (targetPriorSet && !targetPriorSet.isAchieved) {
                         isLocked = true;
@@ -637,9 +633,7 @@ function ExerciseRow({
                   if (!isLocked && setIdx > 0) {
                     const laterExercises = superSetGroup.slice(groupIndex + 1);
                     for (const laterEx of laterExercises) {
-                      const laterSorted = [...(laterEx.dailyExerciseSets || [])].sort(
-                        (a, b) => (Number(a.setNumber) || 0) - (Number(b.setNumber) || 0),
-                      );
+                      const laterSorted = [...(laterEx.dailyExerciseSets || [])].reverse();
                       const targetPrevSet = laterSorted[setIdx - 1];
                       if (targetPrevSet && !targetPrevSet.isAchieved) {
                         isLocked = true;
@@ -664,6 +658,7 @@ function ExerciseRow({
                     exId={ex.dailyExerciseId}
                     set={set}
                     index={setIdx}
+                    displaySetNumber={setIdx + 1}
                     isLocked={isLocked}
                     lockReason={lockReason}
                     isSuperSet={isSuperSet}
@@ -716,6 +711,7 @@ function DetailsSetsRow({
   exId,
   set,
   index,
+  displaySetNumber,
   isLocked = false,
   lockReason = "",
   isSuperSet = false,
@@ -728,6 +724,7 @@ function DetailsSetsRow({
   exId: number;
   set: DailyExerciseSets;
   index: number;
+  displaySetNumber?: number;
   isLocked?: boolean;
   lockReason?: string;
   isSuperSet?: boolean;
@@ -738,6 +735,7 @@ function DetailsSetsRow({
   onSetUpdate?: (exId: number, updatedSet: DailyExerciseSets) => void;
 }) {
   const { isRestTimerRunning, startRestTimer } = useContext(RoutineTimerContext);
+  const currentSetNumber = displaySetNumber ?? index + 1;
 
   const getInitialWeight = (s: DailyExerciseSets) => {
     if (s.isAchieved) {
@@ -826,12 +824,12 @@ function DetailsSetsRow({
 
       // Si es ejercicio normal O si es el último de la combinación:
       // Iniciar el cronómetro de descanso para toda la ronda
-      const effectiveRestTime = isSuperSet ? (combinedRestTime || set.restTime) : set.restTime;
+      const effectiveRestTime = isSuperSet ? combinedRestTime || set.restTime : set.restTime;
       const restSec = parseRestTimeToSeconds(effectiveRestTime);
       if (restSec > 0) {
         const timerLabel = isSuperSet
-          ? `Descanso Combinado • Ronda #${set.setNumber}`
-          : `Set #${set.setNumber}`;
+          ? `Descanso Combinado • Ronda #${currentSetNumber}`
+          : `Set #${currentSetNumber}`;
         startRestTimer(restSec, timerLabel, set.id);
         if (isSuperSet) {
           notify.success("¡Ronda combinada completada!", `Iniciando descanso de ${restSec}s 🔥`);
@@ -862,7 +860,7 @@ function DetailsSetsRow({
             <Layers className="h-3 w-3" /> Set
           </p>
           <p className="text-sm sm:text-base font-bold text-primary-glow flex items-center justify-center gap-1">
-            #{set.setNumber}
+            #{currentSetNumber}
             {isLocked && (
               <span title={lockReason || "Bloqueada hasta completar la serie anterior"}>
                 <Lock className="h-3 w-3 text-muted-foreground" />
@@ -907,7 +905,8 @@ function DetailsSetsRow({
                 className="text-emerald-400 font-semibold text-xs flex items-center justify-center gap-0.5"
                 title="Descanso único de la ronda combinada"
               >
-                <Timer className="h-3 w-3" /> Único: {formatRestTimeDisplay(combinedRestTime || set.restTime)}
+                <Timer className="h-3 w-3" /> Único:{" "}
+                {formatRestTimeDisplay(combinedRestTime || set.restTime)}
               </span>
             ) : (
               formatRestTimeDisplay(set.restTime)
