@@ -238,6 +238,13 @@ function ClientRoutinesPage() {
   // Post state
   const [savedRoutine, setSavedRoutine] = useState<boolean>(false);
   const isSavingRoutineRef = useRef<boolean>(false);
+  const newRoutineDraftRef = useRef<{
+    routineForm: ExerciseForm;
+    isSuperSet: boolean;
+    selectedSuperSetTag: string;
+    combinedRestTime: string;
+    selectedDate: Date | undefined;
+  } | null>(null);
   const [routineForm, setRoutineForm] = useState<ExerciseForm>({
     dailyStudentExerciseId: 0,
     exerciseId: 0,
@@ -396,14 +403,6 @@ function ClientRoutinesPage() {
     setIsUploadingVideo(false);
   };
 
-  const handleAdd = () => {
-    if (!showForm) {
-      resetForm();
-      setIsUpdating(false);
-    }
-    setShowForm((s) => !s);
-  };
-
   const updateSet = (id: string, patch: Partial<DailyExerciseSets | DailyExerciseSetsForm>) => {
     setRoutineForm((prev) => ({
       ...prev,
@@ -514,13 +513,7 @@ function ClientRoutinesPage() {
     setRoutineForm((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleExercises = async (muscleGroupId: number, isNew: boolean = false) => {
-    if (isNew) {
-      setNewExerciseForm((prev) => ({ ...prev, muscleGroupId: muscleGroupId }));
-      return;
-    }
-
-    setRoutineForm((prev) => ({ ...prev, muscleGroupId: muscleGroupId }));
+  const fetchExercisesForMuscleGroup = async (muscleGroupId: number) => {
     try {
       const rawExercises = await getExerciseByMuscleGroupId(muscleGroupId);
       const visibleExercises = filterExercisesForUser(rawExercises, user, Number(studentId));
@@ -529,6 +522,64 @@ function ClientRoutinesPage() {
       console.error("Error al obtener los ejercicios:", error);
       notify.error("error", "Error al obtener los ejercicios");
     }
+  };
+
+  const handleExercises = async (muscleGroupId: number, isNew: boolean = false) => {
+    if (isNew) {
+      setNewExerciseForm((prev) => ({ ...prev, muscleGroupId: muscleGroupId }));
+      return;
+    }
+
+    setRoutineForm((prev) => ({ ...prev, muscleGroupId: muscleGroupId }));
+    await fetchExercisesForMuscleGroup(muscleGroupId);
+  };
+
+  const hasDraftContent = useMemo(() => {
+    return (
+      routineForm.muscleGroupId !== 0 ||
+      routineForm.exerciseId !== 0 ||
+      Boolean(routineForm.coachNotes?.trim()) ||
+      routineForm.dailyExerciseSets.length > 1 ||
+      routineForm.dailyExerciseSets.some(
+        (s) => Boolean(s.targetReps) || Boolean(s.targetWeight) || Boolean(s.restTime),
+      )
+    );
+  }, [routineForm]);
+
+  const restoreCreateDraftOrReset = () => {
+    setIsUpdating(false);
+    if (newRoutineDraftRef.current) {
+      const draft = newRoutineDraftRef.current;
+      setRoutineForm(draft.routineForm);
+      setIsSuperSet(draft.isSuperSet);
+      setSelectedSuperSetTag(draft.selectedSuperSetTag);
+      setCombinedRestTime(draft.combinedRestTime);
+      if (draft.selectedDate) {
+        setSelectedDate(draft.selectedDate);
+      }
+      if (draft.routineForm.muscleGroupId) {
+        fetchExercisesForMuscleGroup(draft.routineForm.muscleGroupId);
+      }
+      newRoutineDraftRef.current = null;
+    } else {
+      resetForm();
+    }
+  };
+
+  const cancelOrCloseForm = () => {
+    setShowForm(false);
+    if (isUpdating) {
+      restoreCreateDraftOrReset();
+    }
+  };
+
+  const handleAdd = () => {
+    if (isUpdating) {
+      restoreCreateDraftOrReset();
+      setShowForm(true);
+      return;
+    }
+    setShowForm((s) => !s);
   };
 
   const handleSearchDatePickerDate = async (date: Date | undefined) => {
@@ -662,6 +713,16 @@ function ClientRoutinesPage() {
   };
 
   const handleEnableEdit = (routine: Exercise) => {
+    if (!isUpdating) {
+      newRoutineDraftRef.current = {
+        routineForm: { ...routineForm },
+        isSuperSet,
+        selectedSuperSetTag,
+        combinedRestTime,
+        selectedDate,
+      };
+    }
+
     setRoutineForm({
       dailyStudentExerciseId: routine.dailyExerciseId,
       exerciseId: routine.exerciseId,
@@ -810,7 +871,7 @@ function ClientRoutinesPage() {
       );
 
       notify.updated("Ejercicio actualizado", "La rutina se ha actualizado con éxito.");
-      resetForm();
+      restoreCreateDraftOrReset();
       setShowForm(false);
     } catch (error) {
       console.error("Error al actualizar la rutina:", error);
@@ -915,6 +976,7 @@ function ClientRoutinesPage() {
           routineForm.dailyExerciseSets.length === 1 ? "ejercicio" : "ejercicios"
         } para ${client.name}`,
       );
+      newRoutineDraftRef.current = null;
       resetForm();
     } catch (error) {
       console.error("Error al guardar la rutina:", error);
@@ -1011,10 +1073,7 @@ function ClientRoutinesPage() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => {
-                    setShowForm(false);
-                    resetForm();
-                  }}
+                  onClick={cancelOrCloseForm}
                   className="hover:bg-destructive/10 hover:text-destructive"
                 >
                   <X className="h-4 w-4" />
@@ -1401,13 +1460,24 @@ function ClientRoutinesPage() {
                 )}
               </div>
               <div className="flex items-center gap-3 justify-end flex-wrap">
+                {!isUpdating && hasDraftContent && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="text-xs text-muted-foreground hover:text-destructive mr-auto"
+                    onClick={() => {
+                      resetForm();
+                      notify.info("Borrador limpiado", "Se han restablecido los campos del ejercicio");
+                    }}
+                  >
+                    Limpiar campos
+                  </Button>
+                )}
                 <Button
                   variant="outline"
                   className="border-border hover:text-white"
-                  onClick={() => {
-                    setShowForm(false);
-                    resetForm();
-                  }}
+                  onClick={cancelOrCloseForm}
                 >
                   Cancelar
                 </Button>
@@ -1822,7 +1892,6 @@ function ClientRoutinesPage() {
                               className="border-border hover:text-white"
                               onClick={() => {
                                 setGetShowForm("");
-                                resetForm();
                               }}
                             >
                               Cerrar
@@ -1868,9 +1937,6 @@ function ClientRoutinesPage() {
           open={showNewExerciseDialog}
           onOpenChange={(open) => {
             setShowNewExerciseDialog(open);
-            if (!open) {
-              newExerciseFormReset();
-            }
           }}
         >
           <DialogContent className="bg-popover/95 backdrop-blur-xl border-primary/40 shadow-elevated sm:max-w-md">
