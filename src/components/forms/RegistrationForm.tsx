@@ -515,10 +515,15 @@ export function RegistrationForm({
                   <Input
                     id="weight"
                     type="number"
+                    step="any"
+                    min="0"
                     placeholder="Peso (kg)"
-                    value={registerForm.weight}
+                    value={registerForm.weight ? registerForm.weight : ""}
                     onChange={(e) =>
-                      setRegisterForm({ ...registerForm, weight: Number(e.target.value) })
+                      setRegisterForm({
+                        ...registerForm,
+                        weight: e.target.value === "" ? 0 : Number(e.target.value),
+                      })
                     }
                     required
                     className="bg-input/60"
