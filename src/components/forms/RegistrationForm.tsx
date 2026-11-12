@@ -15,7 +15,13 @@ import { Goal, goalLabels } from "@/types/goals";
 import DatePicker from "@/components/DatePicker";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { CountryDto } from "@/dtos/countryDto";
-import { findPlaceHolder } from "@/utils/registerUtils";
+import {
+  cleanPhoneNumber,
+  findPlaceHolder,
+  formatPhoneNumber,
+  getPhoneConfig,
+  validatePhoneNumber,
+} from "@/utils/registerUtils";
 
 export interface RegistrationFormProps {
   type: "coach" | "student";
@@ -73,12 +79,33 @@ export function RegistrationForm({
     setRegisterForm({ ...registerForm, fitnessGoal: e });
   };
 
+  const selectedCountry = countries.find((c) => c.id === registerForm.countryId);
+  const currentPhoneConfig = getPhoneConfig({
+    countryName: selectedCountry?.name,
+    phoneCode: registerForm.phoneCode,
+  });
+
   const handleCities = async (value: number) => {
-    setRegisterForm({
-      ...registerForm,
-      countryId: value,
-      phoneCode: phoneCodes.find((p) => p.id === value)!.code,
-      phonePlaceHolder: findPlaceHolder(phoneCodes.find((p) => p.id === value)!.code),
+    const chosenCountry = countries.find((c) => c.id === value);
+    const chosenPhoneCode =
+      phoneCodes.find((p) => p.id === value)?.code || chosenCountry?.phoneCode || "";
+    const phoneConfig = getPhoneConfig({
+      countryName: chosenCountry?.name,
+      phoneCode: chosenPhoneCode,
+    });
+
+    setRegisterForm((prev) => {
+      const currentDigits = cleanPhoneNumber(prev.partialPhoneNumber);
+      const trimmedDigits = currentDigits.slice(0, phoneConfig.digits);
+      const formatted = formatPhoneNumber(trimmedDigits, phoneConfig);
+      return {
+        ...prev,
+        countryId: value,
+        phoneCode: chosenPhoneCode,
+        phonePlaceHolder: phoneConfig.placeholder,
+        partialPhoneNumber: formatted,
+        phoneNumber: chosenPhoneCode ? `${chosenPhoneCode}${trimmedDigits}` : trimmedDigits,
+      };
     });
 
     try {
@@ -121,16 +148,23 @@ export function RegistrationForm({
       return;
     }
 
-    if (!registerForm.phoneCode!.trim()) {
-      notify.error("Error", `El código de teléfono es obligatorio`);
-      return;
-    }
-    if (!registerForm.partialPhoneNumber && !registerForm.phoneNumber) {
-      notify.error("Error", `El teléfono es obligatorio`);
-      return;
-    }
     if (!registerForm.countryId) {
       notify.error("Error", `Selecciona un País`);
+      setStep(2);
+      return;
+    }
+    if (!registerForm.phoneCode!.trim()) {
+      notify.error("Error", `El código de teléfono es obligatorio`);
+      setStep(2);
+      return;
+    }
+    const phoneValidation = validatePhoneNumber(
+      registerForm.partialPhoneNumber,
+      currentPhoneConfig
+    );
+    if (!phoneValidation.isValid) {
+      notify.error("Error", phoneValidation.message || "El teléfono es obligatorio");
+      setStep(2);
       return;
     }
     if (!registerForm.cityId) {
@@ -170,11 +204,11 @@ export function RegistrationForm({
 
     try {
       const formDataToSubmit = { ...registerForm };
-
-      if (formDataToSubmit.partialPhoneNumber && !formDataToSubmit.phoneNumber) {
-        formDataToSubmit.phoneNumber =
-          formDataToSubmit.phoneCode + formDataToSubmit.partialPhoneNumber;
-      }
+      const cleanDigits = cleanPhoneNumber(formDataToSubmit.partialPhoneNumber);
+      formDataToSubmit.partialPhoneNumber = cleanDigits;
+      formDataToSubmit.phoneNumber = formDataToSubmit.phoneCode
+        ? `${formDataToSubmit.phoneCode}${cleanDigits}`
+        : cleanDigits;
 
       await onSubmit(formDataToSubmit);
       setSuccess(true);
@@ -396,18 +430,30 @@ export function RegistrationForm({
                     />
                     <Input
                       id="phoneNumber"
-                      type="text"
-                      placeholder={registerForm.phonePlaceHolder}
-                      value={registerForm.partialPhoneNumber || registerForm.phoneNumber}
-                      onChange={(e) =>
+                      type="tel"
+                      inputMode="numeric"
+                      placeholder={
+                        registerForm.phonePlaceHolder ||
+                        (registerForm.countryId
+                          ? currentPhoneConfig.placeholder
+                          : "Selecciona tu país")
+                      }
+                      value={registerForm.partialPhoneNumber}
+                      maxLength={currentPhoneConfig.placeholder.length || currentPhoneConfig.digits + 4}
+                      disabled={!registerForm.countryId && !registerForm.phoneCode}
+                      onChange={(e) => {
+                        const formatted = formatPhoneNumber(e.target.value, currentPhoneConfig);
+                        const cleanDigits = cleanPhoneNumber(formatted);
                         setRegisterForm({
                           ...registerForm,
-                          partialPhoneNumber: e.target.value,
-                          phoneNumber: e.target.value,
-                        })
-                      }
+                          partialPhoneNumber: formatted,
+                          phoneNumber: registerForm.phoneCode
+                            ? `${registerForm.phoneCode}${cleanDigits}`
+                            : cleanDigits,
+                        });
+                      }}
                       required
-                      className="mt-1.5 bg-input/60"
+                      className="mt-1.5 bg-input/60 disabled:opacity-60"
                     />
                   </div>
                 </div>
