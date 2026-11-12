@@ -9,6 +9,7 @@ export interface RegisterCredentials {
   password: string;
   confirmPassword: string;
   phoneCode: string;
+  phonePlaceHolder: string;
   partialPhoneNumber: string;
   phoneNumber: string;
   countryId: number;

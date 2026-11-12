@@ -94,8 +94,8 @@ function RegisterInfoPage() {
       successTitle="¡Información guardada!"
       successMessage={(form) => (
         <>
-          Gracias <span className="text-foreground font-medium">{form.firstName}</span>, tus datos
-          se han registrado correctamente.
+          Hemos enviado un enlace de confirmación a{" "}
+          <span className="text-foreground font-medium">{form.email}</span>. Confirma para empezar.
         </>
       )}
       onSubmit={handleRegisterStudent}

@@ -309,8 +309,14 @@ export function AddDailyExerciseDialog({
     setCombinedRestTime("90");
   };
 
+  const hasDraft =
+    Boolean(selectedMuscleGroupId) ||
+    Boolean(selectedExerciseId) ||
+    Boolean(notes.trim()) ||
+    sets.length > 1 ||
+    sets.some((s) => s.targetReps !== "12" || s.targetWeight !== "20" || s.restTime !== "90");
+
   const handleClose = () => {
-    resetForm();
     onClose();
   };
 
@@ -891,6 +897,20 @@ export function AddDailyExerciseDialog({
           </div>
 
           <DialogFooter className="gap-2 sm:gap-0">
+            {hasDraft && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="text-xs text-muted-foreground hover:text-destructive mr-auto"
+                onClick={() => {
+                  resetForm();
+                  notify.info("Borrador limpiado", "Se han restablecido los campos del ejercicio");
+                }}
+              >
+                Limpiar campos
+              </Button>
+            )}
             <Button variant="ghost" onClick={handleClose} disabled={saving}>
               Cancelar
             </Button>
@@ -918,10 +938,6 @@ export function AddDailyExerciseDialog({
         open={showNewExerciseDialog}
         onOpenChange={(open) => {
           setShowNewExerciseDialog(open);
-          if (!open) {
-            setNewExerciseForm({ name: "", muscleGroupId: 0, videoUrl: "", description: "" });
-            setSelectedExerciseVideoFile(null);
-          }
         }}
       >
         <DialogContent className="bg-popover/95 backdrop-blur-xl border-primary/40 shadow-elevated sm:max-w-md max-h-[85vh] overflow-y-auto">
