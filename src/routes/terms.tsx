@@ -308,6 +308,10 @@ function TermsPage() {
             <Link to="/terms" className="hover:text-primary transition-colors">
               Términos & Privacidad
             </Link>
+            <span>•</span>
+            <Link to="/delete-account" className="hover:text-primary transition-colors">
+              Eliminación de Datos
+            </Link>
           </div>
         </div>
       </footer>

@@ -16,6 +16,7 @@ import { preview } from "vite";
 import { PyrosLogo } from "@/components/brand/PyrosLogo";
 import { Checkbox } from "@/components/ui/checkbox";
 import { TermsDialog } from "@/components/legal/TermsDialog";
+import { isUserDeactivated } from "@/utils/deletedAccount";
 
 export const Route = createFileRoute("/login")({
   head: () => ({
@@ -85,11 +86,22 @@ function LoginPage() {
     try {
       const data = await login(loginData);
       const { id, token } = data;
+
+      if (isUserDeactivated(data, null, { id: Number(id), userName: loginForm.userName })) {
+        notify.error("Cuenta eliminada", "Esta cuenta ha sido dada de baja y no puede ingresar.");
+        return;
+      }
+
       const [userData, studentData, coachData] = await Promise.all([
         getUser(id).catch(() => null),
         getStudent(id).catch(() => null),
         getCoach(id).catch(() => null),
       ]);
+
+      if (isUserDeactivated(data, userData, { id: Number(id), userName: loginForm.userName })) {
+        notify.error("Cuenta eliminada", "Esta cuenta ha sido dada de baja y no puede ingresar.");
+        return;
+      }
 
       const isRealCoach = coachData !== null && Number(coachData?.id) > 0;
       let currentStudent = studentData;
@@ -272,10 +284,7 @@ function LoginPage() {
           </p>
           <p className="text-center text-sm text-muted-foreground">
             ¿Quieres entrenar?{" "}
-            <Link
-              to="/register-info"
-              className="text-primary font-medium hover:underline"
-            >
+            <Link to="/register-info" className="text-primary font-medium hover:underline">
               Crea tu cuenta Aquí
             </Link>
           </p>
@@ -289,6 +298,14 @@ function LoginPage() {
                 className="text-[11px] text-muted-foreground/80 hover:text-primary transition-colors underline-offset-4 hover:underline"
               >
                 Consultar Términos y Condiciones completos
+              </Link>
+            </div>
+            <div className="pt-0.5">
+              <Link
+                to="/delete-account"
+                className="text-[10px] text-muted-foreground/60 hover:text-destructive transition-colors underline-offset-4 hover:underline"
+              >
+                Solicitar eliminación de datos
               </Link>
             </div>
           </div>

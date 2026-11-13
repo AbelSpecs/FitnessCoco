@@ -1,7 +1,17 @@
-import { createFileRoute, Link, redirect, useParams } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect, useNavigate, useParams } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Field } from "@/components/ui/field";
 import { Stat } from "@/components/ui/stat";
 import { Input } from "@/components/ui/input";
@@ -9,6 +19,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ChangeEvent, useEffect, useRef, useState } from "react";
 import {
+  AlertTriangle,
   Award,
   BadgeCheck,
   Camera,
@@ -25,7 +36,15 @@ import {
 } from "lucide-react";
 import { Goal, goalLabels } from "@/types/goals";
 import { User } from "@/types/user";
-import { createStudent, getUser, getUserDetails, updateProfilePictures } from "@/services/user.service";
+import {
+  createStudent,
+  deleteUser,
+  getUser,
+  getUserDetails,
+  updateProfilePictures,
+} from "@/services/user.service";
+import { useAuthStore } from "@/store/authStore";
+import { markAccountAsDeleted } from "@/utils/deletedAccount";
 import { notify } from "@/components/NotificationCenter";
 import { SpinnerOverlay } from "@/components/Spinner";
 import { getStudent, updateStudent } from "@/services/student.service";
@@ -219,16 +238,55 @@ export const Route = createFileRoute("/perfil/$userId")({
 function Perfil() {
   const { userData: userInfo, base64: QrBase64, urlToShare: url } = Route.useLoaderData();
   const { userId } = useParams({ from: "/perfil/$userId" });
+  const navigate = useNavigate();
+  const authUser = useAuthStore((state) => state.user);
+  const logout = useAuthStore((state) => state.logout);
   const { isStudent } = userInfo;
   const [goal, setGoal] = useState<Goal | null>(null);
   const [edition, setEdition] = useState(true);
   const [userData, setUserData] = useState<User | null>(userInfo);
   const [userCompleteData, setUserCompleteData] = useState<User | null>(userInfo);
   const [isLoading, setIsLoading] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const bannerInputRef = useRef<HTMLInputElement>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
   const currentUserId = Number(userId) || userData?.id || 1;
+  const isOwnProfile = Number(authUser?.id) === currentUserId;
+
+  const handleConfirmDeleteAccount = async () => {
+    setIsDeleteDialogOpen(false);
+    setIsDeletingAccount(true);
+
+    try {
+      const response = await deleteUser(currentUserId);
+      if (response?.isSuccess === false || response?.succeeded === false) {
+        notify.error(
+          "Error",
+          response?.message || "No se pudo dar de baja la cuenta. Intenta de nuevo."
+        );
+        return;
+      }
+
+      markAccountAsDeleted({
+        id: currentUserId,
+      });
+
+      logout();
+      notify.success("Cuenta eliminada", "Tu cuenta y todos tus datos han sido dados de baja.");
+      navigate({ to: "/login" });
+    } catch (error: any) {
+      console.error("Error al dar de baja la cuenta:", error);
+      const apiMessage =
+        error?.response?.data?.message ||
+        error?.response?.data?.title ||
+        "No se pudo completar la baja de la cuenta. Intenta más tarde.";
+      notify.error("Error", apiMessage);
+    } finally {
+      setIsDeletingAccount(false);
+    }
+  };
 
   useEffect(() => {
     // Si el usuario es entrenador, invocar asíncronamente las estadísticas del endpoint de Swagger
@@ -1167,8 +1225,61 @@ function Perfil() {
             </Button>
           </div>
         )}
+
+        {/* Account Deletion Section for all user types */}
+        {isOwnProfile && (
+          <Card className="lg:col-span-3 border-destructive/30 bg-card/80 p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 text-destructive font-semibold text-sm">
+                <AlertTriangle className="h-4 w-4 shrink-0" />
+                <span>Zona de peligro</span>
+              </div>
+              <p className="text-xs sm:text-sm text-muted-foreground">
+                Si das de baja tu cuenta, todos tus datos, entrenamientos y progreso serán eliminados
+                de forma permanente.
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={() => setIsDeleteDialogOpen(true)}
+              disabled={isLoading || isDeletingAccount}
+              className="w-full sm:w-auto gap-2 shrink-0 cursor-pointer"
+            >
+              <Trash2 className="h-4 w-4" />
+              <span>Dar de baja mi cuenta</span>
+            </Button>
+          </Card>
+        )}
       </div>
-      {isLoading && <SpinnerOverlay label={"Guardando..."} />}
+
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent className="border-border bg-card">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" />
+              <span>¿Estás seguro de que deseas darte de baja?</span>
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción es irreversible. Si confirmas, tu cuenta y todos tus datos personales,
+              rutinas e historial serán borrados permanentemente y no podrás volver a ingresar.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="cursor-pointer">Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDeleteAccount}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 cursor-pointer"
+            >
+              Sí, dar de baja
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {(isLoading || isDeletingAccount) && (
+        <SpinnerOverlay label={isDeletingAccount ? "Dando de baja..." : "Guardando..."} />
+      )}
     </AppShell>
   );
 }
