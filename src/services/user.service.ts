@@ -60,3 +60,13 @@ export const updateProfilePictures = async (
     throw error;
   }
 };
+
+export const deleteUser = async (userId: number) => {
+  try {
+    const response = await api.delete(`/Users/${userId}`);
+    return response.data?.data !== undefined ? response.data.data : response.data;
+  } catch (error) {
+    console.error("Error al eliminar el usuario", error);
+    throw error;
+  }
+};

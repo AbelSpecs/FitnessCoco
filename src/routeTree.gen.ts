@@ -19,6 +19,7 @@ import { Route as ParQRouteImport } from './routes/par-q'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as ExercisesRouteImport } from './routes/exercises'
+import { Route as DeleteAccountRouteImport } from './routes/delete-account'
 import { Route as ConfirmEmailRouteImport } from './routes/confirm-email'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ClientsIndexRouteImport } from './routes/clients.index'
@@ -79,6 +80,11 @@ const ExercisesRoute = ExercisesRouteImport.update({
   path: '/exercises',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DeleteAccountRoute = DeleteAccountRouteImport.update({
+  id: '/delete-account',
+  path: '/delete-account',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ConfirmEmailRoute = ConfirmEmailRouteImport.update({
   id: '/confirm-email',
   path: '/confirm-email',
@@ -128,6 +134,7 @@ const ClientsStudentIdEditRoute = ClientsStudentIdEditRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/confirm-email': typeof ConfirmEmailRoute
+  '/delete-account': typeof DeleteAccountRoute
   '/exercises': typeof ExercisesRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
@@ -149,6 +156,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/confirm-email': typeof ConfirmEmailRoute
+  '/delete-account': typeof DeleteAccountRoute
   '/exercises': typeof ExercisesRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
@@ -170,6 +178,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/confirm-email': typeof ConfirmEmailRoute
+  '/delete-account': typeof DeleteAccountRoute
   '/exercises': typeof ExercisesRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
@@ -193,6 +202,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/confirm-email'
+    | '/delete-account'
     | '/exercises'
     | '/forgot-password'
     | '/login'
@@ -214,6 +224,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/confirm-email'
+    | '/delete-account'
     | '/exercises'
     | '/forgot-password'
     | '/login'
@@ -234,6 +245,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/confirm-email'
+    | '/delete-account'
     | '/exercises'
     | '/forgot-password'
     | '/login'
@@ -256,6 +268,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ConfirmEmailRoute: typeof ConfirmEmailRoute
+  DeleteAccountRoute: typeof DeleteAccountRoute
   ExercisesRoute: typeof ExercisesRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   LoginRoute: typeof LoginRoute
@@ -346,6 +359,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ExercisesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/delete-account': {
+      id: '/delete-account'
+      path: '/delete-account'
+      fullPath: '/delete-account'
+      preLoaderRoute: typeof DeleteAccountRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/confirm-email': {
       id: '/confirm-email'
       path: '/confirm-email'
@@ -426,6 +446,7 @@ const ClientsStudentIdRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ConfirmEmailRoute: ConfirmEmailRoute,
+  DeleteAccountRoute: DeleteAccountRoute,
   ExercisesRoute: ExercisesRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
   LoginRoute: LoginRoute,
