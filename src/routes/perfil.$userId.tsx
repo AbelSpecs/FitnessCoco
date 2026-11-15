@@ -22,6 +22,7 @@ import {
   AlertTriangle,
   Award,
   BadgeCheck,
+  Bug,
   Camera,
   Check,
   CheckCircle2,
@@ -1224,6 +1225,37 @@ function Perfil() {
               <CheckCircle2 className="h-4 w-4" /> Guardar cambios
             </Button>
           </div>
+        )}
+
+        {/* Support / Bug & Suggestion Section for all user types */}
+        {isOwnProfile && (
+          <Card className="lg:col-span-3 border-primary/30 bg-card/80 p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 text-primary font-semibold text-sm">
+                <Bug className="h-4 w-4 shrink-0" />
+                <span>Soporte, bugs y sugerencias</span>
+              </div>
+              <p className="text-xs sm:text-sm text-muted-foreground">
+                ¿Encontraste un problema o tienes una idea para mejorar PyrosFit? Envíanos un ticket
+                directamente desde tu cuenta.
+              </p>
+            </div>
+            <Link
+              to="/support"
+              search={{ mode: "ticket" }}
+              className="w-full sm:w-auto shrink-0"
+            >
+              <Button
+                type="button"
+                variant="hero"
+                disabled={isLoading || isDeletingAccount}
+                className="w-full sm:w-auto gap-2 cursor-pointer"
+              >
+                <Bug className="h-4 w-4" />
+                <span>Reportar bug o sugerencia</span>
+              </Button>
+            </Link>
+          </Card>
         )}
 
         {/* Account Deletion Section for all user types */}

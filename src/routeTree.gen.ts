@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TermsRouteImport } from './routes/terms'
+import { Route as SupportRouteImport } from './routes/support'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as RegisterInfoRouteImport } from './routes/register-info'
 import { Route as RegisterRouteImport } from './routes/register'
@@ -19,7 +20,6 @@ import { Route as ParQRouteImport } from './routes/par-q'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as ExercisesRouteImport } from './routes/exercises'
-import { Route as DeleteAccountRouteImport } from './routes/delete-account'
 import { Route as ConfirmEmailRouteImport } from './routes/confirm-email'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ClientsIndexRouteImport } from './routes/clients.index'
@@ -33,6 +33,11 @@ import { Route as ClientsStudentIdEditRouteImport } from './routes/clients.$stud
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
   path: '/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SupportRoute = SupportRouteImport.update({
+  id: '/support',
+  path: '/support',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
@@ -78,11 +83,6 @@ const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
 const ExercisesRoute = ExercisesRouteImport.update({
   id: '/exercises',
   path: '/exercises',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DeleteAccountRoute = DeleteAccountRouteImport.update({
-  id: '/delete-account',
-  path: '/delete-account',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ConfirmEmailRoute = ConfirmEmailRouteImport.update({
@@ -134,7 +134,6 @@ const ClientsStudentIdEditRoute = ClientsStudentIdEditRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/confirm-email': typeof ConfirmEmailRoute
-  '/delete-account': typeof DeleteAccountRoute
   '/exercises': typeof ExercisesRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
@@ -144,6 +143,7 @@ export interface FileRoutesByFullPath {
   '/register': typeof RegisterRoute
   '/register-info': typeof RegisterInfoRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/support': typeof SupportRoute
   '/terms': typeof TermsRoute
   '/clients/$studentId': typeof ClientsStudentIdRouteWithChildren
   '/perfil/$userId': typeof PerfilUserIdRoute
@@ -156,7 +156,6 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/confirm-email': typeof ConfirmEmailRoute
-  '/delete-account': typeof DeleteAccountRoute
   '/exercises': typeof ExercisesRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
@@ -166,6 +165,7 @@ export interface FileRoutesByTo {
   '/register': typeof RegisterRoute
   '/register-info': typeof RegisterInfoRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/support': typeof SupportRoute
   '/terms': typeof TermsRoute
   '/perfil/$userId': typeof PerfilUserIdRoute
   '/clients': typeof ClientsIndexRoute
@@ -178,7 +178,6 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/confirm-email': typeof ConfirmEmailRoute
-  '/delete-account': typeof DeleteAccountRoute
   '/exercises': typeof ExercisesRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
@@ -188,6 +187,7 @@ export interface FileRoutesById {
   '/register': typeof RegisterRoute
   '/register-info': typeof RegisterInfoRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/support': typeof SupportRoute
   '/terms': typeof TermsRoute
   '/clients/$studentId': typeof ClientsStudentIdRouteWithChildren
   '/perfil/$userId': typeof PerfilUserIdRoute
@@ -202,7 +202,6 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/confirm-email'
-    | '/delete-account'
     | '/exercises'
     | '/forgot-password'
     | '/login'
@@ -212,6 +211,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/register-info'
     | '/reset-password'
+    | '/support'
     | '/terms'
     | '/clients/$studentId'
     | '/perfil/$userId'
@@ -224,7 +224,6 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/confirm-email'
-    | '/delete-account'
     | '/exercises'
     | '/forgot-password'
     | '/login'
@@ -234,6 +233,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/register-info'
     | '/reset-password'
+    | '/support'
     | '/terms'
     | '/perfil/$userId'
     | '/clients'
@@ -245,7 +245,6 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/confirm-email'
-    | '/delete-account'
     | '/exercises'
     | '/forgot-password'
     | '/login'
@@ -255,6 +254,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/register-info'
     | '/reset-password'
+    | '/support'
     | '/terms'
     | '/clients/$studentId'
     | '/perfil/$userId'
@@ -268,7 +268,6 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ConfirmEmailRoute: typeof ConfirmEmailRoute
-  DeleteAccountRoute: typeof DeleteAccountRoute
   ExercisesRoute: typeof ExercisesRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   LoginRoute: typeof LoginRoute
@@ -278,6 +277,7 @@ export interface RootRouteChildren {
   RegisterRoute: typeof RegisterRoute
   RegisterInfoRoute: typeof RegisterInfoRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
+  SupportRoute: typeof SupportRoute
   TermsRoute: typeof TermsRoute
   ClientsStudentIdRoute: typeof ClientsStudentIdRouteWithChildren
   PerfilUserIdRoute: typeof PerfilUserIdRoute
@@ -294,6 +294,13 @@ declare module '@tanstack/react-router' {
       path: '/terms'
       fullPath: '/terms'
       preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/support': {
+      id: '/support'
+      path: '/support'
+      fullPath: '/support'
+      preLoaderRoute: typeof SupportRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/reset-password': {
@@ -357,13 +364,6 @@ declare module '@tanstack/react-router' {
       path: '/exercises'
       fullPath: '/exercises'
       preLoaderRoute: typeof ExercisesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/delete-account': {
-      id: '/delete-account'
-      path: '/delete-account'
-      fullPath: '/delete-account'
-      preLoaderRoute: typeof DeleteAccountRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/confirm-email': {
@@ -446,7 +446,6 @@ const ClientsStudentIdRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ConfirmEmailRoute: ConfirmEmailRoute,
-  DeleteAccountRoute: DeleteAccountRoute,
   ExercisesRoute: ExercisesRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
   LoginRoute: LoginRoute,
@@ -456,6 +455,7 @@ const rootRouteChildren: RootRouteChildren = {
   RegisterRoute: RegisterRoute,
   RegisterInfoRoute: RegisterInfoRoute,
   ResetPasswordRoute: ResetPasswordRoute,
+  SupportRoute: SupportRoute,
   TermsRoute: TermsRoute,
   ClientsStudentIdRoute: ClientsStudentIdRouteWithChildren,
   PerfilUserIdRoute: PerfilUserIdRoute,

@@ -302,10 +302,10 @@ function LoginPage() {
             </div>
             <div className="pt-0.5">
               <Link
-                to="/delete-account"
+                to="/support"
                 className="text-[10px] text-muted-foreground/60 hover:text-destructive transition-colors underline-offset-4 hover:underline"
               >
-                Solicitar eliminación de datos
+                Enviar sugerencia o dar de baja
               </Link>
             </div>
           </div>
