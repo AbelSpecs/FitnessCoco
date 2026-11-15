@@ -14,10 +14,10 @@ export const getCountries = async () => {
 
 export const getCities = async (countryId: number) => {
   try {
-    const response = await api.get(`/Cities/${countryId}`);
+    const response = await api.get(`/Cities/country/${countryId}`);
     const { data } = response.data;
 
-    return data;
+    return Array.isArray(data) ? data : data ? [data] : [];
   } catch (error) {
     console.error("Error al obtener las ciudades", error);
     throw error;

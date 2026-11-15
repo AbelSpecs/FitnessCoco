@@ -110,7 +110,7 @@ export function RegistrationForm({
 
     try {
       const fetchedCities = await getCities(value);
-      setCities(fetchedCities ? [fetchedCities] : []);
+      setCities(Array.isArray(fetchedCities) ? fetchedCities : fetchedCities ? [fetchedCities] : []);
     } catch (error) {
       console.error("Error al obtener las ciudades del pais:", error);
     }
