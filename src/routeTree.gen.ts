@@ -16,6 +16,7 @@ import { Route as RegisterInfoRouteImport } from './routes/register-info'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as RankingRouteImport } from './routes/ranking'
 import { Route as ProgressRouteImport } from './routes/progress'
+import { Route as PaymentsRouteImport } from './routes/payments'
 import { Route as ParQRouteImport } from './routes/par-q'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
@@ -63,6 +64,11 @@ const RankingRoute = RankingRouteImport.update({
 const ProgressRoute = ProgressRouteImport.update({
   id: '/progress',
   path: '/progress',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PaymentsRoute = PaymentsRouteImport.update({
+  id: '/payments',
+  path: '/payments',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ParQRoute = ParQRouteImport.update({
@@ -138,6 +144,7 @@ export interface FileRoutesByFullPath {
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/par-q': typeof ParQRoute
+  '/payments': typeof PaymentsRoute
   '/progress': typeof ProgressRoute
   '/ranking': typeof RankingRoute
   '/register': typeof RegisterRoute
@@ -160,6 +167,7 @@ export interface FileRoutesByTo {
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/par-q': typeof ParQRoute
+  '/payments': typeof PaymentsRoute
   '/progress': typeof ProgressRoute
   '/ranking': typeof RankingRoute
   '/register': typeof RegisterRoute
@@ -182,6 +190,7 @@ export interface FileRoutesById {
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/par-q': typeof ParQRoute
+  '/payments': typeof PaymentsRoute
   '/progress': typeof ProgressRoute
   '/ranking': typeof RankingRoute
   '/register': typeof RegisterRoute
@@ -206,6 +215,7 @@ export interface FileRouteTypes {
     | '/forgot-password'
     | '/login'
     | '/par-q'
+    | '/payments'
     | '/progress'
     | '/ranking'
     | '/register'
@@ -228,6 +238,7 @@ export interface FileRouteTypes {
     | '/forgot-password'
     | '/login'
     | '/par-q'
+    | '/payments'
     | '/progress'
     | '/ranking'
     | '/register'
@@ -249,6 +260,7 @@ export interface FileRouteTypes {
     | '/forgot-password'
     | '/login'
     | '/par-q'
+    | '/payments'
     | '/progress'
     | '/ranking'
     | '/register'
@@ -272,6 +284,7 @@ export interface RootRouteChildren {
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   LoginRoute: typeof LoginRoute
   ParQRoute: typeof ParQRoute
+  PaymentsRoute: typeof PaymentsRoute
   ProgressRoute: typeof ProgressRoute
   RankingRoute: typeof RankingRoute
   RegisterRoute: typeof RegisterRoute
@@ -336,6 +349,13 @@ declare module '@tanstack/react-router' {
       path: '/progress'
       fullPath: '/progress'
       preLoaderRoute: typeof ProgressRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/payments': {
+      id: '/payments'
+      path: '/payments'
+      fullPath: '/payments'
+      preLoaderRoute: typeof PaymentsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/par-q': {
@@ -450,6 +470,7 @@ const rootRouteChildren: RootRouteChildren = {
   ForgotPasswordRoute: ForgotPasswordRoute,
   LoginRoute: LoginRoute,
   ParQRoute: ParQRoute,
+  PaymentsRoute: PaymentsRoute,
   ProgressRoute: ProgressRoute,
   RankingRoute: RankingRoute,
   RegisterRoute: RegisterRoute,

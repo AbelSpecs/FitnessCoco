@@ -26,6 +26,7 @@ import {
   Camera,
   Check,
   CheckCircle2,
+  ChevronRight,
   Copy,
   ImagePlus,
   Link2,
@@ -33,6 +34,7 @@ import {
   QrCode,
   Trash2,
   Users,
+  Wallet,
   X,
 } from "lucide-react";
 import { Goal, goalLabels } from "@/types/goals";
@@ -45,6 +47,7 @@ import {
   updateProfilePictures,
 } from "@/services/user.service";
 import { useAuthStore } from "@/store/authStore";
+import { isAdminUser } from "@/utils/admin";
 import { markAccountAsDeleted } from "@/utils/deletedAccount";
 import { notify } from "@/components/NotificationCenter";
 import { SpinnerOverlay } from "@/components/Spinner";
@@ -614,11 +617,36 @@ function Perfil() {
         onChange={handleAvatarUpload}
       />
 
-      <div className="mb-6 sm:mb-8">
-        <p className="text-[10px] sm:text-xs uppercase tracking-[0.3em] text-primary-glow mb-2">
-          Tu cuenta
-        </p>
-        <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl">Perfil</h1>
+      <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+        <div>
+          <p className="text-[10px] sm:text-xs uppercase tracking-[0.3em] text-primary-glow mb-2">
+            Tu cuenta
+          </p>
+          <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl">Perfil</h1>
+        </div>
+
+        {isOwnProfile && (
+          <Link to="/payments" className="w-full sm:w-auto">
+            <div className="group flex items-center justify-between gap-3 px-4 py-3 rounded-2xl border border-emerald-500/35 bg-emerald-500/10 hover:bg-emerald-500/15 hover:border-emerald-400/60 transition-all shadow-sm">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center shrink-0">
+                  <Wallet className="h-5 w-5 text-emerald-400" />
+                </div>
+                <div className="text-left">
+                  <p className="text-sm font-semibold text-foreground leading-tight">
+                    {isAdminUser(authUser) ? "Gestión de Pagos" : "Mis Pagos"}
+                  </p>
+                  <p className="text-[11px] text-emerald-400/90">
+                    {isAdminUser(authUser)
+                      ? "Confirmar y revisar pagos"
+                      : "Historial y registro de pagos"}
+                  </p>
+                </div>
+              </div>
+              <ChevronRight className="h-4 w-4 text-emerald-400 group-hover:translate-x-0.5 transition-transform shrink-0" />
+            </div>
+          </Link>
+        )}
       </div>
 
       {!isStudent && (
