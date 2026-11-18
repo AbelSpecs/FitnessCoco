@@ -317,9 +317,24 @@ function PaymentsPage() {
   const handleMethodChange = (val: string) => {
     const code = Number(val) as PaymentMethodCode;
     setNewMethod(code);
-    if (code === 2) setNewCurrency(1);
-    if (code === 3 || code === 6) setNewCurrency(2);
-    if (code === 4) setNewCurrency(3);
+    if (code === 2) setNewCurrency(1); // Pago Móvil -> VES
+    else if (code === 3 || code === 6) setNewCurrency(2); // Zelle / PayPal -> USD
+    else if (code === 4) setNewCurrency(3); // Binance Pay -> USDT
+    else if (code === 1 || code === 5) {
+      if (newCurrency === 3) setNewCurrency(2); // Transferencia / Efectivo no usan USDT
+    }
+  };
+
+  const handleCurrencyChange = (val: string) => {
+    const code = Number(val) as PaymentCurrencyCode;
+    setNewCurrency(code);
+    if (code === 3 && newMethod !== 4 && newMethod !== 99) {
+      setNewMethod(4); // USDT solo permite BinancePay u Otro
+    } else if (code !== 1 && newMethod === 2) {
+      setNewMethod(1); // Pago Móvil solo es válido en VES
+    } else if (code !== 3 && newMethod === 4) {
+      setNewMethod(1);
+    }
   };
 
   const handleCreatePayment = async (e: React.FormEvent) => {
@@ -335,6 +350,27 @@ function PaymentsPage() {
       notify.error(
         "Referencia requerida",
         "Ingresa el número de referencia bancaria o hash de la transacción."
+      );
+      return;
+    }
+
+    if ((newCurrency === 3 || newMethod === 4) && newReference.trim().length < 18) {
+      notify.error(
+        "Referencia muy corta",
+        "Para USDT / Binance Pay la referencia o hash debe tener al menos 18 caracteres."
+      );
+      return;
+    }
+
+    if (newMethod === 2 && newCurrency !== 1) {
+      notify.error("Moneda incompatible", "Pago Móvil solo es válido en Bolívares (VES).");
+      return;
+    }
+
+    if (newCurrency === 3 && newMethod !== 4 && newMethod !== 99) {
+      notify.error(
+        "Método incompatible",
+        "Los pagos en USDT solo aceptan Binance Pay u Otro como método."
       );
       return;
     }
@@ -370,7 +406,9 @@ function PaymentsPage() {
       console.error("Error registrando pago:", error);
       notify.error(
         "No se pudo registrar",
-        error.response?.data?.message || "Verifica los datos e intenta nuevamente."
+        error?.message ||
+          error.response?.data?.message ||
+          "Verifica los datos e intenta nuevamente."
       );
     } finally {
       setIsCreating(false);
@@ -1030,7 +1068,7 @@ function PaymentsPage() {
                 <Label htmlFor="currency">Moneda *</Label>
                 <Select
                   value={String(newCurrency)}
-                  onValueChange={(v) => setNewCurrency(Number(v) as PaymentCurrencyCode)}
+                  onValueChange={handleCurrencyChange}
                 >
                   <SelectTrigger id="currency" className="bg-input/60 h-10">
                     <SelectValue />
