@@ -61,14 +61,31 @@ export const getPaymentById = async (id: number): Promise<PaymentDto> => {
   }
 };
 
+function extractApiError(data: any, fallback: string): string {
+  const errors = data?.errors;
+  if (Array.isArray(errors) && errors.length > 0) {
+    const first = errors[0];
+    if (typeof first === "string") return first;
+    if (first?.errorMessage) return first.errorMessage;
+    if (first?.ErrorMessage) return first.ErrorMessage;
+  }
+  return data?.message || fallback;
+}
+
 // POST /api/v1/payments
 export const createPayment = async (
   payment: CreateOrUpdatePaymentDto
 ): Promise<PaymentDto> => {
   try {
     const response = await api.post("/payments", { payment });
+    if (response.data?.isSuccess === false) {
+      throw new Error(extractApiError(response.data, "No se pudo registrar el pago."));
+    }
     return response.data?.data ?? response.data;
-  } catch (error) {
+  } catch (error: any) {
+    if (error?.response?.data) {
+      error.message = extractApiError(error.response.data, error.message);
+    }
     console.error("Error al registrar el pago:", error);
     throw error;
   }
@@ -81,8 +98,14 @@ export const updatePayment = async (
 ): Promise<PaymentDto> => {
   try {
     const response = await api.put(`/payments/${id}`, { id, payment });
+    if (response.data?.isSuccess === false) {
+      throw new Error(extractApiError(response.data, "No se pudo actualizar el pago."));
+    }
     return response.data?.data ?? response.data;
-  } catch (error) {
+  } catch (error: any) {
+    if (error?.response?.data) {
+      error.message = extractApiError(error.response.data, error.message);
+    }
     console.error(`Error al actualizar el pago #${id}:`, error);
     throw error;
   }
