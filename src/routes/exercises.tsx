@@ -19,6 +19,7 @@ import {
 import { notify } from "@/components/NotificationCenter";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/authStore";
+import { isAdminUser } from "@/utils/admin";
 import {
   getExerciseByCoachId,
   getMuscleGroups,
@@ -37,6 +38,7 @@ import {
   getPresignedVideoUrl,
   getServeUrl,
   getServeDownloadUrl,
+  invalidateDownloadUrlCache,
   uploadFileToPresignedUrl,
 } from "@/services/storage.service";
 import { GetExerciseDto, GetMuscleGroupDto } from "@/dtos/exerciseDto";
@@ -158,7 +160,16 @@ function EjerciciosPage() {
     coachId: loaderCoachId,
   } = Route.useLoaderData();
   const { user } = useAuthStore();
+  const isAdmin = isAdminUser(user);
+  const currentUserId = Number(user?.id || 0);
   const currentCoachId = user?.coachId || user?.id || loaderCoachId || 1;
+
+  const isGeneralExercise = (item: GetExerciseDto) => !item.coachId || !item.isCustom;
+
+  const canManageExercise = (item: GetExerciseDto) => {
+    if (isGeneralExercise(item)) return isAdmin;
+    return isAdmin || Number(item.coachId) === Number(currentCoachId);
+  };
 
   const muscleGroups = loadedMuscleGroups.length > 0 ? loadedMuscleGroups : FALLBACK_MUSCLE_GROUPS;
 
@@ -285,6 +296,10 @@ function EjerciciosPage() {
   }
 
   function openEdit(item: GetExerciseDto) {
+    if (!canManageExercise(item)) {
+      notify.error("Acceso restringido", "Solo un administrador puede editar ejercicios generales.");
+      return;
+    }
     setEditing(item);
     setSelectedFile(null);
     setUploadProgress(0);
@@ -343,6 +358,12 @@ function EjerciciosPage() {
 
     try {
       if (editing) {
+        const isEditingGeneral = isGeneralExercise(editing);
+        if (isEditingGeneral && !isAdmin) {
+          notify.error("Acceso restringido", "Solo un administrador puede editar ejercicios generales.");
+          return;
+        }
+
         // 1. Si estamos editando y seleccionó un archivo nuevo de video
         if (videoMode === "upload" && selectedFile) {
           setUploading(true);
@@ -351,10 +372,11 @@ function EjerciciosPage() {
 
           const contentType = getFileContentType(selectedFile);
           const presign = await getPresignedVideoUrl({
-            trainerId: currentCoachId,
+            trainerId: isEditingGeneral ? undefined : editing.coachId || currentCoachId,
             exerciseId: editing.id,
             fileName: selectedFile.name,
             contentType,
+            userId: currentUserId || undefined,
             expiresInSeconds: 600,
           });
 
@@ -366,6 +388,8 @@ function EjerciciosPage() {
           );
 
           finalVideoKey = presign.key;
+          invalidateDownloadUrlCache(editing?.videoKey);
+          invalidateDownloadUrlCache(finalVideoKey);
           setUploading(false);
         } else if (videoMode === "url") {
           finalVideoKey = form.videoUrl.trim();
@@ -378,15 +402,18 @@ function EjerciciosPage() {
           finalDescription = formatExerciseDescriptionWithStudentId(finalDescription, effectiveStudentId);
         }
 
+        const preservedCoachId = isEditingGeneral ? null : editing.coachId ?? currentCoachId;
+        const preservedIsCustom = isEditingGeneral ? false : editing.isCustom;
+
         // 2. Actualizar ejercicio en BD
         await updateExercise(editing.id, {
-          coachId: independent ? null : currentCoachId,
+          coachId: preservedCoachId,
           name: form.name.trim(),
           description: finalDescription,
           muscleGroupId: Number(form.muscleGroupId),
           videoKey: finalVideoKey || null,
           videoUrl: finalVideoKey || null,
-          isCustom: form.isCustom,
+          isCustom: preservedIsCustom,
         });
 
         setItems((prev) =>
@@ -394,13 +421,14 @@ function EjerciciosPage() {
             Number(e.id) === Number(editing.id)
               ? {
                   ...e,
+                  coachId: preservedCoachId,
                   name: form.name.trim(),
                   description: finalDescription,
                   muscleGroupId: Number(form.muscleGroupId),
                   muscleGroup: muscleName,
                   videoKey: finalVideoKey,
                   videoUrl: finalVideoKey,
-                  isCustom: form.isCustom,
+                  isCustom: preservedIsCustom,
                 }
               : e,
           ),
@@ -409,18 +437,48 @@ function EjerciciosPage() {
         notify.updated("Ejercicio actualizado", form.name.trim());
       } else {
         // 3. Crear ejercicio nuevo en BD
-        if (videoMode === "upload" && selectedFile) {
+        const independent = isUserIndependent(user);
+        const effectiveStudentId = user?.studentId ? Number(user.studentId) : undefined;
+        let finalDescription = form.description.trim();
+        if (independent && effectiveStudentId) {
+          finalDescription = formatExerciseDescriptionWithStudentId(finalDescription, effectiveStudentId);
+        }
+
+        const createAsGeneral = isAdmin && !form.isCustom;
+        const targetCoachId = createAsGeneral ? null : independent ? null : currentCoachId;
+        const targetIsCustom = createAsGeneral ? false : true;
+
+        if (videoMode === "url") {
+          finalVideoKey = form.videoUrl.trim();
+        } else {
+          finalVideoKey = "";
+        }
+
+        const responseData = await postExercise({
+          coachId: targetCoachId,
+          name: form.name.trim(),
+          description: finalDescription,
+          muscleGroupId: Number(form.muscleGroupId),
+          videoKey: finalVideoKey || null,
+          videoUrl: finalVideoKey || null,
+          isCustom: targetIsCustom,
+        });
+
+        const newId = responseData?.id || responseData?.exercise?.id || Date.now();
+
+        // Si el usuario seleccionó un archivo de video, ahora que el ejercicio existe en BD lo subimos a R2
+        if (videoMode === "upload" && selectedFile && newId) {
           setUploading(true);
           setUploadProgress(0);
           notify.info("Subiendo video demostrativo a Cloudflare R2...");
 
-          const tempExerciseId = Math.floor(Date.now() % 100000000);
           const contentType = getFileContentType(selectedFile);
           const presign = await getPresignedVideoUrl({
-            trainerId: currentCoachId,
-            exerciseId: tempExerciseId,
+            trainerId: createAsGeneral ? undefined : currentCoachId,
+            exerciseId: Number(newId),
             fileName: selectedFile.name,
             contentType,
+            userId: currentUserId || undefined,
             expiresInSeconds: 600,
           });
 
@@ -432,40 +490,30 @@ function EjerciciosPage() {
           );
 
           finalVideoKey = presign.key;
+          invalidateDownloadUrlCache(finalVideoKey);
           setUploading(false);
-        } else if (videoMode === "url") {
-          finalVideoKey = form.videoUrl.trim();
+
+          await updateExercise(Number(newId), {
+            coachId: targetCoachId,
+            name: form.name.trim(),
+            description: finalDescription,
+            muscleGroupId: Number(form.muscleGroupId),
+            videoKey: finalVideoKey,
+            videoUrl: finalVideoKey,
+            isCustom: targetIsCustom,
+          });
         }
-
-        const independent = isUserIndependent(user);
-        const effectiveStudentId = user?.studentId ? Number(user.studentId) : undefined;
-        let finalDescription = form.description.trim();
-        if (independent && effectiveStudentId) {
-          finalDescription = formatExerciseDescriptionWithStudentId(finalDescription, effectiveStudentId);
-        }
-
-        const responseData = await postExercise({
-          coachId: independent ? null : currentCoachId,
-          name: form.name.trim(),
-          description: finalDescription,
-          muscleGroupId: Number(form.muscleGroupId),
-          videoKey: finalVideoKey || null,
-          videoUrl: finalVideoKey || null,
-          isCustom: form.isCustom,
-        });
-
-        const newId = responseData?.id || responseData?.exercise?.id || Date.now();
 
         const createdItem: GetExerciseDto = {
           id: newId,
-          coachId: independent ? null : currentCoachId,
+          coachId: targetCoachId,
           name: form.name.trim(),
           description: finalDescription,
           muscleGroupId: Number(form.muscleGroupId),
           muscleGroup: muscleName,
           videoKey: finalVideoKey,
           videoUrl: videoMode === "url" ? form.videoUrl.trim() : "",
-          isCustom: form.isCustom,
+          isCustom: targetIsCustom,
         };
 
         setItems((prev) => [createdItem, ...prev]);
@@ -710,16 +758,18 @@ function EjerciciosPage() {
                             <PlayCircle className="h-4 w-4" />
                           </Button>
                         )}
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => openEdit(e)}
-                          aria-label={`Editar ${e.name}`}
-                          className="h-8 w-8"
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        {e.isCustom && (
+                        {canManageExercise(e) && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => openEdit(e)}
+                            aria-label={`Editar ${e.name}`}
+                            className="h-8 w-8"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {canManageExercise(e) && (
                           <Button
                             variant="ghost"
                             size="icon"
@@ -786,15 +836,17 @@ function EjerciciosPage() {
                       <PlayCircle className="h-4 w-4" />
                     </Button>
                   )}
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => openEdit(e)}
-                    aria-label={`Editar ${e.name}`}
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  {e.isCustom && (
+                  {canManageExercise(e) && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => openEdit(e)}
+                      aria-label={`Editar ${e.name}`}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                  )}
+                  {canManageExercise(e) && (
                     <Button
                       variant="ghost"
                       size="icon"
@@ -827,10 +879,16 @@ function EjerciciosPage() {
         <DialogContent className="bg-gradient-card border-border sm:max-w-xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="font-display tracking-wide text-xl">
-              {editing ? "Editar ejercicio" : "Nuevo ejercicio"}
+              {editing
+                ? isGeneralExercise(editing)
+                  ? "Editar ejercicio general"
+                  : "Editar ejercicio"
+                : "Nuevo ejercicio"}
             </DialogTitle>
             <DialogDescription>
-              Define el nombre, grupo muscular y video demostrativo para tus rutinas.
+              {editing && isGeneralExercise(editing)
+                ? "Actualiza los datos y el video demostrativo de este ejercicio general visible para todos los entrenadores."
+                : "Define el nombre, grupo muscular y video demostrativo para tus rutinas."}
             </DialogDescription>
           </DialogHeader>
 
@@ -997,14 +1055,16 @@ function EjerciciosPage() {
               />
             </div>
 
-            <label className="flex items-center gap-3 text-sm cursor-pointer pt-1">
-              <Switch
-                checked={form.isCustom}
-                onCheckedChange={(v) => setForm({ ...form, isCustom: v })}
-                disabled={saving}
-              />
-              <span>Ejercicio personalizado del entrenador</span>
-            </label>
+            {!editing && isAdmin && (
+              <label className="flex items-center gap-3 text-sm cursor-pointer pt-1">
+                <Switch
+                  checked={!form.isCustom}
+                  onCheckedChange={(isGeneral) => setForm({ ...form, isCustom: !isGeneral })}
+                  disabled={saving}
+                />
+                <span>Publicar como ejercicio general (visible para todos los entrenadores)</span>
+              </label>
+            )}
           </div>
 
           <DialogFooter className="gap-2 pt-2">

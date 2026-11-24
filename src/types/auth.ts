@@ -42,6 +42,7 @@ export interface UserAuth {
   studentId: number;
   coachId?: number;
   myCoachId?: number;
+  isAdmin?: boolean;
   email?: string;
   firstName?: string;
   profilePicture?: string;
