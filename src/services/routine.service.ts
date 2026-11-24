@@ -10,6 +10,7 @@ import {
   UpdateDailyStudentExerciseDto,
 } from "@/dtos/exerciseDto";
 
+import { useAuthStore } from "@/store/authStore";
 import api from "./api";
 
 // MuscleGroups
@@ -27,10 +28,14 @@ export const getMuscleGroups = async (): Promise<GetMuscleGroupDto[]> => {
 // Exercises
 export const postExercise = async (
   routineData: ExerciseDto | ExerciseCreateDto,
+  userId?: number,
 ) => {
   try {
+    const effectiveUserId = userId ?? useAuthStore.getState().user?.id;
     const payload = "exercise" in routineData ? routineData : { exercise: routineData };
-    const response = await api.post("/Exercises", payload);
+    const response = await api.post("/Exercises", payload, {
+      params: effectiveUserId ? { userId: effectiveUserId } : undefined,
+    });
     const { data } = response.data;
 
     return data;
@@ -91,10 +96,14 @@ export const getExerciseByCoachId = async (id: number): Promise<GetExerciseDto[]
 export const updateExercise = async (
   id: number,
   routineData: ExerciseDto | ExerciseUpdateDto,
+  userId?: number,
 ) => {
   try {
+    const effectiveUserId = userId ?? useAuthStore.getState().user?.id;
     const payload = "exercise" in routineData ? (routineData as ExerciseDto).exercise : routineData;
-    const response = await api.put(`/Exercises/${id}`, payload);
+    const response = await api.put(`/Exercises/${id}`, payload, {
+      params: effectiveUserId ? { userId: effectiveUserId } : undefined,
+    });
     const { data } = response.data;
 
     return data;
@@ -104,9 +113,12 @@ export const updateExercise = async (
   }
 };
 
-export const deleteExercise = async (id: number) => {
+export const deleteExercise = async (id: number, userId?: number) => {
   try {
-    const response = await api.delete(`/Exercises/${id}`);
+    const effectiveUserId = userId ?? useAuthStore.getState().user?.id;
+    const response = await api.delete(`/Exercises/${id}`, {
+      params: effectiveUserId ? { userId: effectiveUserId } : undefined,
+    });
     const { data } = response.data;
     return data;
   } catch (error) {

@@ -145,6 +145,7 @@ function LoginPage() {
         studentId: currentStudent?.id ?? (currentStudent ? Number(currentStudent) : 0),
         myCoachId: isRealCoach ? 0 : myCoachId,
         coachId: isRealCoach ? Number(coachData.id) : 0,
+        isAdmin: Boolean(data?.isAdmin || userData?.isAdmin),
         role: isRealCoach ? "coach" : "student",
       };
 

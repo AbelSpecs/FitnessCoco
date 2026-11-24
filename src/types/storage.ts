@@ -13,10 +13,11 @@ export interface PresignBannerParams {
 }
 
 export interface PresignVideoParams {
-  trainerId: number;
+  trainerId?: number | null;
   exerciseId: number;
   fileName: string;
   contentType: string;
+  userId?: number;
   expiresInSeconds?: number;
 }
 

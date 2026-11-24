@@ -1,4 +1,5 @@
 import axios from "axios";
+import { useAuthStore } from "@/store/authStore";
 import {
   DownloadParams,
   PresignBannerParams,
@@ -15,6 +16,11 @@ interface CachedUrl {
   expiresAt: number;
 }
 const downloadUrlCache = new Map<string, CachedUrl>();
+
+export const invalidateDownloadUrlCache = (key?: string | null) => {
+  if (!key) return;
+  downloadUrlCache.delete(key);
+};
 
 /**
  * Solicita una URL presignada para subir una foto de perfil de usuario
@@ -85,13 +91,20 @@ export const getPresignedVideoUrl = async (
   params: PresignVideoParams,
 ): Promise<PresignResponse> => {
   try {
+    const effectiveUserId = params.userId ?? useAuthStore.getState().user?.id;
     const query = new URLSearchParams({
-      trainerId: params.trainerId.toString(),
       exerciseId: params.exerciseId.toString(),
       fileName: params.fileName,
       contentType: params.contentType,
       expiresInSeconds: (params.expiresInSeconds || 600).toString(),
     });
+
+    if (params.trainerId && params.trainerId > 0) {
+      query.set("trainerId", params.trainerId.toString());
+    }
+    if (effectiveUserId && Number(effectiveUserId) > 0) {
+      query.set("userId", String(effectiveUserId));
+    }
 
     const response = await axios.post<PresignResponse>(
       `${STORAGE_API_BASE}/presign/video?${query.toString()}`,

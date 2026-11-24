@@ -24,6 +24,8 @@ import { ProfileMenu } from "@/components/ProfileMenu";
 import { Role } from "@/types/auth";
 import { PyrosLogo } from "@/components/brand/PyrosLogo";
 import { isUserIndependent } from "@/utils/exerciseFilter";
+import { isAdminUser } from "@/utils/admin";
+import { getUser } from "@/services/user.service";
 
 const nav = [
   {
@@ -81,7 +83,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const effectiveRole: Role =
     user?.role === "coach" && Number(user?.coachId) > 0 ? "coach" : "student";
 
-  // Auto-sanitizar sesión guardada desactualizada en localStorage
+  // Auto-sanitizar sesión guardada desactualizada en localStorage y sincronizar isAdmin
   useEffect(() => {
     if (user && user.role === "coach" && (!user.coachId || Number(user.coachId) === 0)) {
       const correctedUser = {
@@ -89,12 +91,36 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         role: "student" as Role,
       };
       useAuthStore.getState().setAuth(correctedUser, useAuthStore.getState().token || "");
+      return;
     }
-  }, [user]);
+
+    if (user?.id) {
+      getUser(Number(user.id))
+        .then((userData) => {
+          if (userData && typeof userData.isAdmin === "boolean") {
+            const current = useAuthStore.getState().user;
+            if (current && Number(current.id) === Number(user.id) && current.isAdmin !== userData.isAdmin) {
+              useAuthStore
+                .getState()
+                .setAuth({ ...current, isAdmin: userData.isAdmin }, useAuthStore.getState().token || "");
+            }
+          }
+        })
+        .catch(() => {
+          // Silencioso si no se puede sincronizar
+        });
+    }
+  }, [user?.id]);
+
+  const adminUser = isAdminUser(user);
 
   const visibleItems = nav.filter((item) => {
     if (!item.roles) return true;
     if (!user?.role) return false;
+
+    if (item.to === "/exercises" && adminUser) {
+      return true;
+    }
 
     if (item.condition) {
       return isUserIndependent(user);
@@ -151,7 +177,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           {visibleItems.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.to);
-            if (user?.role && !item.roles.includes(user.role as Role)) {
+            if (user?.role && !item.roles.includes(user.role as Role) && !(item.to === "/exercises" && adminUser)) {
               return;
             }
 
